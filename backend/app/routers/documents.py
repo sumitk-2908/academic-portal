@@ -88,6 +88,7 @@ async def upload_document(
         title=title,
         category=category,
         module_id=module_id,
+        subject=subject,
         uploaded_by=uploaded_by,
         file_url=public_url 
     )
