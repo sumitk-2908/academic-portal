@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDocumentsByModule, uploadDocument, deleteDocument } from "./lib/api";
+// NOTICE: We added 'supabase' to the import list below!
+import { getDocumentsByModule, uploadDocument, deleteDocument, supabase } from "./lib/api"; 
 import { FileText, Download, BookOpen, Plus, Upload, X, Lock, Unlock, Trash2 } from "lucide-react";
 
 interface Document {
@@ -18,6 +19,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // --- NEW SUPABASE AUTH STATES ---
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -39,15 +45,37 @@ export default function Home() {
 
   useEffect(() => {
     fetchDocs();
+    
+    // --- NEW: Check if we are already logged in when the page loads ---
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setIsAdmin(true);
+    });
   }, []);
 
-  const handleAdminLogin = () => {
-    const password = prompt("Enter the Admin Passcode:");
-    if (password === "admin123") {
+  // --- NEW: Real Supabase Login Function ---
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setAuthError(error.message);
+    } else {
       setIsAdmin(true);
-    } else if (password !== null) {
-      alert("Incorrect passcode. Access denied.");
+      setEmail("");
+      setPassword("");
     }
+  };
+
+  // --- NEW: Real Supabase Logout Function ---
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsAdmin(false);
+    setShowForm(false);
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -106,22 +134,46 @@ export default function Home() {
             </p>
           </div>
 
+          {/* --- NEW: The Secure Login UI --- */}
           {!isAdmin ? (
-            <button 
-              onClick={handleAdminLogin}
-              className="flex items-center gap-2 bg-blue-700 text-white px-5 py-3 rounded-xl font-semibold hover:bg-blue-800 transition-colors shadow-sm border border-blue-500"
-            >
-              <Lock size={20} />
-              Admin Login
-            </button>
+            <form onSubmit={handleAdminLogin} className="flex flex-col gap-2 bg-white p-4 rounded-xl shadow-sm border border-blue-100 min-w-[250px]">
+              <input 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                placeholder="Admin Email" 
+                className="p-2 border border-slate-300 rounded-md text-sm outline-none text-slate-800 focus:ring-2 focus:ring-blue-600" 
+                required
+              />
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder="Password" 
+                className="p-2 border border-slate-300 rounded-md text-sm outline-none text-slate-800 focus:ring-2 focus:ring-blue-600" 
+                required
+              />
+              {authError && <p className="text-xs text-red-500 font-semibold">{authError}</p>}
+              <button type="submit" className="flex justify-center items-center gap-2 bg-blue-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-800 transition-colors text-sm">
+                <Lock size={16} /> Login
+              </button>
+            </form>
           ) : (
-            <button 
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 bg-white text-blue-600 px-5 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-colors shadow-sm"
-            >
-              {showForm ? <X size={20} /> : <Plus size={20} />}
-              {showForm ? "Cancel" : "Upload PDF"}
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowForm(!showForm)}
+                className="flex items-center gap-2 bg-white text-blue-600 px-5 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-colors shadow-sm"
+              >
+                {showForm ? <X size={20} /> : <Plus size={20} />}
+                {showForm ? "Cancel" : "Upload PDF"}
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 bg-red-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors shadow-sm"
+              >
+                <Unlock size={20} /> Logout
+              </button>
+            </div>
           )}
         </div>
 
