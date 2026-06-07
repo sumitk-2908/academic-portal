@@ -13,6 +13,8 @@ from app.schemas.academic import DocumentResponse
 # Import the official Supabase Client tools
 from supabase import create_client, Client
 
+from app.auth import verify_token
+
 router = APIRouter()
 
 # Initialize Supabase client using cloud environment variables
@@ -32,7 +34,9 @@ async def upload_document(
     module_id: int = Form(...),
     uploaded_by: str = Form(None),
     file: UploadFile = File(...),
+    user: dict = Depends(verify_token),
     db: Session = Depends(get_db)
+    
 ):
     """Uploads a PDF directly via REST API, completely bypassing the buggy Supabase SDK."""
     
@@ -122,7 +126,7 @@ async def download_document(filename: str):
 
 
 @router.delete("/{document_id}")
-async def delete_document(document_id: int, db: Session = Depends(get_db)):
+async def delete_document(document_id: int, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     """Deletes a document from the database and scrubs the file out of Supabase."""
     
     # 1. Find the document in the database
