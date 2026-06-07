@@ -13,7 +13,7 @@ from app.schemas.academic import DocumentResponse
 # Import the official Supabase Client tools
 from supabase import create_client, Client
 
-from app.auth import verify_token
+from app.auth import verify_token, verify_admin
 
 router = APIRouter()
 
@@ -35,6 +35,7 @@ async def upload_document(
     uploaded_by: str = Form(None),
     file: UploadFile = File(...),
     user: dict = Depends(verify_token),
+    admin_user: dict = Depends(verify_admin),
     db: Session = Depends(get_db)
     
 ):
@@ -126,8 +127,12 @@ async def download_document(filename: str):
 
 
 @router.delete("/{document_id}")
-async def delete_document(document_id: int, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
-    """Deletes a document from the database and scrubs the file out of Supabase."""
+async def delete_document(document_id: int, admin_user: dict = Depends(verify_admin), db: Session = Depends(get_db)):
+    success = await db.delete_record(id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"message": "Document deleted successfully"}
+    
     
     # 1. Find the document in the database
     document = db.query(Document).filter(Document.id == document_id).first()
