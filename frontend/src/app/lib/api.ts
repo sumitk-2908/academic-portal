@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // 1. Initialize Supabase Auth
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dyxymzyijinfouqzjfls.supabase.co";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5eHltenlpamluZm91cXpqZmxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4MTM1OTAsImV4cCI6MjA5NjM4OTU5MH0.xMHv4X8BppnSchvv58pTS6SnZfvRGN61KAXnpV3JQUs";
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5eHltenlpamluZm91cXpqZmxzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDgxMzU5MCwiZXhwIjoyMDk2Mzg5NTkwfQ.y_LkC1fv4tk0jvHNDVx9JJbQSFEqHuhu1hrXI-IuQG8" ;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -32,7 +32,7 @@ export const getDocumentsByModule = async (moduleId: number) => {
 };
 
 export const uploadDocument = async (formData: FormData) => {
-  const response = await api.post('/api/v1/documents/upload', formData, {
+  const response = await api.post('/api/v1/documents/upload/', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

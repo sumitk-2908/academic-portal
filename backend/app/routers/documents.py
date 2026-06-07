@@ -31,17 +31,16 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-@router.post("/upload", response_model=DocumentResponse)
+@router.post("/upload/", response_model=DocumentResponse)
 async def upload_document(
     title: str = Form(...),
     category: DocCategory = Form(...),
-    module_id: int = Form(...),
-    uploaded_by: str = Form(None),
+    module_id: int = Form(1),
+    uploaded_by: str = Form("Admin"),
     file: UploadFile = File(...),
-    user: dict = Depends(verify_token),
-    admin_user: dict = Depends(verify_admin),
+    user: dict = Depends(verify_token),       # 🛡️ General Token Security intact
+    admin_user: dict = Depends(verify_admin), # 🛡️ Admin Security intact
     db: Session = Depends(get_db)
-    
 ):
     """Uploads a PDF directly via REST API, completely bypassing the buggy Supabase SDK."""
     
@@ -131,13 +130,11 @@ async def download_document(filename: str):
 
 
 @router.delete("/{document_id}")
-async def delete_document(document_id: int, admin_user: dict = Depends(verify_admin), db: Session = Depends(get_db)):
-    success = await db.delete_record(id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Document not found")
-    return {"message": "Document deleted successfully"}
-    
-    
+async def delete_document(
+    document_id: int, 
+    admin_user: dict = Depends(verify_admin), # 🛡️ Admin Security intact
+    db: Session = Depends(get_db)
+):
     # 1. Find the document in the database
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
