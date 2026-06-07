@@ -189,27 +189,38 @@ export default function Home() {
                     </div>
                   </div>
                   
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    {isAdmin && (
-                      <button 
-                        onClick={() => handleDelete(doc.id)}
-                        className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm"
-                        title="Delete Document"
+                  {/* Action Buttons & Print Test */}
+                  <div className="flex flex-col items-end gap-2">
+                    
+                    {/* --- THE PRINT TEST --- */}
+                    <p className="text-[10px] text-red-600 font-mono font-bold max-w-[200px] break-all leading-tight">
+                      DEBUG URL: {doc.file_url ? doc.file_url : "UNDEFINED!"}
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      {isAdmin && (
+                        <button 
+                          onClick={() => handleDelete(doc.id)}
+                          className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm"
+                          title="Delete Document"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                      
+                      {/* 👇 The Corrected Download Link 👇 */}
+                      <a 
+                        href={doc.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm"
                       >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                    <a 
-                      href={`http://localhost:8000${doc.file_url}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm"
-                    >
-                      <Download size={18} />
-                      <span>Download</span>
-                    </a>
+                        <Download size={18} />
+                        <span>Download</span>
+                      </a>
+                    </div>
                   </div>
+
                 </div>
               ))}
             </div>
