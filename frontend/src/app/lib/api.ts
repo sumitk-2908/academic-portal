@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGci
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://academic-portal-backend-kt25.onrender.com';
 
 export const api = axios.create({
   baseURL: API_URL,
