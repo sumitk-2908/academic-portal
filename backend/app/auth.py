@@ -6,7 +6,7 @@ import os
 SUPABASE_URL = os.getenv("SUPABASE_URL") 
 
 ALLOWED_ADMINS = [
-    "sumitk240806@gmail.com","anonymousperson123.08@gmail.com"
+    "anonymousperson123.08@gmail.com"
 ]
 
 async def verify_token(request: Request):
