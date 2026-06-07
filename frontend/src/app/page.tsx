@@ -189,14 +189,8 @@ export default function Home() {
                     </div>
                   </div>
                   
-                  {/* Action Buttons & Print Test */}
+                  {/* Action Buttons */}
                   <div className="flex flex-col items-end gap-2">
-                    
-                    {/* --- THE PRINT TEST --- */}
-                    <p className="text-[10px] text-red-600 font-mono font-bold max-w-[200px] break-all leading-tight">
-                      DEBUG URL: {doc.file_url ? doc.file_url : "UNDEFINED!"}
-                    </p>
-
                     <div className="flex items-center gap-2">
                       {isAdmin && (
                         <button 
@@ -208,7 +202,6 @@ export default function Home() {
                         </button>
                       )}
                       
-                      {/* 👇 The Corrected Download Link 👇 */}
                       <a 
                         href={doc.file_url} 
                         target="_blank" 
