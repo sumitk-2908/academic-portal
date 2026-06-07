@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List
 import os
+import httpx
 
 from app.database import get_db
 from app.models.academic import Document, Module, DocCategory
@@ -33,9 +34,8 @@ async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Uploads a PDF to Supabase Storage using a temporary local buffer."""
+    """Uploads a PDF directly via REST API, completely bypassing the buggy Supabase SDK."""
     
-    # 1. Check file type and module
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
 
@@ -44,36 +44,37 @@ async def upload_document(
         raise HTTPException(status_code=404, detail="Module not found")
 
     safe_filename = file.filename.replace(" ", "_")
+    file_bytes = await file.read()
     
-    # 2. Create a temporary staging area
-    TEMP_DIR = "temp_uploads"
-    os.makedirs(TEMP_DIR, exist_ok=True)
-    temp_file_path = f"{TEMP_DIR}/{safe_filename}"
+    # 1. Clean the URL (removes accidental trailing slashes that break uploads)
+    base_url = SUPABASE_URL.rstrip("/")
     
-    try:
-        # 3. Save the file to the local disk momentarily
-        with open(temp_file_path, "wb") as buffer:
-            buffer.write(await file.read())
-
-        # 4. Upload the physical file to Supabase (bypasses the memory bug)
-        supabase.storage.from_("documents").upload(
-            file=temp_file_path,
-            path=safe_filename,
-            file_options={"content-type": file.content_type}
+    # 2. Build the exact Supabase REST API endpoint
+    upload_url = f"{base_url}/storage/v1/object/documents/{safe_filename}"
+    
+    # 3. Set up the strict security headers (using your service_role key)
+    headers = {
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "apikey": SUPABASE_KEY,
+        "Content-Type": file.content_type,
+        "x-upsert": "true" # Forces overwrite if you test the same file twice
+    }
+    
+    # 4. Fire the file directly at their servers
+    async with httpx.AsyncClient() as client:
+        response = await client.post(upload_url, content=file_bytes, headers=headers)
+        
+    # 5. The Moment of Truth: If it fails, print the REAL error message
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Direct Upload Failed: {response.text}"
         )
         
-        # 5. Extract the permanent public link
-        public_url = supabase.storage.from_("documents").get_public_url(safe_filename)
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Supabase Error: {str(e)}")
-        
-    finally:
-        # 6. IMMEDIATELY delete the temporary file so Render stays clean
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+    # 6. Generate the standard public URL
+    public_url = f"{base_url}/storage/v1/object/public/documents/{safe_filename}"
 
-    # 7. Save the cloud URL to the Neon database
+    # 7. Save to the Neon database
     new_doc = Document(
         title=title,
         category=category,
