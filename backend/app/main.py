@@ -9,6 +9,11 @@ from app.models.academic import Base
 
 from app.routers import documents
 
+from dotenv import load_dotenv
+
+# This forces Python to read your .env file immediately
+load_dotenv()
+
 
 # 2. Recreate them perfectly with all new columns
 Base.metadata.create_all(bind=engine)

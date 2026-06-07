@@ -1,9 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// NOTICE: We added 'supabase' to the import list below!
-import { getDocumentsByModule, uploadDocument, deleteDocument, supabase } from "./lib/api"; 
-import { FileText, Download, BookOpen, Plus, Upload, X, Lock, Unlock, Trash2 } from "lucide-react";
+import {
+  getDocumentsByModule,
+  uploadDocument,
+  deleteDocument,
+  supabase,
+} from "./lib/api";
+import {
+  FileText,
+  Download,
+  GraduationCap,
+  Plus,
+  Upload,
+  X,
+  Lock,
+  LogOut,
+  Trash2,
+  LayoutDashboard,
+  NotebookPen,
+  FileQuestion,
+  ListChecks,
+  PanelLeftClose,
+  PanelLeft,
+  Search,
+} from "lucide-react";
 
 interface Document {
   id: number;
@@ -14,17 +35,44 @@ interface Document {
   created_at: string;
 }
 
+type NavKey = "dashboard" | "notes" | "pyq" | "syllabus";
+
+const NAV_ITEMS: { key: NavKey; label: string; icon: typeof LayoutDashboard }[] =
+  [
+    { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { key: "notes", label: "Notes", icon: NotebookPen },
+    { key: "pyq", label: "PYQs", icon: FileQuestion },
+    { key: "syllabus", label: "Syllabus", icon: ListChecks },
+  ];
+
+const CATEGORY_STYLES: Record<string, string> = {
+  notes: "bg-blue-50 text-blue-700 ring-blue-200",
+  pyq: "bg-amber-50 text-amber-700 ring-amber-200",
+  syllabus: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+};
+
+function categoryLabel(category: string) {
+  if (category === "pyq") return "PYQ";
+  return category.charAt(0).toUpperCase() + category.slice(1).replace("_", " ");
+}
+
 export default function Home() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // --- NEW SUPABASE AUTH STATES ---
+  // --- Auth states ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [showLogin, setShowLogin] = useState(false);
 
+  // --- UI states ---
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
+
+  // --- Upload form states ---
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -45,18 +93,16 @@ export default function Home() {
 
   useEffect(() => {
     fetchDocs();
-    
-    // --- NEW: Check if we are already logged in when the page loads ---
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setIsAdmin(true);
     });
   }, []);
 
-  // --- NEW: Real Supabase Login Function ---
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
-    
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -66,12 +112,12 @@ export default function Home() {
       setAuthError(error.message);
     } else {
       setIsAdmin(true);
+      setShowLogin(false);
       setEmail("");
       setPassword("");
     }
   };
 
-  // --- NEW: Real Supabase Logout Function ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
@@ -83,7 +129,7 @@ export default function Home() {
     if (!file) return alert("Please select a file!");
 
     setUploading(true);
-    
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("title", title);
@@ -97,7 +143,7 @@ export default function Home() {
       setTitle("");
       setUploadedBy("");
       setShowForm(false);
-      await fetchDocs(); 
+      await fetchDocs();
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Upload failed. Check terminal for details.");
@@ -107,171 +153,414 @@ export default function Home() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this PDF forever?")) return;
+    if (!window.confirm("Are you sure you want to delete this PDF forever?"))
+      return;
 
     try {
       await deleteDocument(id);
-      await fetchDocs(); 
+      await fetchDocs();
     } catch (error) {
       console.error("Failed to delete document:", error);
       alert("Failed to delete. Check your terminal.");
     }
   };
 
-  return (
-    <main className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="bg-blue-600 rounded-2xl p-8 text-white shadow-lg flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <BookOpen size={32} />
-              Academic Portal
-            </h1>
-            <p className="text-blue-100 mt-2 text-lg">
-              Module 1: Introduction to C Programming
-            </p>
-          </div>
+  const filteredDocuments =
+    activeNav === "dashboard"
+      ? documents
+      : documents.filter((doc) => doc.category === activeNav);
 
-          {/* --- NEW: The Secure Login UI --- */}
+  const activeLabel =
+    NAV_ITEMS.find((item) => item.key === activeNav)?.label ?? "Dashboard";
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-surface px-4 md:px-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            className="hidden rounded-lg p-2 text-muted transition-colors hover:bg-background hover:text-foreground md:inline-flex"
+            aria-label="Toggle sidebar"
+          >
+            {sidebarCollapsed ? (
+              <PanelLeft size={20} />
+            ) : (
+              <PanelLeftClose size={20} />
+            )}
+          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <GraduationCap size={20} />
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-foreground">
+                Academic Portal
+              </p>
+              <p className="text-xs text-muted">Computer Science Dept.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
           {!isAdmin ? (
-            <form onSubmit={handleAdminLogin} className="flex flex-col gap-2 bg-white p-4 rounded-xl shadow-sm border border-blue-100 min-w-[250px]">
-              <input 
-                type="email" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                placeholder="Admin Email" 
-                className="p-2 border border-slate-300 rounded-md text-sm outline-none text-slate-800 focus:ring-2 focus:ring-blue-600" 
-                required
-              />
-              <input 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                placeholder="Password" 
-                className="p-2 border border-slate-300 rounded-md text-sm outline-none text-slate-800 focus:ring-2 focus:ring-blue-600" 
-                required
-              />
-              {authError && <p className="text-xs text-red-500 font-semibold">{authError}</p>}
-              <button type="submit" className="flex justify-center items-center gap-2 bg-blue-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-800 transition-colors text-sm">
-                <Lock size={16} /> Login
+            <div className="relative">
+              <button
+                onClick={() => setShowLogin((v) => !v)}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-blue-700"
+              >
+                <Lock size={16} /> Admin Login
               </button>
-            </form>
+
+              {showLogin && (
+                <>
+                  <button
+                    className="fixed inset-0 z-10 cursor-default"
+                    onClick={() => setShowLogin(false)}
+                    aria-label="Close login"
+                    tabIndex={-1}
+                  />
+                  <form
+                    onSubmit={handleAdminLogin}
+                    className="absolute right-0 top-12 z-20 w-72 rounded-xl border border-border bg-surface p-4 shadow-lg"
+                  >
+                    <p className="mb-3 text-sm font-semibold text-foreground">
+                      Sign in to manage resources
+                    </p>
+                    <div className="space-y-2">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Admin email"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        required
+                      />
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Password"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        required
+                      />
+                      {authError && (
+                        <p className="text-xs font-medium text-destructive">
+                          {authError}
+                        </p>
+                      )}
+                      <button
+                        type="submit"
+                        className="w-full rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-blue-700"
+                      >
+                        Login
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
+            </div>
           ) : (
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-2 bg-white text-blue-600 px-5 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-colors shadow-sm"
-              >
-                {showForm ? <X size={20} /> : <Plus size={20} />}
-                {showForm ? "Cancel" : "Upload PDF"}
-              </button>
-              <button 
+            <div className="flex items-center gap-2">
+              <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 sm:inline-flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                Admin Mode
+              </span>
+              <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 bg-red-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-background hover:text-foreground"
               >
-                <Unlock size={20} /> Logout
+                <LogOut size={16} /> Logout
               </button>
             </div>
           )}
         </div>
+      </header>
 
-        {/* The Upload Form */}
-        {isAdmin && showForm && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in slide-in-from-top-4 fade-in duration-200">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <Upload size={20} className="text-blue-600"/> 
-              Upload New Document
-            </h2>
-            <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Document Title</label>
-                <input required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Chapter 1 Summary" className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Category</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none bg-white">
-                  <option value="notes">Notes</option>
-                  <option value="pyq">PYQ (Previous Year Question)</option>
-                  <option value="syllabus">Syllabus</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Your Name (Optional)</label>
-                <input type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} placeholder="Admin" className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">PDF File</label>
-                <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full p-1.5 border border-slate-300 rounded-lg file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-              </div>
-              <div className="md:col-span-2 mt-2">
-                <button disabled={uploading} type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-300 transition-colors flex justify-center items-center gap-2">
-                  {uploading ? "Uploading to Server..." : "Submit Document"}
+      <div className="flex flex-1">
+        {/* Left Sidebar */}
+        <aside
+          className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 border-r border-border bg-surface p-3 transition-all duration-200 md:block ${
+            sidebarCollapsed ? "w-[68px]" : "w-60"
+          }`}
+        >
+          <nav className="space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = activeNav === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveNav(item.key)}
+                  title={item.label}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted hover:bg-background hover:text-foreground"
+                  } ${sidebarCollapsed ? "justify-center" : ""}`}
+                >
+                  <Icon size={20} className="shrink-0" />
+                  {!sidebarCollapsed && <span>{item.label}</span>}
                 </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 px-4 py-6 md:px-8">
+          <div className="mx-auto max-w-5xl space-y-6">
+            {/* Hero */}
+            <section className="rounded-xl border border-border bg-surface p-6 md:p-8">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-primary">Module 1</p>
+                  <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground text-balance md:text-3xl">
+                    Introduction to C Programming
+                  </h1>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted text-pretty">
+                    Browse notes, previous year questions, and the syllabus for
+                    this module. Everything you need to study, in one place.
+                  </p>
+                </div>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-blue-700"
+                  >
+                    <Plus size={18} /> Upload PDF
+                  </button>
+                )}
               </div>
-            </form>
-          </div>
-        )}
+            </section>
 
-        {/* Document List */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-xl font-semibold text-slate-800 mb-6 border-b pb-4 flex items-center justify-between">
-            Available Study Materials
-            {isAdmin && <span className="text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded-md">Admin Mode Active</span>}
-          </h2>
+            {/* Mobile nav */}
+            <nav className="flex gap-2 overflow-x-auto pb-1 md:hidden">
+              {NAV_ITEMS.map((item) => {
+                const active = activeNav === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setActiveNav(item.key)}
+                    className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "border border-border bg-surface text-muted"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
 
-          {loading ? (
-            <div className="text-center text-slate-500 py-8 animate-pulse">Loading documents...</div>
-          ) : documents.length === 0 ? (
-            <div className="text-center text-slate-500 py-8">No documents uploaded yet.</div>
-          ) : (
-            <div className="grid gap-4">
-              {documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-blue-50 transition-colors group">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white rounded-lg text-blue-600 shadow-sm group-hover:text-blue-700">
-                      <FileText size={24} />
+            {/* Resource header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {activeNav === "dashboard"
+                    ? "All Study Materials"
+                    : activeLabel}
+                </h2>
+                <p className="text-sm text-muted">
+                  {filteredDocuments.length}{" "}
+                  {filteredDocuments.length === 1 ? "resource" : "resources"}{" "}
+                  available
+                </p>
+              </div>
+            </div>
+
+            {/* Resource Grid */}
+            {loading ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-40 animate-pulse rounded-xl border border-border bg-surface"
+                  />
+                ))}
+              </div>
+            ) : filteredDocuments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface py-16 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-muted">
+                  <Search size={22} />
+                </div>
+                <p className="mt-3 text-sm font-medium text-foreground">
+                  No documents found
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {activeNav === "dashboard"
+                    ? "No materials have been uploaded yet."
+                    : `No ${activeLabel.toLowerCase()} available for this module.`}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {filteredDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="group flex flex-col rounded-xl border border-border bg-surface p-5 transition-shadow hover:shadow-sm"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <FileText size={22} />
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
+                          CATEGORY_STYLES[doc.category] ??
+                          "bg-background text-muted ring-border"
+                        }`}
+                      >
+                        {categoryLabel(doc.category)}
+                      </span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-800">{doc.title}</h3>
-                      <p className="text-sm text-slate-500 capitalize">
-                        {doc.category.replace('_', ' ')} • Uploaded by {doc.uploaded_by || 'Anonymous'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2">
+
+                    <h3 className="mt-4 font-semibold leading-snug text-foreground text-pretty">
+                      {doc.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      Uploaded by {doc.uploaded_by || "Anonymous"}
+                    </p>
+
+                    <div className="mt-5 flex items-center gap-2 border-t border-border pt-4">
+                      <a
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-blue-700"
+                      >
+                        <Download size={16} />
+                        Download
+                      </a>
                       {isAdmin && (
-                        <button 
+                        <button
                           onClick={() => handleDelete(doc.id)}
-                          className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm"
-                          title="Delete Document"
+                          title="Delete document"
+                          aria-label="Delete document"
+                          className="inline-flex items-center justify-center rounded-lg border border-border bg-surface p-2 text-muted transition-colors hover:border-destructive hover:bg-destructive hover:text-white"
                         >
                           <Trash2 size={18} />
                         </button>
                       )}
-                      
-                      <a 
-                        href={doc.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm"
-                      >
-                        <Download size={18} />
-                        <span>Download</span>
-                      </a>
                     </div>
                   </div>
-
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
       </div>
-    </main>
+
+      {/* Upload Modal */}
+      {isAdmin && showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+            onClick={() => setShowForm(false)}
+            aria-label="Close modal"
+            tabIndex={-1}
+          />
+          <div className="relative z-10 w-full max-w-lg rounded-xl border border-border bg-surface shadow-xl">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Upload size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">
+                    Upload Document
+                  </h2>
+                  <p className="text-xs text-muted">
+                    Add a new resource to Module 1
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowForm(false)}
+                className="rounded-lg p-2 text-muted transition-colors hover:bg-background hover:text-foreground"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpload} className="space-y-4 px-6 py-5">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">
+                  Document Title
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Chapter 1 Summary"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">
+                    Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="notes">Notes</option>
+                    <option value="pyq">PYQ (Previous Year Question)</option>
+                    <option value="syllabus">Syllabus</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">
+                    Uploader Name
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadedBy}
+                    onChange={(e) => setUploadedBy(e.target.value)}
+                    placeholder="Admin"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">
+                  PDF File
+                </label>
+                <input
+                  required
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-primary/10 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-primary hover:file:bg-primary/20"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="flex-1 rounded-lg border border-border bg-surface py-2.5 text-sm font-medium text-muted transition-colors hover:bg-background hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={uploading}
+                  type="submit"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {uploading ? "Uploading..." : "Submit Document"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

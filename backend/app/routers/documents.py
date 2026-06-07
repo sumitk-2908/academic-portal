@@ -6,6 +6,8 @@ from typing import List
 import os
 import httpx
 
+from dotenv import load_dotenv
+
 from app.database import get_db
 from app.models.academic import Document, Module, DocCategory
 from app.schemas.academic import DocumentResponse
@@ -14,6 +16,8 @@ from app.schemas.academic import DocumentResponse
 from supabase import create_client, Client
 
 from app.auth import verify_token, verify_admin
+
+load_dotenv()
 
 router = APIRouter()
 

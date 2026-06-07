@@ -22,7 +22,7 @@ async def verify_token(request: Request):
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{SUPABASE_URL}/auth/v1/user",
-            headers={"apikey": os.getenv("SUPABASE_ANON_KEY"), "Authorization": f"Bearer {token}"}
+            headers={"apikey": os.getenv("SUPABASE_KEY"), "Authorization": f"Bearer {token}"}
         )
     
     if response.status_code != 200:
