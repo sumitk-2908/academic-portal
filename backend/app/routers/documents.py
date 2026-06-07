@@ -36,6 +36,7 @@ async def upload_document(
     title: str = Form(...),
     category: DocCategory = Form(...),
     module_id: int = Form(1),
+    subject: str = Form("General"),
     uploaded_by: str = Form("Admin"),
     file: UploadFile = File(...),
     user: dict = Depends(verify_token),       # 🛡️ General Token Security intact

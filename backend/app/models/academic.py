@@ -60,6 +60,7 @@ class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True, index=True)
     module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"))
+    subject = Column(String, default="General")
     title = Column(String(255), nullable=False)
     category = Column(Enum(DocCategory), nullable=False)
     file_url = Column(String, nullable=False)

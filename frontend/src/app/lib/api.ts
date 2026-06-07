@@ -44,3 +44,10 @@ export const deleteDocument = async (documentId: number) => {
   const response = await api.delete(`/api/v1/documents/${documentId}`);
   return response.data;
 };
+
+export const searchDocuments = async (query: string) => {
+  const response = await api.get(`/api/v1/documents/search`, {
+    params: { query }
+  });
+  return response.data;
+};

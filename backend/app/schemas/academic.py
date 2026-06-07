@@ -20,6 +20,7 @@ class DocumentResponse(BaseModel):
     status: ReviewStatus
     created_at: datetime
     module_id: int
+    subject: Optional[str] = None
 
     # This tells Pydantic to read data directly from your SQLAlchemy database models
     model_config = ConfigDict(from_attributes=True)
