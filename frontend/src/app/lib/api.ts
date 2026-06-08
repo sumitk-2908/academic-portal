@@ -2,12 +2,16 @@ import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 
 // 1. Initialize Supabase Auth
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dyxymzyijinfouqzjfls.supabase.co";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5eHltenlpamluZm91cXpqZmxzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDgxMzU5MCwiZXhwIjoyMDk2Mzg5NTkwfQ.y_LkC1fv4tk0jvHNDVx9JJbQSFEqHuhu1hrXI-IuQG8" ;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error("Missing Supabase environment variables");
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://academic-portal-backend-kt25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const api = axios.create({
   baseURL: API_URL,
