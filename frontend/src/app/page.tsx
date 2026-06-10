@@ -13,7 +13,7 @@ import {
   Trash2, LayoutDashboard, NotebookPen, FileQuestion, ListChecks,
   Search, BookOpen, Moon, Sun, Loader2, Bookmark, Clock,
   Layers, FolderOpen, ChevronRight, TrendingUp, Eye,
-  PanelLeft, PanelLeftClose, Sparkles
+  PanelLeft, PanelLeftClose
 } from "lucide-react";
 
 interface Document {
@@ -53,6 +53,11 @@ const SUBJECTS = [
   "PHYSICS LAB", "COMMUNICATION SKILLS", "CHEMISTRY", "BME", "BE",
   "ENVIRONMENTAL SCIENCE", "BE LAB", "BEE LAB", "CHEMISTRY LAB", "NSS",
   "ENGINEERING GRAPHICS"
+];
+
+const NON_MODULE_SUBJECTS = [
+  "WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS",
+  "PHYSICS LAB", "CHEMISTRY LAB", "BE LAB", "BEE LAB"
 ];
 
 function categoryLabel(category: string) {
@@ -141,7 +146,9 @@ export default function Home() {
     setLoading(true);
     try {
       let data = [];
-      if (activeNav === "recent" || activeNav === "bookmarks") {
+      const isNonModuleSubject = NON_MODULE_SUBJECTS.includes(activeSubject);
+      
+      if (activeNav === "recent" || activeNav === "bookmarks" || activeNav === "syllabus" || isNonModuleSubject) {
         data = await searchDocuments(""); 
       } else {
         data = await getDocumentsByModule(activeModule);
@@ -255,9 +262,13 @@ export default function Home() {
     return documents.filter((doc) => {
       const matchesSubject = doc.subject === activeSubject;
       const matchesCategory = activeNav === "dashboard" || doc.category === activeNav;
-      return matchesSubject && matchesCategory;
+      
+      const isNonModuleSubject = NON_MODULE_SUBJECTS.includes(activeSubject);
+      const matchesModule = (activeNav === "syllabus" || isNonModuleSubject) ? true : doc.module_id === activeModule;
+
+      return matchesSubject && matchesCategory && matchesModule;
     });
-  }, [documents, isSearchingGlobal, activeSubject, activeNav, bookmarks]);
+  }, [documents, isSearchingGlobal, activeSubject, activeNav, bookmarks, activeModule]);
 
   const subjectDocs = useMemo(
     () => documents.filter((d) => d.subject === activeSubject),
@@ -274,8 +285,14 @@ export default function Home() {
     activeNav === "recent" ? "Recently Uploaded" :
     NAV_ITEMS.find((item) => item.key === activeNav)?.label ?? "Dashboard";
 
+  const isNonModuleSubject = NON_MODULE_SUBJECTS.includes(activeSubject);
+  const hideModuleSelector = activeNav === "syllabus" || isNonModuleSubject;
+  
+  const isUploadNonModule = NON_MODULE_SUBJECTS.includes(uploadSubject);
+  const hideUploadModule = category === "syllabus" || isUploadNonModule;
+
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors duration-300 overflow-x-hidden w-full max-w-full">
+    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground transition-colors duration-300">
 
       {/* ============================ HEADER ============================ */}
       <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-xl">
@@ -381,9 +398,8 @@ export default function Home() {
 
       <div className="mx-auto flex w-full max-w-[1600px] flex-1">
         {/* ============================ SIDEBAR ============================ */}
-        <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col border-r border-border bg-surface/40 py-6 transition-all duration-300 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2 items-center' : 'w-64 px-3'}`}>
+        <aside className={`sticky top-16 self-start hidden h-[calc(100vh-4rem)] shrink-0 flex-col border-r border-border bg-surface/40 py-6 transition-all duration-300 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2 items-center' : 'w-64 px-3'}`}>
           
-          {/* Top Nav Section */}
           <div className="w-full">
             {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted">Browse</p>}
             <nav className="space-y-1 w-full">
@@ -431,31 +447,22 @@ export default function Home() {
 
           {/* Bottom Footer Section (Anchored via mt-auto) */}
           <div className="mt-auto w-full pt-6">
-            {!sidebarCollapsed ? (
-              <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-4 mb-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <Sparkles size={14} />
-                  <p className="text-xs font-bold">Study smarter</p>
-                </div>
-                <p className="mt-1.5 text-[10px] leading-relaxed text-muted">Advanced search and analytics coming soon.</p>
-              </div>
-            ) : (
-              <button className="flex w-full items-center justify-center rounded-xl p-2.5 text-primary hover:bg-primary/10 transition-colors mb-4" title="Study smarter">
-                <Sparkles size={16} />
-              </button>
-            )}
-            
             {!sidebarCollapsed && (
-              <div className="px-3 flex flex-col gap-1">
-                <p className="text-[10px] font-semibold text-muted/70">Academic Portal v1.0.0</p>
-                <p className="text-[9px] text-muted/50">&copy; {new Date().getFullYear()} B.Tech Hub</p>
-              </div>
+              <>
+                <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-4 mb-4">
+                  <p className="text-[10px] leading-relaxed text-muted">Advanced search and analytics coming soon.</p>
+                </div>
+                <div className="px-3 flex flex-col gap-1">
+                  <p className="text-[10px] font-semibold text-muted/70">Academic Portal v1.0.0</p>
+                  <p className="text-[9px] text-muted/50">&copy; {new Date().getFullYear()} B.Tech Hub</p>
+                </div>
+              </>
             )}
           </div>
         </aside>
 
         {/* ============================ MAIN ============================ */}
-        <main className="flex-1 px-4 pb-16 pt-6 md:px-6 lg:px-8 w-full min-w-0 max-w-full">
+        <main className="flex-1 px-4 pb-16 pt-6 md:px-6 lg:px-8 w-full min-w-0 overflow-x-clip">
           <div className="mx-auto w-full max-w-6xl space-y-5 md:space-y-6">
 
             {/* HERO & DYNAMIC HEADERS */}
@@ -570,31 +577,33 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="w-full">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-1 w-full">
-                    {[1, 2, 3, 4, 5].map((mod) => {
-                      const active = activeModule === mod;
-                      return (
-                        <button
-                          key={mod}
-                          onClick={() => {
-                            setActiveModule(mod);
-                            setUploadModule(mod);
-                          }}
-                          className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-0 ${
-                            active
-                              ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/30"
-                              : "border-border bg-background text-muted hover:border-primary/40 hover:text-foreground"
-                          }`}
-                          aria-pressed={active}
-                        >
-                          <Layers size={14} className={`shrink-0 ${active ? "text-primary-foreground" : "text-muted"}`} />
-                          <span className="truncate">Module {mod}</span>
-                        </button>
-                      );
-                    })}
+                {!hideModuleSelector && (
+                  <div className="w-full">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-1 w-full">
+                      {[1, 2, 3, 4, 5].map((mod) => {
+                        const active = activeModule === mod;
+                        return (
+                          <button
+                            key={mod}
+                            onClick={() => {
+                              setActiveModule(mod);
+                              setUploadModule(mod);
+                            }}
+                            className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-0 ${
+                              active
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                                : "border-border bg-background text-muted hover:border-primary/40 hover:text-foreground"
+                            }`}
+                            aria-pressed={active}
+                          >
+                            <Layers size={14} className={`shrink-0 ${active ? "text-primary-foreground" : "text-muted"}`} />
+                            <span className="truncate">Module {mod}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </section>
             )}
 
@@ -626,7 +635,7 @@ export default function Home() {
                     {isSearchingGlobal
                       ? "Global Search"
                       : activeNav === "dashboard"
-                      ? `${activeSubject} · Module ${activeModule}`
+                      ? (hideModuleSelector ? activeSubject : `${activeSubject} · Module ${activeModule}`)
                       : activeLabel}
                   </span>
                 </h2>
@@ -775,9 +784,10 @@ export default function Home() {
                     {SUBJECTS.map((sub) => <option key={sub} value={sub}>{sub}</option>)}
                   </select>
                 </div>
-                <div className="space-y-1">
+                
+                <div className={`space-y-1 ${hideUploadModule ? "opacity-50 pointer-events-none" : ""}`}>
                   <label htmlFor="target-module" className="text-[10px] font-bold uppercase tracking-wider text-muted">Module</label>
-                  <select id="target-module" value={uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                  <select id="target-module" value={hideUploadModule ? 1 : uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} disabled={hideUploadModule} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed">
                     {[1, 2, 3, 4, 5].map((mod) => <option key={mod} value={mod}>Module {mod}</option>)}
                   </select>
                 </div>
