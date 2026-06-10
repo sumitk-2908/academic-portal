@@ -11,8 +11,9 @@ import {
 import {
   FileText, Download, GraduationCap, Plus, Upload, X, Lock, LogOut,
   Trash2, LayoutDashboard, NotebookPen, FileQuestion, ListChecks,
-  Search, BookOpen, Moon, Sun, Loader2, Sparkles, Bookmark, Clock,
-  Layers, FolderOpen, ChevronRight, ArrowUpRight, TrendingUp
+  Search, BookOpen, Moon, Sun, Loader2, Bookmark, Clock,
+  Layers, FolderOpen, ChevronRight, ArrowUpRight, TrendingUp, Eye,
+  PanelLeft, PanelLeftClose
 } from "lucide-react";
 
 interface Document {
@@ -26,7 +27,7 @@ interface Document {
   subject?: string;
 }
 
-type NavKey = "dashboard" | "notes" | "pyq" | "syllabus";
+type NavKey = "dashboard" | "notes" | "pyq" | "syllabus" | "bookmarks" | "recent";
 
 const NAV_ITEMS: { key: NavKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -83,6 +84,7 @@ export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
 
   // --- UI & Navigation states ---
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
@@ -91,21 +93,28 @@ export default function Home() {
   const [activeSubject, setActiveSubject] = useState(SUBJECTS[0]);
   const [activeModule, setActiveModule] = useState(1);
 
-  // --- Upload Form states ---
+  // --- Modal & Feature States ---
   const [showForm, setShowForm] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const [bookmarks, setBookmarks] = useState<number[]>([]);
+
+  // --- Upload Form states ---
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("notes");
   const [uploadedBy, setUploadedBy] = useState("");
-
   const [uploadSubject, setUploadSubject] = useState(activeSubject);
   const [uploadModule, setUploadModule] = useState(activeModule);
 
-  // Hydration-safe dark mode initialization
+  // Hydration-safe dark mode & bookmarks initialization
   useEffect(() => {
     setMounted(true);
     setIsDarkMode(document.documentElement.classList.contains("dark"));
+    const storedBookmarks = localStorage.getItem("portal_bookmarks");
+    if (storedBookmarks) {
+      setBookmarks(JSON.parse(storedBookmarks));
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -121,11 +130,28 @@ export default function Home() {
     }
   };
 
-  // --- REAL BACKEND LOGIC (From Master) ---
+  const toggleBookmark = (id: number) => {
+    setBookmarks(prev => {
+      const next = prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id];
+      localStorage.setItem("portal_bookmarks", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // --- REAL BACKEND LOGIC ---
   const fetchDocs = async () => {
     setLoading(true);
     try {
-      const data = await getDocumentsByModule(activeModule);
+      // If we are in bookmarks or recent, we should ideally fetch ALL docs, 
+      // but to keep it simple without API changes, we fetch the module docs.
+      // *Note: A robust app would fetch a global list for bookmarks. 
+      // Here we rely on the existing API structure.
+      let data = [];
+      if (activeNav === "recent" || activeNav === "bookmarks") {
+        data = await searchDocuments(""); // Fetch all if the backend supports empty string as "all"
+      } else {
+        data = await getDocumentsByModule(activeModule);
+      }
       setDocuments(data);
     } catch (error) {
       console.error("Failed to fetch documents:", error);
@@ -154,7 +180,7 @@ export default function Home() {
     }, 400); 
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, activeModule, activeSubject]); 
+  }, [searchQuery, activeModule, activeSubject, activeNav]); 
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -221,25 +247,38 @@ export default function Home() {
     }
   };
 
-  // Keep master's filtering logic for real API data
-  const filteredDocuments = documents.filter((doc) => {
-    if (isSearchingGlobal) return true;
-    const matchesSubject = doc.subject === activeSubject;
-    const matchesCategory = activeNav === "dashboard" || doc.category === activeNav;
-    return matchesSubject && matchesCategory;
-  });
+  const filteredDocuments = useMemo(() => {
+    if (isSearchingGlobal) return documents;
+    
+    if (activeNav === "bookmarks") {
+      return documents.filter(doc => bookmarks.includes(doc.id));
+    }
+    
+    if (activeNav === "recent") {
+      return [...documents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20);
+    }
 
-  // Stats for the active UI subject
+    return documents.filter((doc) => {
+      const matchesSubject = doc.subject === activeSubject;
+      const matchesCategory = activeNav === "dashboard" || doc.category === activeNav;
+      return matchesSubject && matchesCategory;
+    });
+  }, [documents, isSearchingGlobal, activeSubject, activeNav, bookmarks]);
+
   const subjectDocs = useMemo(
     () => documents.filter((d) => d.subject === activeSubject),
     [documents, activeSubject]
   );
+  
   const subjectModules = useMemo(
     () => new Set(subjectDocs.map((d) => d.module_id)).size,
     [subjectDocs]
   );
 
-  const activeLabel = NAV_ITEMS.find((item) => item.key === activeNav)?.label ?? "Dashboard";
+  const activeLabel = 
+    activeNav === "bookmarks" ? "Your Bookmarks" :
+    activeNav === "recent" ? "Recently Uploaded" :
+    NAV_ITEMS.find((item) => item.key === activeNav)?.label ?? "Dashboard";
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors duration-300">
@@ -248,6 +287,13 @@ export default function Home() {
       <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-4 md:px-6">
           <div className="flex shrink-0 items-center gap-2.5">
+            <button 
+              onClick={() => setSidebarCollapsed((v) => !v)} 
+              className="hidden rounded-xl p-2 text-muted transition-colors hover:bg-border/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:inline-flex"
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
+            </button>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/30">
               <GraduationCap size={20} />
             </div>
@@ -266,12 +312,12 @@ export default function Home() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search resources"
-                className="h-11 w-full rounded-full border border-border bg-background pl-11 pr-10 text-sm font-medium text-foreground shadow-sm outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10"
+                className="h-10 w-full rounded-full border border-border bg-background pl-11 pr-10 text-sm font-medium text-foreground shadow-sm outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:bg-surface focus:ring-2 focus:ring-primary/20"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label="Clear search"
                 >
                   <X size={14} />
@@ -283,7 +329,7 @@ export default function Home() {
           <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={toggleTheme}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-muted shadow-sm transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-background text-muted shadow-sm transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Toggle theme"
             >
               {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : <div className="h-4 w-4" />}
@@ -293,7 +339,7 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => setShowLogin((v) => !v)}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
                   aria-expanded={showLogin}
                 >
                   <Lock size={16} /> <span className="hidden sm:inline">Admin</span>
@@ -307,14 +353,14 @@ export default function Home() {
                       <div className="space-y-3">
                         <div>
                           <label htmlFor="login-email" className="sr-only">Email</label>
-                          <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Admin email" className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10" required />
+                          <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Admin email" className="h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20" required />
                         </div>
                         <div>
                           <label htmlFor="login-password" className="sr-only">Password</label>
-                          <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10" required />
+                          <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20" required />
                         </div>
                         {authError && <p className="rounded-lg border border-destructive/20 bg-destructive/10 p-2.5 text-xs font-semibold text-destructive">{authError}</p>}
-                        <button type="submit" className="h-11 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background">
+                        <button type="submit" className="h-10 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background">
                           Login
                         </button>
                       </div>
@@ -324,12 +370,12 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="hidden items-center gap-1.5 rounded-full bg-success/10 px-3 py-1.5 text-xs font-semibold text-success ring-1 ring-success/20 sm:inline-flex">
+                <span className="hidden items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success ring-1 ring-success/20 sm:inline-flex">
                   <span className="h-1.5 w-1.5 rounded-full bg-success motion-safe:animate-pulse" /> Admin
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-muted transition-all hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-muted transition-all hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
                 >
                   <LogOut size={16} /> <span className="hidden sm:inline">Logout</span>
                 </button>
@@ -341,9 +387,9 @@ export default function Home() {
 
       <div className="mx-auto flex w-full max-w-[1600px] flex-1">
         {/* ============================ SIDEBAR ============================ */}
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-border bg-surface/40 px-3 py-6 lg:flex">
-          <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted">Browse</p>
-          <nav className="space-y-1">
+        <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col border-r border-border bg-surface/40 py-6 transition-all duration-300 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2 items-center' : 'w-64 px-3'}`}>
+          {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted">Browse</p>}
+          <nav className="space-y-1 w-full">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = activeNav === item.key;
@@ -352,104 +398,125 @@ export default function Home() {
                 <button
                   key={item.key}
                   onClick={() => setActiveNav(item.key)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"}`}
-                  aria-current={active ? "page" : undefined}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  title={sidebarCollapsed ? item.label : undefined}
                 >
                   <Icon size={18} className="shrink-0" />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted"}`}>{count}</span>
+                  {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
+                  {!sidebarCollapsed && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted"}`}>{count}</span>}
                 </button>
               );
             })}
           </nav>
 
-          <p className="px-3 pb-2 pt-7 text-[11px] font-bold uppercase tracking-wider text-muted">Library</p>
-          <nav className="space-y-1">
+          {!sidebarCollapsed && <p className="px-3 pb-2 pt-6 text-[10px] font-bold uppercase tracking-wider text-muted">Library</p>}
+          <nav className="space-y-1 w-full mt-2">
             {[
-              { label: "Bookmarks", icon: Bookmark },
-              { label: "Recent Uploads", icon: Clock },
-              { label: "AI Study Assistant", icon: Sparkles },
-            ].map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                disabled
-                className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted/60 transition-colors"
-                title="Coming soon"
-              >
-                <Icon size={18} className="shrink-0" />
-                <span className="flex-1 text-left">{label}</span>
-                <span className="rounded-full bg-background px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted ring-1 ring-border">Soon</span>
-              </button>
-            ))}
+              { key: "bookmarks", label: "Bookmarks", icon: Bookmark },
+              { key: "recent", label: "Recent Uploads", icon: Clock },
+            ].map((item) => {
+              const active = activeNav === item.key;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveNav(item.key as NavKey)}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
+                </button>
+              );
+            })}
           </nav>
-
-          <div className="mt-auto rounded-2xl border border-border bg-gradient-to-br from-primary-soft to-transparent p-4">
-            <div className="flex items-center gap-2 text-primary">
-              <Sparkles size={16} />
-              <p className="text-xs font-bold">Study smarter</p>
-            </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-muted">AI summaries & PDF preview are coming soon to supercharge your prep.</p>
-          </div>
         </aside>
 
         {/* ============================ MAIN ============================ */}
-        <main className="flex-1 px-4 pb-16 pt-6 md:px-8 lg:px-10">
-          <div className="mx-auto max-w-6xl space-y-6 md:space-y-8">
+        <main className="flex-1 px-4 pb-16 pt-6 md:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl space-y-5 md:space-y-6">
 
-            {/* HERO */}
-            {!isSearchingGlobal ? (
-              <section className="animate-fade-up relative overflow-hidden rounded-3xl border border-border bg-surface p-6 shadow-sm md:p-8">
+            {/* HERO & DYNAMIC HEADERS */}
+            {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && (
+              <section className="animate-fade-up relative overflow-hidden rounded-2xl border border-border bg-surface p-5 shadow-sm md:p-6">
                 <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/5 blur-3xl" />
                 <div className="relative">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold text-muted">
                     <GraduationCap size={14} className="text-primary" /> Academic Portal
                   </div>
-                  <h1 className="mt-4 text-pretty text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl">
+                  <h1 className="mt-3 text-pretty text-2xl font-extrabold leading-tight tracking-tight text-foreground sm:text-3xl md:text-4xl">
                     Everything a first-year{" "}
                     <span className="text-primary">B.Tech student</span> needs
                   </h1>
-                  <p className="mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-muted md:text-base">
-                    Resources, PYQs, notes, assignments and syllabus — beautifully organized in one place.
-                  </p>
 
-                  <div className="mt-6 grid grid-cols-3 gap-3 sm:max-w-md">
+                  <div className="mt-5 grid grid-cols-3 gap-2 sm:max-w-[320px]">
                     {[
                       { label: "Subjects", value: SUBJECTS.length, icon: BookOpen },
                       { label: "Resources", value: subjectDocs.length, icon: FileText },
                       { label: "Modules", value: subjectModules || 0, icon: Layers },
                     ].map(({ label, value, icon: Icon }) => (
-                      <div key={label} className="rounded-2xl border border-border bg-background p-3.5">
-                        <Icon size={18} className="text-primary" />
-                        <p className="mt-2 text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">{value}</p>
-                        <p className="text-xs font-medium text-muted">{label}</p>
+                      <div key={label} className="rounded-xl border border-border bg-background p-2.5">
+                        <Icon size={16} className="text-primary" />
+                        <p className="mt-1.5 text-lg font-extrabold tracking-tight text-foreground">{value}</p>
+                        <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">{label}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               </section>
-            ) : (
-              <section className="animate-fade-up rounded-3xl border border-primary/20 bg-primary-soft p-6 md:p-8">
+            )}
+
+            {isSearchingGlobal && (
+              <section className="animate-fade-up rounded-2xl border border-primary/20 bg-primary-soft p-5 md:p-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                    <Search size={20} />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                    <Search size={18} />
                   </div>
                   <div>
-                    <h1 className="text-xl font-extrabold tracking-tight text-foreground md:text-2xl">Search results</h1>
-                    <p className="mt-0.5 text-sm font-medium text-muted">Matching &ldquo;{searchQuery}&rdquo; across all subjects</p>
+                    <h1 className="text-lg font-extrabold tracking-tight text-foreground md:text-xl">Search results</h1>
+                    <p className="text-xs font-medium text-muted">Matching &ldquo;{searchQuery}&rdquo; across all subjects</p>
                   </div>
                 </div>
               </section>
             )}
 
-            {/* SUBJECT + MODULE CONTROLS */}
-            {!isSearchingGlobal && (
-              <section className="animate-fade-up space-y-5 rounded-3xl border border-border bg-surface p-5 shadow-sm md:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="w-full space-y-2 sm:max-w-xs">
-                    <label htmlFor="hero-subject" className="text-[11px] font-bold uppercase tracking-wider text-muted">Subject</label>
+            {activeNav === "bookmarks" && !isSearchingGlobal && (
+               <section className="animate-fade-up rounded-2xl border border-border bg-surface p-5 md:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Bookmark size={18} />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-extrabold tracking-tight text-foreground md:text-xl">Your Saved Bookmarks</h1>
+                    <p className="text-xs font-medium text-muted">Quick access to your most important resources.</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {activeNav === "recent" && !isSearchingGlobal && (
+               <section className="animate-fade-up rounded-2xl border border-border bg-surface p-5 md:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-extrabold tracking-tight text-foreground md:text-xl">Recently Uploaded</h1>
+                    <p className="text-xs font-medium text-muted">The latest resources added to the database.</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* SUBJECT + MODULE CONTROLS (Only show if not in global search, bookmarks, or recent) */}
+            {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && (
+              <section className="animate-fade-up space-y-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="w-full space-y-1.5 sm:max-w-xs">
+                    <label htmlFor="hero-subject" className="text-[10px] font-bold uppercase tracking-wider text-muted">Subject Domain</label>
                     <div className="group relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted transition-colors group-focus-within:text-primary">
-                        <BookOpen size={18} />
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted transition-colors group-focus-within:text-primary">
+                        <BookOpen size={16} />
                       </div>
                       <select
                         id="hero-subject"
@@ -458,29 +525,28 @@ export default function Home() {
                           setActiveSubject(e.target.value);
                           setUploadSubject(e.target.value);
                         }}
-                        className="h-12 w-full cursor-pointer appearance-none rounded-xl border border-border bg-background pl-11 pr-10 text-sm font-bold text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
+                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-border bg-background pl-9 pr-10 text-xs font-bold text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                       >
                         {SUBJECTS.map((sub) => (
                           <option key={sub} value={sub}>{sub}</option>
                         ))}
                       </select>
-                      <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-muted" />
+                      <ChevronRight size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-muted" />
                     </div>
                   </div>
 
                   {isAdmin && (
                     <button
                       onClick={() => setShowForm(true)}
-                      className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
+                      className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
                     >
-                      <Plus size={18} /> Upload Resource
+                      <Plus size={16} /> Upload Resource
                     </button>
                   )}
                 </div>
 
                 <div>
-                  <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wider text-muted">Modules</p>
-                  <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 mt-1">
                     {[1, 2, 3, 4, 5].map((mod) => {
                       const active = activeModule === mod;
                       return (
@@ -490,14 +556,14 @@ export default function Home() {
                             setActiveModule(mod);
                             setUploadModule(mod);
                           }}
-                          className={`flex flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-3.5 text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                             active
                               ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/30"
                               : "border-border bg-background text-muted hover:border-primary/40 hover:text-foreground"
                           }`}
                           aria-pressed={active}
                         >
-                          <Layers size={16} className={active ? "text-primary-foreground" : "text-muted"} />
+                          <Layers size={14} className={active ? "text-primary-foreground" : "text-muted"} />
                           Module {mod}
                         </button>
                       );
@@ -507,35 +573,35 @@ export default function Home() {
               </section>
             )}
 
-            {/* SEGMENTED CONTROL */}
+            {/* SEGMENTED CONTROL FOR MOBILE */}
             <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden hide-scrollbar" aria-label="Resource categories">
-              {NAV_ITEMS.map((item) => {
+              {[...NAV_ITEMS, {key: "bookmarks", label: "Bookmarks", icon: Bookmark}, {key: "recent", label: "Recent", icon: Clock}].map((item) => {
                 const Icon = item.icon;
                 const active = activeNav === item.key;
                 return (
                   <button
                     key={item.key}
-                    onClick={() => setActiveNav(item.key)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "border border-border bg-surface text-muted"}`}
+                    onClick={() => setActiveNav(item.key as NavKey)}
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "border border-border bg-surface text-muted"}`}
                   >
-                    <Icon size={16} /> {item.label}
+                    <Icon size={14} /> {item.label}
                   </button>
                 );
               })}
             </nav>
 
             {/* GRID HEADER */}
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3">
               <div>
-                <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-foreground md:text-xl">
-                  {isSearchingGlobal ? <TrendingUp size={20} className="text-primary" /> : <FolderOpen size={20} className="text-primary" />}
+                <h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-foreground md:text-lg">
+                  {isSearchingGlobal ? <TrendingUp size={18} className="text-primary" /> : <FolderOpen size={18} className="text-primary" />}
                   {isSearchingGlobal
                     ? "Global Search"
                     : activeNav === "dashboard"
                     ? `${activeSubject} · Module ${activeModule}`
                     : activeLabel}
                 </h2>
-                <p className="mt-1 text-sm font-medium text-muted">
+                <p className="text-[11px] font-medium text-muted">
                   {filteredDocuments.length} {filteredDocuments.length === 1 ? "resource" : "resources"} available
                 </p>
               </div>
@@ -543,106 +609,105 @@ export default function Home() {
 
             {/* CONTENT GRID */}
             {loading ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-48 animate-pulse rounded-2xl border border-border bg-surface" />
+                  <div key={i} className="h-44 animate-pulse rounded-2xl border border-border bg-surface" />
                 ))}
               </div>
             ) : filteredDocuments.length === 0 ? (
-              <div className="animate-fade-up flex flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-surface px-6 py-20 text-center">
-                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary ring-1 ring-primary/10">
-                  <BookOpen size={28} />
+              <div className="animate-fade-up flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary ring-1 ring-primary/10">
+                  <BookOpen size={24} />
                 </div>
-                <h3 className="text-lg font-bold tracking-tight text-foreground">No resources available yet</h3>
-                <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+                <h3 className="text-base font-bold tracking-tight text-foreground">No resources available yet</h3>
+                <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-muted">
                   {isSearchingGlobal
                     ? "Try a different keyword, or browse subjects directly."
-                    : "Materials for this module will appear here once uploaded. Check other modules or resource categories."}
+                    : activeNav === "bookmarks"
+                    ? "You haven't bookmarked any documents yet."
+                    : "Materials for this selection will appear here once uploaded."}
                 </p>
-                {!isSearchingGlobal && (
-                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                    {NAV_ITEMS.filter((n) => n.key !== "dashboard" && n.key !== activeNav).map((n) => (
-                      <button
-                        key={n.key}
-                        onClick={() => setActiveNav(n.key)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-muted transition-colors hover:border-primary/40 hover:text-foreground"
-                      >
-                        Browse {n.label} <ArrowUpRight size={13} />
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredDocuments.map((doc, idx) => (
+                {filteredDocuments.map((doc, idx) => {
+                  const isBookmarked = bookmarks.includes(doc.id);
+                  return (
                   <article
                     key={doc.id}
-                    className="animate-fade-up group flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+                    className="animate-fade-up group flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
                     style={{ animationDelay: `${Math.min(idx * 40, 240)}ms` }}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${CATEGORY_ICON_STYLES[doc.category] ?? "bg-primary/10 text-primary"}`}>
-                        <FileText size={20} />
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${CATEGORY_ICON_STYLES[doc.category] ?? "bg-primary/10 text-primary"}`}>
+                        <FileText size={18} />
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${CATEGORY_STYLES[doc.category] ?? "bg-background text-muted ring-border"}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ${CATEGORY_STYLES[doc.category] ?? "bg-background text-muted ring-border"}`}>
                         {categoryLabel(doc.category)}
                       </span>
                     </div>
 
-                    <h3 className="mt-4 line-clamp-2 text-base font-bold leading-snug text-foreground" title={doc.title}>
+                    <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-snug text-foreground" title={doc.title}>
                       {doc.title}
                     </h3>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                      {(isSearchingGlobal ? doc.subject : null) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+                      {(isSearchingGlobal || activeNav === "recent" || activeNav === "bookmarks") && doc.subject && (
                         <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                          <BookOpen size={12} /> {doc.subject}
+                          <BookOpen size={10} /> {doc.subject}
                         </span>
                       )}
                       {doc.module_id && (
-                        <span className="inline-flex items-center gap-1">
-                          <Layers size={12} /> Module {doc.module_id}
+                        <span className="inline-flex items-center gap-1 font-medium">
+                          <Layers size={10} /> Module {doc.module_id}
                         </span>
                       )}
                       <span className="inline-flex items-center gap-1">
-                        <Clock size={12} /> {formatDate(doc.created_at)}
+                        <Clock size={10} /> {formatDate(doc.created_at)}
                       </span>
                     </div>
 
-                    <p className="mt-2 flex-1 text-xs text-muted">
-                      Uploaded by <span className="font-semibold text-foreground">{doc.uploaded_by || "Admin"}</span>
+                    <p className="mt-2 flex-1 text-[11px] text-muted">
+                      By <span className="font-semibold text-foreground">{doc.uploaded_by || "Admin"}</span>
                     </p>
 
-                    <div className="mt-5 flex items-center gap-2 border-t border-border/70 pt-4">
+                    <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-3">
                       <a
                         href={doc.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
-                        <Download size={16} /> Download
+                        <Download size={14} /> Download
                       </a>
                       <button
-                        disabled
-                        title="Bookmark — coming soon"
-                        className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-border bg-background p-2.5 text-muted/60"
-                        aria-label="Bookmark (coming soon)"
+                        onClick={() => setPreviewDoc(doc)}
+                        className="inline-flex items-center justify-center rounded-xl border border-border bg-background p-2 text-muted transition-all hover:border-primary hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        aria-label="Preview document"
+                        title="Preview PDF"
                       >
-                        <Bookmark size={18} />
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => toggleBookmark(doc.id)}
+                        className={`inline-flex items-center justify-center rounded-xl border p-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isBookmarked ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted hover:border-primary hover:bg-primary/5 hover:text-primary'}`}
+                        aria-label="Bookmark document"
+                        title={isBookmarked ? "Remove Bookmark" : "Bookmark PDF"}
+                      >
+                        <Bookmark size={16} className={isBookmarked ? "fill-primary" : ""} />
                       </button>
                       {isAdmin && (
                         <button
                           onClick={() => handleDelete(doc.id)}
-                          className="inline-flex items-center justify-center rounded-xl border border-border bg-background p-2.5 text-muted transition-all hover:border-destructive hover:bg-destructive hover:text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                          className="inline-flex items-center justify-center rounded-xl border border-border bg-background p-2 text-muted transition-all hover:border-destructive hover:bg-destructive hover:text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
                           aria-label="Delete document"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>
                   </article>
-                ))}
+                )})}
               </div>
             )}
           </div>
@@ -658,10 +723,10 @@ export default function Home() {
             <button
               key={item.key}
               onClick={() => setActiveNav(item.key)}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none ${active ? "text-primary" : "text-muted"}`}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors focus-visible:outline-none ${active ? "text-primary" : "text-muted"}`}
               aria-current={active ? "page" : undefined}
             >
-              <Icon size={20} />
+              <Icon size={18} />
               {item.label}
             </button>
           );
@@ -670,17 +735,17 @@ export default function Home() {
 
       {/* ============================ UPLOAD MODAL ============================ */}
       {isAdmin && showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-title">
           <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setShowForm(false)} aria-hidden="true" />
           <div className="animate-fade-up relative z-10 w-full max-w-xl overflow-hidden rounded-t-3xl border border-border bg-surface shadow-2xl sm:rounded-3xl">
-            <div className="flex items-center justify-between border-b border-border bg-background px-6 py-4">
+            <div className="flex items-center justify-between border-b border-border bg-background px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                  <Upload size={16} />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <Upload size={14} />
                 </div>
                 <div>
-                  <h2 id="modal-title" className="text-base font-extrabold tracking-tight text-foreground">Upload Resource</h2>
-                  <p className="text-xs font-medium text-muted">Add files to the central library</p>
+                  <h2 id="modal-title" className="text-sm font-extrabold tracking-tight text-foreground">Upload Resource</h2>
+                  <p className="text-[11px] font-medium text-muted">Add files to the central library</p>
                 </div>
               </div>
               <button
@@ -688,63 +753,115 @@ export default function Home() {
                 className="rounded-xl p-2 text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Close modal"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleUpload} className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-6">
-              <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-background p-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label htmlFor="target-subject" className="text-[11px] font-bold uppercase tracking-wider text-muted">Subject</label>
-                  <select id="target-subject" value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-11 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-sm font-medium text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/10">
+            <form onSubmit={handleUpload} className="max-h-[70vh] space-y-4 overflow-y-auto px-5 py-5">
+              <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-background p-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label htmlFor="target-subject" className="text-[10px] font-bold uppercase tracking-wider text-muted">Subject</label>
+                  <select id="target-subject" value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                     {SUBJECTS.map((sub) => <option key={sub} value={sub}>{sub}</option>)}
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="target-module" className="text-[11px] font-bold uppercase tracking-wider text-muted">Module</label>
-                  <select id="target-module" value={uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} className="h-11 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-sm font-medium text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/10">
+                <div className="space-y-1">
+                  <label htmlFor="target-module" className="text-[10px] font-bold uppercase tracking-wider text-muted">Module</label>
+                  <select id="target-module" value={uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                     {[1, 2, 3, 4, 5].map((mod) => <option key={mod} value={mod}>Module {mod}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="doc-title" className="text-sm font-semibold text-foreground">Document Title</label>
-                <input id="doc-title" required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Newton's Laws Summary" className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:ring-4 focus:ring-primary/10" />
+              <div className="space-y-1">
+                <label htmlFor="doc-title" className="text-xs font-semibold text-foreground">Document Title</label>
+                <input id="doc-title" required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Newton's Laws Summary" className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/20" />
               </div>
 
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label htmlFor="doc-category" className="text-sm font-semibold text-foreground">Category</label>
-                  <select id="doc-category" value={category} onChange={(e) => setCategory(e.target.value)} className="h-11 w-full cursor-pointer rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/10">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label htmlFor="doc-category" className="text-xs font-semibold text-foreground">Category</label>
+                  <select id="doc-category" value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                     <option value="notes">Notes</option>
                     <option value="pyq">PYQ (Previous Year Question)</option>
                     <option value="syllabus">Syllabus</option>
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="doc-uploader" className="text-sm font-semibold text-foreground">Uploader Name</label>
-                  <input id="doc-uploader" type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} placeholder="Admin" className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:ring-4 focus:ring-primary/10" />
+                <div className="space-y-1">
+                  <label htmlFor="doc-uploader" className="text-xs font-semibold text-foreground">Uploader Name</label>
+                  <input id="doc-uploader" type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} placeholder="Admin" className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/20" />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="doc-file" className="text-sm font-semibold text-foreground">PDF File</label>
-                <div className="rounded-xl border border-dashed border-border bg-background p-2 transition-colors focus-within:border-primary hover:border-primary/50">
-                  <input id="doc-file" required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full cursor-pointer text-sm font-medium text-muted outline-none file:mr-4 file:cursor-pointer file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-foreground hover:file:bg-hover" />
+              <div className="space-y-1">
+                <label htmlFor="doc-file" className="text-xs font-semibold text-foreground">PDF File</label>
+                <div className="rounded-xl border border-dashed border-border bg-background p-1.5 transition-colors focus-within:border-primary hover:border-primary/50">
+                  <input id="doc-file" required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full cursor-pointer text-xs font-medium text-muted outline-none file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:font-semibold file:text-foreground hover:file:bg-hover" />
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-3 border-t border-border pt-4">
-                <button type="button" onClick={() => setShowForm(false)} className="h-11 flex-1 rounded-xl border border-border bg-surface text-sm font-semibold text-muted transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Cancel</button>
-                <button disabled={uploading} type="submit" className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background">
-                  {uploading ? <><Loader2 size={16} className="animate-spin" /> Uploading...</> : "Submit"}
+              <div className="mt-5 flex gap-3 border-t border-border pt-4">
+                <button type="button" onClick={() => setShowForm(false)} className="h-10 flex-1 rounded-xl border border-border bg-surface text-xs font-semibold text-muted transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Cancel</button>
+                <button disabled={uploading} type="submit" className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background">
+                  {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : "Submit"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* ============================ PREVIEW MODAL ============================ */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setPreviewDoc(null)} aria-hidden="true" />
+          <div className="animate-fade-up relative z-10 flex h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+            
+            <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-3 sm:px-6">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <FileText size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h2 id="preview-title" className="truncate text-sm font-extrabold tracking-tight text-foreground" title={previewDoc.title}>
+                    {previewDoc.title}
+                  </h2>
+                  <p className="truncate text-[11px] font-medium text-muted">
+                    {previewDoc.subject} • Module {previewDoc.module_id}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex shrink-0 items-center gap-2 pl-4">
+                <a
+                  href={previewDoc.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
+                >
+                  <Download size={14} /> <span className="hidden md:inline">Download</span>
+                </a>
+                <button
+                  onClick={() => setPreviewDoc(null)}
+                  className="rounded-xl border border-border bg-background p-2 text-muted transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label="Close preview"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden bg-muted/20 p-2 sm:p-4">
+              <iframe
+                src={`${previewDoc.file_url}#view=FitH`}
+                className="h-full w-full rounded-xl border border-border bg-background shadow-sm"
+                title={`Preview of ${previewDoc.title}`}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
