@@ -13,7 +13,7 @@ import {
   Trash2, LayoutDashboard, NotebookPen, FileQuestion, ListChecks,
   Search, BookOpen, Moon, Sun, Loader2, Bookmark, Clock,
   Layers, FolderOpen, ChevronRight, TrendingUp, Eye,
-  PanelLeft, PanelLeftClose
+  PanelLeft, PanelLeftClose, Sparkles
 } from "lucide-react";
 
 interface Document {
@@ -382,48 +382,76 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-[1600px] flex-1">
         {/* ============================ SIDEBAR ============================ */}
         <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col border-r border-border bg-surface/40 py-6 transition-all duration-300 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2 items-center' : 'w-64 px-3'}`}>
-          {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted">Browse</p>}
-          <nav className="space-y-1 w-full">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = activeNav === item.key;
-              const count = subjectDocs.filter((d) => item.key === "dashboard" || d.category === item.key).length;
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => setActiveNav(item.key)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <Icon size={18} className="shrink-0" />
-                  {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
-                  {!sidebarCollapsed && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted"}`}>{count}</span>}
-                </button>
-              );
-            })}
-          </nav>
+          
+          {/* Top Nav Section */}
+          <div className="w-full">
+            {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted">Browse</p>}
+            <nav className="space-y-1 w-full">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = activeNav === item.key;
+                const count = subjectDocs.filter((d) => item.key === "dashboard" || d.category === item.key).length;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setActiveNav(item.key)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    title={sidebarCollapsed ? item.label : undefined}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
+                    {!sidebarCollapsed && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted"}`}>{count}</span>}
+                  </button>
+                );
+              })}
+            </nav>
 
-          {!sidebarCollapsed && <p className="px-3 pb-2 pt-6 text-[10px] font-bold uppercase tracking-wider text-muted">Library</p>}
-          <nav className="space-y-1 w-full mt-2">
-            {[
-              { key: "bookmarks", label: "Bookmarks", icon: Bookmark },
-              { key: "recent", label: "Recent Uploads", icon: Clock },
-            ].map((item) => {
-              const active = activeNav === item.key;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => setActiveNav(item.key as NavKey)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <Icon size={18} className="shrink-0" />
-                  {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
-                </button>
-              );
-            })}
-          </nav>
+            {!sidebarCollapsed && <p className="px-3 pb-2 pt-6 text-[10px] font-bold uppercase tracking-wider text-muted">Library</p>}
+            <nav className="space-y-1 w-full mt-2">
+              {[
+                { key: "bookmarks", label: "Bookmarks", icon: Bookmark },
+                { key: "recent", label: "Recent Uploads", icon: Clock },
+              ].map((item) => {
+                const active = activeNav === item.key;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setActiveNav(item.key as NavKey)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    title={sidebarCollapsed ? item.label : undefined}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Bottom Footer Section (Anchored via mt-auto) */}
+          <div className="mt-auto w-full pt-6">
+            {!sidebarCollapsed ? (
+              <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-4 mb-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <Sparkles size={14} />
+                  <p className="text-xs font-bold">Study smarter</p>
+                </div>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-muted">Advanced search and analytics coming soon.</p>
+              </div>
+            ) : (
+              <button className="flex w-full items-center justify-center rounded-xl p-2.5 text-primary hover:bg-primary/10 transition-colors mb-4" title="Study smarter">
+                <Sparkles size={16} />
+              </button>
+            )}
+            
+            {!sidebarCollapsed && (
+              <div className="px-3 flex flex-col gap-1">
+                <p className="text-[10px] font-semibold text-muted/70">Academic Portal v1.0.0</p>
+                <p className="text-[9px] text-muted/50">&copy; {new Date().getFullYear()} B.Tech Hub</p>
+              </div>
+            )}
+          </div>
         </aside>
 
         {/* ============================ MAIN ============================ */}
@@ -439,7 +467,6 @@ export default function Home() {
                     <GraduationCap size={14} className="text-primary" /> Academic Portal
                   </div>
                   
-                  {/* Fixed Header: Responsive scaling + text-wrap + break-words */}
                   <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl break-words whitespace-normal text-wrap">
                     Everything a first-year <span className="text-primary">B.Tech student</span> needs
                   </h1>
@@ -447,7 +474,6 @@ export default function Home() {
                     Resources, PYQs, notes, assignments and syllabus beautifully organized in one place.
                   </p>
 
-                  {/* Stat Cards - responsive grid */}
                   <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-2 w-full sm:max-w-md">
                     {[
                       { label: "Subjects", value: SUBJECTS.length, icon: BookOpen },
@@ -545,7 +571,6 @@ export default function Home() {
                 </div>
 
                 <div className="w-full">
-                  {/* Fixed Module Grid: Responsive columns mathematically guaranteeing no overflow */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-1 w-full">
                     {[1, 2, 3, 4, 5].map((mod) => {
                       const active = activeModule === mod;
@@ -573,7 +598,7 @@ export default function Home() {
               </section>
             )}
 
-            {/* SEGMENTED CONTROL FOR MOBILE (overflow-x-auto restricted within its parent) */}
+            {/* SEGMENTED CONTROL FOR MOBILE */}
             <div className="w-full lg:hidden min-w-0">
               <nav className="flex gap-2 overflow-x-auto hide-scrollbar pb-2" aria-label="Resource categories">
                 {[...NAV_ITEMS, {key: "bookmarks", label: "Bookmarks", icon: Bookmark}, {key: "recent", label: "Recent", icon: Clock}].map((item) => {
