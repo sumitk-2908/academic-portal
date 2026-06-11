@@ -59,10 +59,13 @@ const SUBJECTS = [
   "ENGINEERING GRAPHICS"
 ];
 
-const NON_MODULE_SUBJECTS = [
-  "WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS",
-  "PHYSICS LAB", "CHEMISTRY LAB", "BE LAB", "BEE LAB"
-];
+// Helper to determine if a subject uses modules
+const isNonModuleSubject = (subject?: string) => {
+  if (!subject) return false;
+  const upperCaseSubject = subject.toUpperCase();
+  const explicitNonModules = ["WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS"];
+  return explicitNonModules.includes(upperCaseSubject) || upperCaseSubject.endsWith("LAB");
+};
 
 function categoryLabel(category: string) {
   if (category === "pyq") return "PYQ";
@@ -168,22 +171,18 @@ export default function Home() {
     localStorage.setItem("portal_study_history", JSON.stringify(historyItem));
   };
 
-  // Force strict local download behavior without opening a new tab
   const handleForceDownload = (e: React.MouseEvent, url: string, title: string) => {
     e.stopPropagation();
     e.preventDefault();
     
-    // Sanitize title to ensure safe filename
     const safeTitle = title.replace(/[^a-zA-Z0-9 \-_]/g, '').trim() || 'document';
-    
-    // Append Supabase native download parameter to force attachment disposition
     const downloadUrl = url.includes('?') 
       ? `${url}&download=${encodeURIComponent(safeTitle)}.pdf` 
       : `${url}?download=${encodeURIComponent(safeTitle)}.pdf`;
       
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.setAttribute("download", `${safeTitle}.pdf`); // Fallback standard HTML5 attribute
+    link.setAttribute("download", `${safeTitle}.pdf`); 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -193,9 +192,9 @@ export default function Home() {
     setLoading(true);
     try {
       let data = [];
-      const isNonModuleSubject = NON_MODULE_SUBJECTS.includes(activeSubject);
+      const isNonModule = isNonModuleSubject(activeSubject);
       
-      if (activeNav === "recent" || activeNav === "bookmarks" || activeNav === "syllabus" || isNonModuleSubject) {
+      if (activeNav === "recent" || activeNav === "bookmarks" || activeNav === "syllabus" || isNonModule) {
         data = await searchDocuments(""); 
       } else {
         data = await getDocumentsByModule(activeModule);
@@ -230,7 +229,6 @@ export default function Home() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, activeModule, activeSubject, activeNav]); 
 
-  // Safely track admin session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setIsAdmin(true);
@@ -303,8 +301,8 @@ export default function Home() {
       const matchesSubject = doc.subject === activeSubject;
       const matchesCategory = activeNav === "dashboard" || doc.category === activeNav;
       
-      const isNonModuleSubject = NON_MODULE_SUBJECTS.includes(activeSubject);
-      const matchesModule = (activeNav === "syllabus" || isNonModuleSubject) ? true : doc.module_id === activeModule;
+      const isNonModule = isNonModuleSubject(activeSubject);
+      const matchesModule = (activeNav === "syllabus" || isNonModule) ? true : doc.module_id === activeModule;
 
       return matchesSubject && matchesCategory && matchesModule;
     });
@@ -325,10 +323,10 @@ export default function Home() {
     activeNav === "recent" ? "Recently Uploaded" :
     NAV_ITEMS.find((item) => item.key === activeNav)?.label ?? "Dashboard";
 
-  const isNonModuleSubject = NON_MODULE_SUBJECTS.includes(activeSubject);
-  const hideModuleSelector = activeNav === "syllabus" || isNonModuleSubject;
+  const isCurrentNonModule = isNonModuleSubject(activeSubject);
+  const hideModuleSelector = activeNav === "syllabus" || isCurrentNonModule;
   
-  const isUploadNonModule = NON_MODULE_SUBJECTS.includes(uploadSubject);
+  const isUploadNonModule = isNonModuleSubject(uploadSubject);
   const hideUploadModule = category === "syllabus" || isUploadNonModule;
 
   return (
@@ -522,7 +520,7 @@ export default function Home() {
                         </h3>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
                           {recentStudy.subject && <span className="font-semibold text-[#4F46E5] dark:text-[#6366F1] truncate max-w-[140px]">{recentStudy.subject}</span>}
-                          {recentStudy.module_id && <span>• Module {recentStudy.module_id}</span>}
+                          {recentStudy.module_id && recentStudy.category !== "syllabus" && !isNonModuleSubject(recentStudy.subject) && <span>• Module {recentStudy.module_id}</span>}
                           <span className="uppercase tracking-wider"> • {recentStudy.category}</span>
                           <span>• Accessed {formatDate(new Date(recentStudy.timestamp).toISOString())}</span>
                         </div>
@@ -754,7 +752,7 @@ export default function Home() {
                           <BookOpen size={10} className="shrink-0" /> <span className="truncate">{doc.subject}</span>
                         </span>
                       )}
-                      {doc.module_id && (
+                      {doc.module_id && doc.category !== "syllabus" && !isNonModuleSubject(doc.subject) && (
                         <span className="inline-flex items-center gap-1 font-medium whitespace-nowrap">
                           <Layers size={10} className="shrink-0" /> Module {doc.module_id}
                         </span>
@@ -910,7 +908,8 @@ export default function Home() {
                     {previewDoc.title}
                   </h2>
                   <p className="truncate text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">
-                    {previewDoc.subject} • Module {previewDoc.module_id}
+                    {previewDoc.subject}
+                    {previewDoc.module_id && previewDoc.category !== "syllabus" && !isNonModuleSubject(previewDoc.subject) && ` • Module ${previewDoc.module_id}`}
                   </p>
                 </div>
               </div>
