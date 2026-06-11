@@ -9,7 +9,7 @@ import {
   supabase,
 } from "./lib/api";
 import {
-  FileText, Download, GraduationCap, Plus, Upload, X, Lock, LogOut,
+  FileText, Download, GraduationCap, Plus, Upload, X, LogOut,
   Trash2, LayoutDashboard, NotebookPen, FileQuestion, ListChecks,
   Search, BookOpen, Moon, Sun, Loader2, Bookmark, Clock,
   Layers, FolderOpen, ChevronRight, TrendingUp, Eye,
@@ -81,12 +81,6 @@ export default function Home() {
   // --- Theme State ---
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  // --- Auth states ---
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [showLogin, setShowLogin] = useState(false);
 
   // --- UI & Navigation states ---
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -183,25 +177,19 @@ export default function Home() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, activeModule, activeSubject, activeNav]); 
 
+  // Check for admin session on load
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setIsAdmin(true);
     });
+    
+    // Set up a listener for auth changes (in case they log out from another tab)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdmin(!!session);
+    });
+    
+    return () => subscription.unsubscribe();
   }, []);
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setAuthError(error.message);
-    } else {
-      setIsAdmin(true);
-      setShowLogin(false);
-      setEmail("");
-      setPassword("");
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -346,40 +334,8 @@ export default function Home() {
               {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : <div className="h-4 w-4" />}
             </button>
 
-            {!isAdmin ? (
-              <div className="relative">
-                <button
-                  onClick={() => setShowLogin((v) => !v)}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
-                  aria-expanded={showLogin}
-                >
-                  <Lock size={16} /> <span className="hidden sm:inline">Admin</span>
-                </button>
-
-                {showLogin && (
-                  <>
-                    <button className="fixed inset-0 z-10 cursor-default outline-none" onClick={() => setShowLogin(false)} tabIndex={-1} aria-label="Close login" />
-                    <form onSubmit={handleAdminLogin} className="animate-fade-up absolute right-0 top-12 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-surface p-5 shadow-2xl">
-                      <p className="mb-4 text-sm font-bold tracking-tight text-foreground">Sign in to manage resources</p>
-                      <div className="space-y-3">
-                        <div>
-                          <label htmlFor="login-email" className="sr-only">Email</label>
-                          <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Admin email" className="h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20" required />
-                        </div>
-                        <div>
-                          <label htmlFor="login-password" className="sr-only">Password</label>
-                          <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20" required />
-                        </div>
-                        {authError && <p className="rounded-lg border border-destructive/20 bg-destructive/10 p-2.5 text-xs font-semibold text-destructive">{authError}</p>}
-                        <button type="submit" className="h-10 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background">
-                          Login
-                        </button>
-                      </div>
-                    </form>
-                  </>
-                )}
-              </div>
-            ) : (
+            {/* ONLY Admins see controls here now. No public login button. */}
+            {isAdmin && (
               <div className="flex items-center gap-2">
                 <span className="hidden items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success ring-1 ring-success/20 sm:inline-flex">
                   <span className="h-1.5 w-1.5 rounded-full bg-success motion-safe:animate-pulse" /> Admin
@@ -445,7 +401,6 @@ export default function Home() {
             </nav>
           </div>
 
-          {/* Bottom Footer Section (Anchored via mt-auto) */}
           <div className="mt-auto w-full pt-6">
             {!sidebarCollapsed && (
               <>
