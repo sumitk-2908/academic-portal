@@ -9,7 +9,7 @@ import {
   supabase,
 } from "./lib/api";
 import {
-  FileText, Download, GraduationCap, Plus, Upload, X, Lock, LogOut,
+  FileText, Download, GraduationCap, Plus, Upload, X, LogOut,
   Trash2, LayoutDashboard, NotebookPen, FileQuestion, ListChecks,
   Search, BookOpen, Moon, Sun, Loader2, Bookmark, Clock,
   Layers, FolderOpen, ChevronRight, TrendingUp, Eye,
@@ -27,7 +27,6 @@ interface Document {
   subject?: string;
 }
 
-// Fixed: StudyHistory now inherits everything from Document, guaranteeing perfect overlap.
 interface StudyHistory extends Document {
   timestamp: number;
 }
@@ -87,12 +86,6 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // --- Auth states ---
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [showLogin, setShowLogin] = useState(false);
-
   // --- UI & Navigation states ---
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
@@ -120,7 +113,22 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    setIsDarkMode(document.documentElement.classList.contains("dark"));
+    
+    // 1. Enforce Dark Mode as Default
+    const html = document.documentElement;
+    const storedTheme = localStorage.getItem("theme");
+    
+    if (storedTheme === "light") {
+      html.classList.remove("dark");
+      setIsDarkMode(false);
+    } else {
+      // Force dark mode if it's the first visit or explicitly set to dark
+      html.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      setIsDarkMode(true);
+    }
+
+    // 2. Load Local Data
     const storedBookmarks = localStorage.getItem("portal_bookmarks");
     if (storedBookmarks) {
       setBookmarks(JSON.parse(storedBookmarks));
@@ -152,7 +160,6 @@ export default function Home() {
     });
   };
 
-  // Fixed: Simply spread the whole Document object to guarantee TypeScript compliance
   const trackStudyActivity = (doc: Document) => {
     const historyItem: StudyHistory = {
       ...doc,
@@ -203,25 +210,18 @@ export default function Home() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, activeModule, activeSubject, activeNav]); 
 
+  // Safely track admin session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setIsAdmin(true);
     });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdmin(!!session);
+    });
+    
+    return () => subscription.unsubscribe();
   }, []);
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setAuthError(error.message);
-    } else {
-      setIsAdmin(true);
-      setShowLogin(false);
-      setEmail("");
-      setPassword("");
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -366,41 +366,7 @@ export default function Home() {
               {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : <div className="h-4 w-4" />}
             </button>
 
-            {!isAdmin ? (
-              <div className="relative">
-                <button
-                  onClick={() => setShowLogin((v) => !v)}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-3 text-sm font-semibold text-white shadow-sm shadow-[#4F46E5]/30 transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
-                  aria-label="Admin access"
-                  aria-expanded={showLogin}
-                >
-                  <Lock size={16} /> <span className="hidden sm:inline">Admin</span>
-                </button>
-
-                {showLogin && (
-                  <>
-                    <button className="fixed inset-0 z-10 cursor-default outline-none" onClick={() => setShowLogin(false)} tabIndex={-1} aria-label="Close login" />
-                    <form onSubmit={handleAdminLogin} className="animate-fade-up absolute right-0 top-12 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-5 shadow-2xl">
-                      <p className="mb-4 text-sm font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">Sign in to manage resources</p>
-                      <div className="space-y-3">
-                        <div>
-                          <label htmlFor="login-email" className="sr-only">Email</label>
-                          <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Admin email" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3.5 text-sm text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" required />
-                        </div>
-                        <div>
-                          <label htmlFor="login-password" className="sr-only">Password</label>
-                          <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3.5 text-sm text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" required />
-                        </div>
-                        {authError && <p className="rounded-lg border border-red-500/20 bg-red-500/10 p-2.5 text-xs font-semibold text-red-500">{authError}</p>}
-                        <button type="submit" className="h-10 w-full rounded-xl bg-[#4F46E5] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]">
-                          Login
-                        </button>
-                      </div>
-                    </form>
-                  </>
-                )}
-              </div>
-            ) : (
+            {isAdmin && (
               <div className="flex items-center gap-2">
                 <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-500 ring-1 ring-emerald-500/20 sm:inline-flex">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" /> Admin
