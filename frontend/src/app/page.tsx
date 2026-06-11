@@ -9,7 +9,7 @@ import {
   supabase,
 } from "./lib/api";
 import {
-  FileText, Download, GraduationCap, Plus, Upload, X, LogOut,
+  FileText, Download, GraduationCap, Plus, Upload, X, Lock, LogOut,
   Trash2, LayoutDashboard, NotebookPen, FileQuestion, ListChecks,
   Search, BookOpen, Moon, Sun, Loader2, Bookmark, Clock,
   Layers, FolderOpen, ChevronRight, TrendingUp, Eye,
@@ -27,6 +27,11 @@ interface Document {
   subject?: string;
 }
 
+// Fixed: StudyHistory now inherits everything from Document, guaranteeing perfect overlap.
+interface StudyHistory extends Document {
+  timestamp: number;
+}
+
 type NavKey = "dashboard" | "notes" | "pyq" | "syllabus" | "bookmarks" | "recent";
 
 const NAV_ITEMS: { key: NavKey; label: string; icon: typeof LayoutDashboard }[] = [
@@ -37,15 +42,15 @@ const NAV_ITEMS: { key: NavKey; label: string; icon: typeof LayoutDashboard }[] 
 ];
 
 const CATEGORY_STYLES: Record<string, string> = {
-  notes: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/25",
-  pyq: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/25",
-  syllabus: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/25",
+  notes: "bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1] ring-[#4F46E5]/20",
+  pyq: "bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1] ring-[#4F46E5]/20",
+  syllabus: "bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1] ring-[#4F46E5]/20",
 };
 
 const CATEGORY_ICON_STYLES: Record<string, string> = {
-  notes: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  pyq: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  syllabus: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  notes: "bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]",
+  pyq: "bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]",
+  syllabus: "bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]",
 };
 
 const SUBJECTS = [
@@ -82,6 +87,12 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // --- Auth states ---
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [showLogin, setShowLogin] = useState(false);
+
   // --- UI & Navigation states ---
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
@@ -96,6 +107,7 @@ export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
+  const [recentStudy, setRecentStudy] = useState<StudyHistory | null>(null);
 
   // --- Upload Form states ---
   const [uploading, setUploading] = useState(false);
@@ -112,6 +124,10 @@ export default function Home() {
     const storedBookmarks = localStorage.getItem("portal_bookmarks");
     if (storedBookmarks) {
       setBookmarks(JSON.parse(storedBookmarks));
+    }
+    const history = localStorage.getItem("portal_study_history");
+    if (history) {
+      setRecentStudy(JSON.parse(history));
     }
   }, []);
 
@@ -134,6 +150,16 @@ export default function Home() {
       localStorage.setItem("portal_bookmarks", JSON.stringify(next));
       return next;
     });
+  };
+
+  // Fixed: Simply spread the whole Document object to guarantee TypeScript compliance
+  const trackStudyActivity = (doc: Document) => {
+    const historyItem: StudyHistory = {
+      ...doc,
+      timestamp: Date.now(),
+    };
+    setRecentStudy(historyItem);
+    localStorage.setItem("portal_study_history", JSON.stringify(historyItem));
   };
 
   const fetchDocs = async () => {
@@ -177,19 +203,25 @@ export default function Home() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, activeModule, activeSubject, activeNav]); 
 
-  // Check for admin session on load
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setIsAdmin(true);
     });
-    
-    // Set up a listener for auth changes (in case they log out from another tab)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAdmin(!!session);
-    });
-    
-    return () => subscription.unsubscribe();
   }, []);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setAuthError(error.message);
+    } else {
+      setIsAdmin(true);
+      setShowLogin(false);
+      setEmail("");
+      setPassword("");
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -280,43 +312,43 @@ export default function Home() {
   const hideUploadModule = category === "syllabus" || isUploadNonModule;
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground transition-colors duration-300">
+    <div className="flex min-h-[100dvh] flex-col bg-[#FAFAF9] dark:bg-[#0B1020] text-[#0F172A] dark:text-[#F8FAFC] transition-colors duration-300">
 
       {/* ============================ HEADER ============================ */}
-      <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF]/80 dark:bg-[#111827]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-3 px-4 md:px-6">
           <div className="flex shrink-0 items-center gap-2.5">
             <button 
               onClick={() => setSidebarCollapsed((v) => !v)} 
-              className="hidden rounded-xl p-2 text-muted transition-colors hover:bg-border/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:inline-flex"
+              className="hidden rounded-xl p-2 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] lg:inline-flex"
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
             </button>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/30">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-sm shadow-[#4F46E5]/30">
               <GraduationCap size={20} />
             </div>
             <div className="hidden leading-tight sm:block">
-              <p className="text-sm font-extrabold tracking-tight text-foreground">Academic Portal</p>
-              <p className="text-[11px] font-medium text-muted">First-Year B.Tech Hub</p>
+              <p className="text-sm font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">Academic Portal</p>
+              <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">First-Year B.Tech Hub</p>
             </div>
           </div>
 
           <div className="flex flex-1 justify-center min-w-0 px-2">
             <div className="group relative w-full max-w-xl">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-primary" size={18} />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8] transition-colors group-focus-within:text-[#4F46E5]" size={18} />
               <input
                 type="text"
                 placeholder="Search notes, PYQs, subjects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search resources"
-                className="h-10 w-full rounded-full border border-border bg-background pl-11 pr-10 text-sm font-medium text-foreground shadow-sm outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:bg-surface focus:ring-2 focus:ring-primary/20"
+                className="h-10 w-full rounded-full border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] pl-11 pr-10 text-sm font-medium text-[#0F172A] dark:text-[#F8FAFC] shadow-sm outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:bg-[#FFFFFF] dark:focus:bg-[#111827] focus:ring-2 focus:ring-[#4F46E5]/20"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
                   aria-label="Clear search"
                 >
                   <X size={14} />
@@ -328,21 +360,54 @@ export default function Home() {
           <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={toggleTheme}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-background text-muted shadow-sm transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] text-[#64748B] dark:text-[#94A3B8] shadow-sm transition-all hover:bg-[#F8FAFC] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
               aria-label="Toggle theme"
             >
               {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : <div className="h-4 w-4" />}
             </button>
 
-            {/* ONLY Admins see controls here now. No public login button. */}
-            {isAdmin && (
+            {!isAdmin ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowLogin((v) => !v)}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-3 text-sm font-semibold text-white shadow-sm shadow-[#4F46E5]/30 transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
+                  aria-label="Admin access"
+                  aria-expanded={showLogin}
+                >
+                  <Lock size={16} /> <span className="hidden sm:inline">Admin</span>
+                </button>
+
+                {showLogin && (
+                  <>
+                    <button className="fixed inset-0 z-10 cursor-default outline-none" onClick={() => setShowLogin(false)} tabIndex={-1} aria-label="Close login" />
+                    <form onSubmit={handleAdminLogin} className="animate-fade-up absolute right-0 top-12 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-5 shadow-2xl">
+                      <p className="mb-4 text-sm font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">Sign in to manage resources</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label htmlFor="login-email" className="sr-only">Email</label>
+                          <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Admin email" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3.5 text-sm text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" required />
+                        </div>
+                        <div>
+                          <label htmlFor="login-password" className="sr-only">Password</label>
+                          <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3.5 text-sm text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" required />
+                        </div>
+                        {authError && <p className="rounded-lg border border-red-500/20 bg-red-500/10 p-2.5 text-xs font-semibold text-red-500">{authError}</p>}
+                        <button type="submit" className="h-10 w-full rounded-xl bg-[#4F46E5] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]">
+                          Login
+                        </button>
+                      </div>
+                    </form>
+                  </>
+                )}
+              </div>
+            ) : (
               <div className="flex items-center gap-2">
-                <span className="hidden items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success ring-1 ring-success/20 sm:inline-flex">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success motion-safe:animate-pulse" /> Admin
+                <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-500 ring-1 ring-emerald-500/20 sm:inline-flex">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" /> Admin
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-muted transition-all hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-sm font-semibold text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 >
                   <LogOut size={16} /> <span className="hidden sm:inline">Logout</span>
                 </button>
@@ -354,10 +419,10 @@ export default function Home() {
 
       <div className="mx-auto flex w-full max-w-[1600px] flex-1">
         {/* ============================ SIDEBAR ============================ */}
-        <aside className={`sticky top-16 self-start hidden h-[calc(100vh-4rem)] shrink-0 flex-col border-r border-border bg-surface/40 py-6 transition-all duration-300 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2 items-center' : 'w-64 px-3'}`}>
+        <aside className={`sticky top-16 self-start hidden h-[calc(100vh-4rem)] shrink-0 flex-col border-r border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF]/40 dark:bg-[#111827]/40 py-6 transition-all duration-300 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2 items-center' : 'w-64 px-3'}`}>
           
           <div className="w-full">
-            {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted">Browse</p>}
+            {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Browse</p>}
             <nav className="space-y-1 w-full">
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
@@ -367,18 +432,18 @@ export default function Home() {
                   <button
                     key={item.key}
                     onClick={() => setActiveNav(item.key)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${active ? "bg-[#4F46E5] text-white shadow-sm shadow-[#4F46E5]/30" : "text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC]"} ${sidebarCollapsed ? 'justify-center' : ''}`}
                     title={sidebarCollapsed ? item.label : undefined}
                   >
                     <Icon size={18} className="shrink-0" />
                     {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
-                    {!sidebarCollapsed && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted"}`}>{count}</span>}
+                    {!sidebarCollapsed && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-white/20 text-white" : "bg-[#FAFAF9] dark:bg-[#0B1020] text-[#64748B] dark:text-[#94A3B8]"}`}>{count}</span>}
                   </button>
                 );
               })}
             </nav>
 
-            {!sidebarCollapsed && <p className="px-3 pb-2 pt-6 text-[10px] font-bold uppercase tracking-wider text-muted">Library</p>}
+            {!sidebarCollapsed && <p className="px-3 pb-2 pt-6 text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Library</p>}
             <nav className="space-y-1 w-full mt-2">
               {[
                 { key: "bookmarks", label: "Bookmarks", icon: Bookmark },
@@ -390,7 +455,7 @@ export default function Home() {
                   <button
                     key={item.key}
                     onClick={() => setActiveNav(item.key as NavKey)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "text-muted hover:bg-hover hover:text-foreground"} ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${active ? "bg-[#4F46E5] text-white shadow-sm shadow-[#4F46E5]/30" : "text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC]"} ${sidebarCollapsed ? 'justify-center' : ''}`}
                     title={sidebarCollapsed ? item.label : undefined}
                   >
                     <Icon size={18} className="shrink-0" />
@@ -404,12 +469,12 @@ export default function Home() {
           <div className="mt-auto w-full pt-6">
             {!sidebarCollapsed && (
               <>
-                <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-4 mb-4">
-                  <p className="text-[10px] leading-relaxed text-muted">Advanced search and analytics coming soon.</p>
+                <div className="rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-gradient-to-br from-[#4F46E5]/5 to-transparent p-4 mb-4">
+                  <p className="text-[10px] leading-relaxed text-[#64748B] dark:text-[#94A3B8]">Advanced search and analytics coming soon.</p>
                 </div>
                 <div className="px-3 flex flex-col gap-1">
-                  <p className="text-[10px] font-semibold text-muted/70">Academic Portal v1.0.0</p>
-                  <p className="text-[9px] text-muted/50">&copy; {new Date().getFullYear()} B.Tech Hub</p>
+                  <p className="text-[10px] font-semibold text-[#64748B]/70 dark:text-[#94A3B8]/70">Academic Portal v1.0.0</p>
+                  <p className="text-[9px] text-[#64748B]/50 dark:text-[#94A3B8]/50">&copy; {new Date().getFullYear()} B.Tech Hub</p>
                 </div>
               </>
             )}
@@ -422,17 +487,17 @@ export default function Home() {
 
             {/* HERO & DYNAMIC HEADERS */}
             {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && (
-              <section className="animate-fade-up relative overflow-hidden w-full rounded-2xl border border-border bg-surface p-5 shadow-sm md:p-6">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/5 blur-3xl" />
+              <section className="animate-fade-up relative overflow-hidden w-full rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-5 shadow-sm md:p-6">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#4F46E5]/5 blur-3xl" />
                 <div className="relative">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold text-muted">
-                    <GraduationCap size={14} className="text-primary" /> Academic Portal
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 py-1 text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8]">
+                    <GraduationCap size={14} className="text-[#4F46E5] dark:text-[#6366F1]" /> Academic Portal
                   </div>
                   
-                  <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl break-words whitespace-normal text-wrap">
-                    Everything a first-year <span className="text-primary">B.Tech student</span> needs
+                  <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-[#0F172A] dark:text-[#F8FAFC] sm:text-4xl md:text-5xl break-words whitespace-normal text-wrap">
+                    Everything a first-year <span className="text-[#4F46E5] dark:text-[#6366F1]">B.Tech student</span> needs
                   </h1>
-                  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted md:text-base break-words text-wrap">
+                  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#64748B] dark:text-[#94A3B8] md:text-base break-words text-wrap">
                     Resources, PYQs, notes, assignments and syllabus beautifully organized in one place.
                   </p>
 
@@ -442,10 +507,10 @@ export default function Home() {
                       { label: "Resources", value: subjectDocs.length, icon: FileText },
                       { label: "Modules", value: subjectModules || 0, icon: Layers },
                     ].map(({ label, value, icon: Icon }) => (
-                      <div key={label} className="rounded-xl border border-border bg-background p-2.5 min-w-0">
-                        <Icon size={16} className="text-primary" />
-                        <p className="mt-1.5 text-lg font-extrabold tracking-tight text-foreground truncate">{value}</p>
-                        <p className="text-[10px] font-semibold text-muted uppercase tracking-wider truncate">{label}</p>
+                      <div key={label} className="rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-2.5 min-w-0">
+                        <Icon size={16} className="text-[#4F46E5] dark:text-[#6366F1]" />
+                        <p className="mt-1.5 text-lg font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] truncate">{value}</p>
+                        <p className="text-[10px] font-semibold text-[#64748B] dark:text-[#94A3B8] uppercase tracking-wider truncate">{label}</p>
                       </div>
                     ))}
                   </div>
@@ -453,43 +518,96 @@ export default function Home() {
               </section>
             )}
 
+            {/* CONTINUE STUDYING FEATURE */}
+            {activeNav === "dashboard" && !isSearchingGlobal && (
+              <section className="animate-fade-up w-full mt-2 mb-2">
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-3 px-1">
+                  Continue Studying
+                </h2>
+                {recentStudy ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#F8FAFC] dark:bg-[#131D33] p-4 shadow-sm transition-all hover:border-[#4F46E5]/40">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]">
+                        <Clock size={18} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]" title={recentStudy.title}>
+                          {recentStudy.title}
+                        </h3>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                          {recentStudy.subject && <span className="font-semibold text-[#4F46E5] dark:text-[#6366F1] truncate max-w-[140px]">{recentStudy.subject}</span>}
+                          {recentStudy.module_id && <span>• Module {recentStudy.module_id}</span>}
+                          <span className="uppercase tracking-wider"> • {recentStudy.category}</span>
+                          <span>• Accessed {formatDate(new Date(recentStudy.timestamp).toISOString())}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 sm:w-auto w-full">
+                      <button
+                        onClick={() => {
+                          setPreviewDoc(recentStudy);
+                          trackStudyActivity(recentStudy);
+                        }}
+                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5]/10 px-4 py-2.5 text-xs font-bold text-[#4F46E5] dark:text-[#6366F1] transition-all hover:bg-[#4F46E5] hover:text-white"
+                      >
+                        <Eye size={14} /> Resume Reading
+                      </button>
+                      <a
+                        href={recentStudy.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackStudyActivity(recentStudy)}
+                        className="inline-flex items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2.5 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1]"
+                      >
+                        <Download size={14} />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] py-8 text-center">
+                    <p className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">No recent study activity yet.</p>
+                  </div>
+                )}
+              </section>
+            )}
+
             {isSearchingGlobal && (
-              <section className="animate-fade-up w-full rounded-2xl border border-primary/20 bg-primary-soft p-5 md:p-6">
+              <section className="animate-fade-up w-full rounded-2xl border border-[#4F46E5]/20 bg-[#4F46E5]/5 p-5 md:p-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4F46E5] text-white">
                     <Search size={18} />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-lg font-extrabold tracking-tight text-foreground md:text-xl truncate">Search results</h1>
-                    <p className="text-xs font-medium text-muted truncate">Matching &ldquo;{searchQuery}&rdquo; across all subjects</p>
+                    <h1 className="text-lg font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] md:text-xl truncate">Search results</h1>
+                    <p className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8] truncate">Matching &ldquo;{searchQuery}&rdquo; across all subjects</p>
                   </div>
                 </div>
               </section>
             )}
 
             {activeNav === "bookmarks" && !isSearchingGlobal && (
-               <section className="animate-fade-up w-full rounded-2xl border border-border bg-surface p-5 md:p-6">
+               <section className="animate-fade-up w-full rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-5 md:p-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]">
                     <Bookmark size={18} />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-lg font-extrabold tracking-tight text-foreground md:text-xl truncate">Your Saved Bookmarks</h1>
-                    <p className="text-xs font-medium text-muted truncate">Quick access to your most important resources.</p>
+                    <h1 className="text-lg font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] md:text-xl truncate">Your Saved Bookmarks</h1>
+                    <p className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8] truncate">Quick access to your most important resources.</p>
                   </div>
                 </div>
               </section>
             )}
 
             {activeNav === "recent" && !isSearchingGlobal && (
-               <section className="animate-fade-up w-full rounded-2xl border border-border bg-surface p-5 md:p-6">
+               <section className="animate-fade-up w-full rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-5 md:p-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]">
                     <Clock size={18} />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-lg font-extrabold tracking-tight text-foreground md:text-xl truncate">Recently Uploaded</h1>
-                    <p className="text-xs font-medium text-muted truncate">The latest resources added to the database.</p>
+                    <h1 className="text-lg font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] md:text-xl truncate">Recently Uploaded</h1>
+                    <p className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8] truncate">The latest resources added to the database.</p>
                   </div>
                 </div>
               </section>
@@ -497,12 +615,12 @@ export default function Home() {
 
             {/* SUBJECT + MODULE CONTROLS */}
             {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && (
-              <section className="animate-fade-up w-full space-y-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
+              <section className="animate-fade-up w-full space-y-4 rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-4 shadow-sm">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between w-full">
                   <div className="w-full space-y-1.5 sm:max-w-xs min-w-0">
-                    <label htmlFor="hero-subject" className="text-[10px] font-bold uppercase tracking-wider text-muted">Subject Domain</label>
+                    <label htmlFor="hero-subject" className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Subject Domain</label>
                     <div className="group relative w-full">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted transition-colors group-focus-within:text-primary">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#64748B] dark:text-[#94A3B8] transition-colors group-focus-within:text-[#4F46E5]">
                         <BookOpen size={16} />
                       </div>
                       <select
@@ -512,20 +630,20 @@ export default function Home() {
                           setActiveSubject(e.target.value);
                           setUploadSubject(e.target.value);
                         }}
-                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-border bg-background pl-9 pr-10 text-xs font-bold text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 truncate"
+                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] pl-9 pr-10 text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 truncate"
                       >
                         {SUBJECTS.map((sub) => (
                           <option key={sub} value={sub}>{sub}</option>
                         ))}
                       </select>
-                      <ChevronRight size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-muted" />
+                      <ChevronRight size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#64748B] dark:text-[#94A3B8]" />
                     </div>
                   </div>
 
                   {isAdmin && (
                     <button
                       onClick={() => setShowForm(true)}
-                      className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/30 transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
+                      className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white shadow-sm shadow-[#4F46E5]/30 transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
                     >
                       <Plus size={16} /> Upload Resource
                     </button>
@@ -544,14 +662,14 @@ export default function Home() {
                               setActiveModule(mod);
                               setUploadModule(mod);
                             }}
-                            className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-0 ${
+                            className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] min-w-0 ${
                               active
-                                ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/30"
-                                : "border-border bg-background text-muted hover:border-primary/40 hover:text-foreground"
+                                ? "border-[#4F46E5] bg-[#4F46E5] text-white shadow-sm shadow-[#4F46E5]/30"
+                                : "border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] text-[#64748B] dark:text-[#94A3B8] hover:border-[#4F46E5]/40 hover:text-[#0F172A] dark:hover:text-[#F8FAFC]"
                             }`}
                             aria-pressed={active}
                           >
-                            <Layers size={14} className={`shrink-0 ${active ? "text-primary-foreground" : "text-muted"}`} />
+                            <Layers size={14} className={`shrink-0 ${active ? "text-white" : "text-[#64748B] dark:text-[#94A3B8]"}`} />
                             <span className="truncate">Module {mod}</span>
                           </button>
                         );
@@ -572,7 +690,7 @@ export default function Home() {
                     <button
                       key={item.key}
                       onClick={() => setActiveNav(item.key as NavKey)}
-                      className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" : "border border-border bg-surface text-muted"}`}
+                      className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${active ? "bg-[#4F46E5] text-white shadow-sm shadow-[#4F46E5]/30" : "border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-[#64748B] dark:text-[#94A3B8]"}`}
                     >
                       <Icon size={14} /> {item.label}
                     </button>
@@ -582,10 +700,10 @@ export default function Home() {
             </div>
 
             {/* GRID HEADER */}
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3 w-full">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#E5E7EB] dark:border-[#1F2A44] pb-3 w-full">
               <div className="min-w-0">
-                <h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-foreground md:text-lg truncate">
-                  {isSearchingGlobal ? <TrendingUp size={18} className="shrink-0 text-primary" /> : <FolderOpen size={18} className="shrink-0 text-primary" />}
+                <h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] md:text-lg truncate">
+                  {isSearchingGlobal ? <TrendingUp size={18} className="shrink-0 text-[#4F46E5] dark:text-[#6366F1]" /> : <FolderOpen size={18} className="shrink-0 text-[#4F46E5] dark:text-[#6366F1]" />}
                   <span className="truncate">
                     {isSearchingGlobal
                       ? "Global Search"
@@ -594,7 +712,7 @@ export default function Home() {
                       : activeLabel}
                   </span>
                 </h2>
-                <p className="text-[11px] font-medium text-muted">
+                <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">
                   {filteredDocuments.length} {filteredDocuments.length === 1 ? "resource" : "resources"} available
                 </p>
               </div>
@@ -604,16 +722,16 @@ export default function Home() {
             {loading ? (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 w-full">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-44 animate-pulse rounded-2xl border border-border bg-surface w-full" />
+                  <div key={i} className="h-44 animate-pulse rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] w-full" />
                 ))}
               </div>
             ) : filteredDocuments.length === 0 ? (
-              <div className="animate-fade-up flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center w-full">
-                <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary ring-1 ring-primary/10">
+              <div className="animate-fade-up flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-6 py-16 text-center w-full">
+                <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1] ring-1 ring-[#4F46E5]/20">
                   <BookOpen size={24} />
                 </div>
-                <h3 className="text-base font-bold tracking-tight text-foreground">No resources available yet</h3>
-                <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-muted">
+                <h3 className="text-base font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">No resources available yet</h3>
+                <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
                   {isSearchingGlobal
                     ? "Try a different keyword, or browse subjects directly."
                     : activeNav === "bookmarks"
@@ -628,25 +746,25 @@ export default function Home() {
                   return (
                   <article
                     key={doc.id}
-                    className="animate-fade-up group flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 min-w-0"
+                    className="animate-fade-up group flex flex-col rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#F8FAFC] dark:bg-[#131D33] p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#4F46E5]/40 hover:shadow-lg hover:shadow-[#4F46E5]/5 min-w-0"
                     style={{ animationDelay: `${Math.min(idx * 40, 240)}ms` }}
                   >
                     <div className="flex items-start justify-between gap-3 min-w-0">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${CATEGORY_ICON_STYLES[doc.category] ?? "bg-primary/10 text-primary"}`}>
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${CATEGORY_ICON_STYLES[doc.category] ?? "bg-[#4F46E5]/10 text-[#4F46E5]"}`}>
                         <FileText size={18} />
                       </div>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 shrink-0 ${CATEGORY_STYLES[doc.category] ?? "bg-background text-muted ring-border"}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 shrink-0 ${CATEGORY_STYLES[doc.category] ?? "bg-[#FAFAF9] text-[#64748B] ring-[#E5E7EB]"}`}>
                         {categoryLabel(doc.category)}
                       </span>
                     </div>
 
-                    <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-snug text-foreground break-words" title={doc.title}>
+                    <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-snug text-[#0F172A] dark:text-[#F8FAFC] break-words" title={doc.title}>
                       {doc.title}
                     </h3>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
                       {(isSearchingGlobal || activeNav === "recent" || activeNav === "bookmarks") && doc.subject && (
-                        <span className="inline-flex items-center gap-1 font-semibold text-primary truncate">
+                        <span className="inline-flex items-center gap-1 font-semibold text-[#4F46E5] dark:text-[#6366F1] truncate">
                           <BookOpen size={10} className="shrink-0" /> <span className="truncate">{doc.subject}</span>
                         </span>
                       )}
@@ -660,22 +778,26 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <p className="mt-2 flex-1 text-[11px] text-muted truncate">
-                      By <span className="font-semibold text-foreground">{doc.uploaded_by || "Admin"}</span>
+                    <p className="mt-2 flex-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] truncate">
+                      By <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{doc.uploaded_by || "Admin"}</span>
                     </p>
 
-                    <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-3">
+                    <div className="mt-4 flex items-center gap-2 border-t border-[#E5E7EB] dark:border-[#1F2A44] pt-3">
                       <a
                         href={doc.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-0"
+                        onClick={() => trackStudyActivity(doc)}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 py-2 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] min-w-0"
                       >
                         <Download size={14} className="shrink-0" /> <span className="truncate">Download</span>
                       </a>
                       <button
-                        onClick={() => setPreviewDoc(doc)}
-                        className="inline-flex shrink-0 items-center justify-center rounded-xl border border-border bg-background p-2 text-muted transition-all hover:border-primary hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        onClick={() => {
+                          setPreviewDoc(doc);
+                          trackStudyActivity(doc);
+                        }}
+                        className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
                         aria-label="Preview document"
                         title="Preview PDF"
                       >
@@ -683,16 +805,16 @@ export default function Home() {
                       </button>
                       <button
                         onClick={() => toggleBookmark(doc.id)}
-                        className={`inline-flex shrink-0 items-center justify-center rounded-xl border p-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isBookmarked ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted hover:border-primary hover:bg-primary/5 hover:text-primary'}`}
+                        className={`inline-flex shrink-0 items-center justify-center rounded-xl border p-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${isBookmarked ? 'border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#F59E0B]' : 'border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-[#64748B] dark:text-[#94A3B8] hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1]'}`}
                         aria-label="Bookmark document"
                         title={isBookmarked ? "Remove Bookmark" : "Bookmark PDF"}
                       >
-                        <Bookmark size={16} className={isBookmarked ? "fill-primary" : ""} />
+                        <Bookmark size={16} className={isBookmarked ? "fill-[#F59E0B]" : ""} />
                       </button>
                       {isAdmin && (
                         <button
                           onClick={() => handleDelete(doc.id)}
-                          className="inline-flex shrink-0 items-center justify-center rounded-xl border border-border bg-background p-2 text-muted transition-all hover:border-destructive hover:bg-destructive hover:text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                          className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-red-500 hover:bg-red-500/10 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                           aria-label="Delete document"
                         >
                           <Trash2 size={16} />
@@ -710,21 +832,21 @@ export default function Home() {
       {/* ============================ UPLOAD MODAL ============================ */}
       {isAdmin && showForm && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setShowForm(false)} aria-hidden="true" />
-          <div className="animate-fade-up relative z-10 w-full max-w-xl overflow-hidden rounded-t-3xl border border-border bg-surface shadow-2xl sm:rounded-3xl">
-            <div className="flex items-center justify-between border-b border-border bg-background px-5 py-4">
+          <div className="absolute inset-0 bg-[#FAFAF9]/80 dark:bg-[#0B1020]/80 backdrop-blur-sm" onClick={() => setShowForm(false)} aria-hidden="true" />
+          <div className="animate-fade-up relative z-10 w-full max-w-xl overflow-hidden rounded-t-3xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] shadow-2xl sm:rounded-3xl">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#4F46E5] text-white">
                   <Upload size={14} />
                 </div>
                 <div>
-                  <h2 id="modal-title" className="text-sm font-extrabold tracking-tight text-foreground">Upload Resource</h2>
-                  <p className="text-[11px] font-medium text-muted">Add files to the central library</p>
+                  <h2 id="modal-title" className="text-sm font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">Upload Resource</h2>
+                  <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">Add files to the central library</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowForm(false)}
-                className="rounded-xl p-2 text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="rounded-xl p-2 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
                 aria-label="Close modal"
               >
                 <X size={16} />
@@ -732,52 +854,52 @@ export default function Home() {
             </div>
 
             <form onSubmit={handleUpload} className="max-h-[70vh] space-y-4 overflow-y-auto px-5 py-5">
-              <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-background p-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label htmlFor="target-subject" className="text-[10px] font-bold uppercase tracking-wider text-muted">Subject</label>
-                  <select id="target-subject" value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                  <label htmlFor="target-subject" className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Subject</label>
+                  <select id="target-subject" value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 text-xs font-medium text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20">
                     {SUBJECTS.map((sub) => <option key={sub} value={sub}>{sub}</option>)}
                   </select>
                 </div>
                 
                 <div className={`space-y-1 ${hideUploadModule ? "opacity-50 pointer-events-none" : ""}`}>
-                  <label htmlFor="target-module" className="text-[10px] font-bold uppercase tracking-wider text-muted">Module</label>
-                  <select id="target-module" value={hideUploadModule ? 1 : uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} disabled={hideUploadModule} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed">
+                  <label htmlFor="target-module" className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Module</label>
+                  <select id="target-module" value={hideUploadModule ? 1 : uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} disabled={hideUploadModule} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 text-xs font-medium text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 disabled:cursor-not-allowed">
                     {[1, 2, 3, 4, 5].map((mod) => <option key={mod} value={mod}>Module {mod}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="doc-title" className="text-xs font-semibold text-foreground">Document Title</label>
-                <input id="doc-title" required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Newton's Laws Summary" className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                <label htmlFor="doc-title" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Document Title</label>
+                <input id="doc-title" required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Newton's Laws Summary" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label htmlFor="doc-category" className="text-xs font-semibold text-foreground">Category</label>
-                  <select id="doc-category" value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                  <label htmlFor="doc-category" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Category</label>
+                  <select id="doc-category" value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20">
                     <option value="notes">Notes</option>
                     <option value="pyq">PYQ (Previous Year Question)</option>
                     <option value="syllabus">Syllabus</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor="doc-uploader" className="text-xs font-semibold text-foreground">Uploader Name</label>
-                  <input id="doc-uploader" type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} placeholder="Admin" className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none transition-all placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  <label htmlFor="doc-uploader" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Uploader Name</label>
+                  <input id="doc-uploader" type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} placeholder="Admin" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="doc-file" className="text-xs font-semibold text-foreground">PDF File</label>
-                <div className="rounded-xl border border-dashed border-border bg-background p-1.5 transition-colors focus-within:border-primary hover:border-primary/50">
-                  <input id="doc-file" required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full cursor-pointer text-xs font-medium text-muted outline-none file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:font-semibold file:text-foreground hover:file:bg-hover" />
+                <label htmlFor="doc-file" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">PDF File</label>
+                <div className="rounded-xl border border-dashed border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-1.5 transition-colors focus-within:border-[#4F46E5] hover:border-[#4F46E5]/50">
+                  <input id="doc-file" required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full cursor-pointer text-xs font-medium text-[#64748B] dark:text-[#94A3B8] outline-none file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-[#E5E7EB] dark:file:border-[#1F2A44] file:bg-[#FFFFFF] dark:file:bg-[#111827] file:px-3 file:py-1.5 file:font-semibold file:text-[#0F172A] dark:file:text-[#F8FAFC] hover:file:bg-[#E5E7EB]/50 dark:hover:file:bg-[#1F2A44]/50" />
                 </div>
               </div>
 
-              <div className="mt-5 flex gap-3 border-t border-border pt-4">
-                <button type="button" onClick={() => setShowForm(false)} className="h-10 flex-1 rounded-xl border border-border bg-surface text-xs font-semibold text-muted transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Cancel</button>
-                <button disabled={uploading} type="submit" className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background">
+              <div className="mt-5 flex gap-3 border-t border-[#E5E7EB] dark:border-[#1F2A44] pt-4">
+                <button type="button" onClick={() => setShowForm(false)} className="h-10 flex-1 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-xs font-semibold text-[#64748B] dark:text-[#94A3B8] transition-all hover:bg-[#FAFAF9] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]">Cancel</button>
+                <button disabled={uploading} type="submit" className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#4F46E5] text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#6366F1] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]">
                   {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : "Submit"}
                 </button>
               </div>
@@ -789,19 +911,19 @@ export default function Home() {
       {/* ============================ PREVIEW MODAL ============================ */}
       {previewDoc && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="preview-title">
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setPreviewDoc(null)} aria-hidden="true" />
-          <div className="animate-fade-up relative z-10 flex h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+          <div className="absolute inset-0 bg-[#FAFAF9]/80 dark:bg-[#0B1020]/80 backdrop-blur-sm" onClick={() => setPreviewDoc(null)} aria-hidden="true" />
+          <div className="animate-fade-up relative z-10 flex h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] shadow-2xl">
             
-            <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-3 sm:px-6">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]">
                   <FileText size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 id="preview-title" className="truncate text-sm font-extrabold tracking-tight text-foreground" title={previewDoc.title}>
+                  <h2 id="preview-title" className="truncate text-sm font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]" title={previewDoc.title}>
                     {previewDoc.title}
                   </h2>
-                  <p className="truncate text-[11px] font-medium text-muted">
+                  <p className="truncate text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">
                     {previewDoc.subject} • Module {previewDoc.module_id}
                   </p>
                 </div>
@@ -812,13 +934,13 @@ export default function Home() {
                   href={previewDoc.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
+                  className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
                 >
                   <Download size={14} className="shrink-0" /> <span className="hidden md:inline">Download</span>
                 </a>
                 <button
                   onClick={() => setPreviewDoc(null)}
-                  className="rounded-xl border border-border bg-background p-2 text-muted transition-all hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
                   aria-label="Close preview"
                 >
                   <X size={16} />
@@ -826,10 +948,10 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-hidden bg-muted/20 p-2 sm:p-4">
+            <div className="flex-1 overflow-hidden bg-[#E5E7EB]/20 dark:bg-[#1F2A44]/20 p-2 sm:p-4">
               <iframe
                 src={`${previewDoc.file_url}#view=FitH`}
-                className="h-full w-full rounded-xl border border-border bg-background shadow-sm"
+                className="h-full w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] shadow-sm"
                 title={`Preview of ${previewDoc.title}`}
               />
             </div>
