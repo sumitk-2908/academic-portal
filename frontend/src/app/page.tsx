@@ -114,7 +114,7 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // 1. Enforce Dark Mode as Default
+    // Enforce Dark Mode as Default
     const html = document.documentElement;
     const storedTheme = localStorage.getItem("theme");
     
@@ -122,13 +122,12 @@ export default function Home() {
       html.classList.remove("dark");
       setIsDarkMode(false);
     } else {
-      // Force dark mode if it's the first visit or explicitly set to dark
       html.classList.add("dark");
       localStorage.setItem("theme", "dark");
       setIsDarkMode(true);
     }
 
-    // 2. Load Local Data
+    // Load Local Data
     const storedBookmarks = localStorage.getItem("portal_bookmarks");
     if (storedBookmarks) {
       setBookmarks(JSON.parse(storedBookmarks));
@@ -167,6 +166,27 @@ export default function Home() {
     };
     setRecentStudy(historyItem);
     localStorage.setItem("portal_study_history", JSON.stringify(historyItem));
+  };
+
+  // Force strict local download behavior without opening a new tab
+  const handleForceDownload = (e: React.MouseEvent, url: string, title: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Sanitize title to ensure safe filename
+    const safeTitle = title.replace(/[^a-zA-Z0-9 \-_]/g, '').trim() || 'document';
+    
+    // Append Supabase native download parameter to force attachment disposition
+    const downloadUrl = url.includes('?') 
+      ? `${url}&download=${encodeURIComponent(safeTitle)}.pdf` 
+      : `${url}?download=${encodeURIComponent(safeTitle)}.pdf`;
+      
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.setAttribute("download", `${safeTitle}.pdf`); // Fallback standard HTML5 attribute
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const fetchDocs = async () => {
@@ -518,15 +538,15 @@ export default function Home() {
                       >
                         <Eye size={14} /> Resume Reading
                       </button>
-                      <a
-                        href={recentStudy.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackStudyActivity(recentStudy)}
+                      <button
+                        onClick={(e) => {
+                          trackStudyActivity(recentStudy);
+                          handleForceDownload(e, recentStudy.file_url, recentStudy.title);
+                        }}
                         className="inline-flex items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2.5 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1]"
                       >
                         <Download size={14} />
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -749,15 +769,15 @@ export default function Home() {
                     </p>
 
                     <div className="mt-4 flex items-center gap-2 border-t border-[#E5E7EB] dark:border-[#1F2A44] pt-3">
-                      <a
-                        href={doc.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackStudyActivity(doc)}
+                      <button
+                        onClick={(e) => {
+                          trackStudyActivity(doc);
+                          handleForceDownload(e, doc.file_url, doc.title);
+                        }}
                         className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 py-2 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] min-w-0"
                       >
                         <Download size={14} className="shrink-0" /> <span className="truncate">Download</span>
-                      </a>
+                      </button>
                       <button
                         onClick={() => {
                           setPreviewDoc(doc);
@@ -896,14 +916,12 @@ export default function Home() {
               </div>
               
               <div className="flex shrink-0 items-center gap-2 pl-4">
-                <a
-                  href={previewDoc.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={(e) => handleForceDownload(e, previewDoc.file_url, previewDoc.title)}
                   className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
                 >
                   <Download size={14} className="shrink-0" /> <span className="hidden md:inline">Download</span>
-                </a>
+                </button>
                 <button
                   onClick={() => setPreviewDoc(null)}
                   className="rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
