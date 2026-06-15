@@ -156,3 +156,37 @@ export const updateStudentHistory = async (userId: string, documentId: number) =
     });
   if (error) throw error;
 };
+
+
+// --- ANALYTICS TRACKING ---
+
+export const trackDocumentStat = async (docId: number, type: 'view' | 'download') => {
+  try {
+    const { error } = await supabase.rpc('increment_doc_stat', {
+      doc_id: docId,
+      stat_type: type
+    });
+    
+    if (error) throw error;
+  } catch (error) {
+    // We intentionally fail silently so tracking errors never interrupt the user
+    console.error("Failed to track analytics:", error);
+  }
+};
+
+export const getTrendingDocumentIds = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('document_analytics')
+      .select('document_id')
+      .order('view_count', { ascending: false })
+      .limit(5);
+
+    if (error) throw error;
+    // Returns an array of the top 5 document IDs: [12, 5, 89, 2]
+    return data.map(d => d.document_id);
+  } catch (error) {
+    console.error("Failed to fetch trending:", error);
+    return [];
+  }
+};

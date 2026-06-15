@@ -6,6 +6,8 @@ import {
   uploadDocument,
   deleteDocument,
   searchDocuments,
+  trackDocumentStat,
+  getTrendingDocumentIds,
   supabase,
 } from "../../lib/api";
 import {
@@ -84,7 +86,6 @@ function formatDate(iso: string) {
 export default function SubjectClientView({ subjects, modules, initialDocs, currentSubject }: any) {
   const router = useRouter();
 
-  // Initialize state directly from the server props
   const [documents, setDocuments] = useState<Document[]>(initialDocs || []);
   const [loading, setLoading] = useState(false); 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -122,6 +123,9 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [recentStudy, setRecentStudy] = useState<StudyHistory | null>(null);
 
+  // --- Trending State ---
+  const [trendingIds, setTrendingIds] = useState<number[]>([]);
+
   // --- Upload Form states ---
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -134,10 +138,9 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
   useEffect(() => {
     setMounted(true);
     
-    // Enforce Dark Mode as Default
+    // Theme setup
     const html = document.documentElement;
     const storedTheme = localStorage.getItem("theme");
-    
     if (storedTheme === "light") {
       html.classList.remove("dark");
       setIsDarkMode(false);
@@ -147,12 +150,14 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
       setIsDarkMode(true);
     }
 
-    // Load Local Data (Guest Fallback)
+    // Load Guest Fallback Data
     const storedBookmarks = localStorage.getItem("portal_bookmarks");
     if (storedBookmarks) setBookmarks(JSON.parse(storedBookmarks));
-    
     const history = localStorage.getItem("portal_study_history");
     if (history) setRecentStudy(JSON.parse(history));
+
+    // Fetch live trending stats
+    getTrendingDocumentIds().then(setTrendingIds);
   }, []);
 
   // --- AUTHENTICATION & SECURITY LISTENER ---
@@ -216,18 +221,12 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
 
     try {
       if (authMode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email: authEmail,
-          password: authPassword,
-        });
+        const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
         if (error) throw error;
         alert("Success! Please check your email for the confirmation link.");
         setShowAuthModal(false);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: authEmail,
-          password: authPassword,
-        });
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
         if (error) throw error;
         setShowAuthModal(false);
       }
@@ -242,12 +241,11 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem("admin_portal_access"); // Destroy Admin Token
+    localStorage.removeItem("admin_portal_access"); 
     setIsAdmin(false);
     setIsStudent(false);
     setShowForm(false);
     
-    // Revert to local storage data on logout
     const storedBookmarks = localStorage.getItem("portal_bookmarks");
     setBookmarks(storedBookmarks ? JSON.parse(storedBookmarks) : []);
   };
@@ -269,10 +267,8 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     const isBookmarked = bookmarks.includes(id);
     const nextBookmarks = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
     
-    // Optimistic UI update
     setBookmarks(nextBookmarks);
 
-    // Hybrid Sync Logic
     if (userId) { 
       if (isBookmarked) {
         await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
@@ -288,7 +284,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     const historyItem: StudyHistory = { ...doc, timestamp: Date.now() };
     setRecentStudy(historyItem);
 
-    // Hybrid Sync Logic
     if (userId) {
       await supabase.from('student_history').upsert({
         user_id: userId,
@@ -300,10 +295,13 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     }
   };
 
-  const handleForceDownload = (e: React.MouseEvent, url: string, title: string) => {
+  const handleForceDownload = (e: React.MouseEvent, url: string, title: string, docId?: number) => {
     e.stopPropagation();
     e.preventDefault();
     
+    // Track Analytics
+    if (docId) trackDocumentStat(docId, 'download');
+
     const safeTitle = title.replace(/[^a-zA-Z0-9 \-_]/g, '').trim() || 'document';
     const downloadUrl = url.includes('?') 
       ? `${url}&download=${encodeURIComponent(safeTitle)}.pdf` 
@@ -411,23 +409,21 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     return documents.filter((doc) => {
       const matchesSubject = doc.subject === activeSubject;
       const matchesCategory = activeNav === "dashboard" || doc.category === activeNav;
-      
       const isNonModule = isNonModuleSubject(activeSubject);
       const matchesModule = (activeNav === "syllabus" || isNonModule) ? true : doc.module_id === activeModule;
-
       return matchesSubject && matchesCategory && matchesModule;
     });
   }, [documents, isSearchingGlobal, activeSubject, activeNav, bookmarks, activeModule]);
 
-  const subjectDocs = useMemo(
-    () => documents.filter((d) => d.subject === activeSubject),
-    [documents, activeSubject]
-  );
-  
-  const subjectModules = useMemo(
-    () => new Set(subjectDocs.map((d) => d.module_id)).size,
-    [subjectDocs]
-  );
+  const trendingDocs = useMemo(() => {
+    if (trendingIds.length === 0 || documents.length === 0) return [];
+    return trendingIds
+      .map(id => documents.find(d => d.id === id))
+      .filter((doc): doc is Document => doc !== undefined);
+  }, [trendingIds, documents]);
+
+  const subjectDocs = useMemo(() => documents.filter((d) => d.subject === activeSubject), [documents, activeSubject]);
+  const subjectModules = useMemo(() => new Set(subjectDocs.map((d) => d.module_id)).size, [subjectDocs]);
 
   const activeLabel = 
     activeNav === "bookmarks" ? "Your Bookmarks" :
@@ -436,7 +432,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
 
   const isCurrentNonModule = isNonModuleSubject(activeSubject);
   const hideModuleSelector = activeNav === "syllabus" || isCurrentNonModule;
-  
   const isUploadNonModule = isNonModuleSubject(uploadSubject);
   const hideUploadModule = category === "syllabus" || isUploadNonModule;
 
@@ -471,14 +466,12 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                 placeholder="Search notes, PYQs, subjects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Search resources"
                 className="h-10 w-full rounded-full border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] pl-11 pr-10 text-sm font-medium text-[#0F172A] dark:text-[#F8FAFC] shadow-sm outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:bg-[#FFFFFF] dark:focus:bg-[#111827] focus:ring-2 focus:ring-[#4F46E5]/20"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#F8FAFC] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
-                  aria-label="Clear search"
                 >
                   <X size={14} />
                 </button>
@@ -490,12 +483,10 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
             <button
               onClick={toggleTheme}
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] text-[#64748B] dark:text-[#94A3B8] shadow-sm transition-all hover:bg-[#F8FAFC] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
-              aria-label="Toggle theme"
             >
               {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : <div className="h-4 w-4" />}
             </button>
 
-            {/* --- NEW HEADER AUTH CONTROLS --- */}
             {isAdmin && (
               <div className="flex items-center gap-2">
                 <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-500 ring-1 ring-emerald-500/20 sm:inline-flex">
@@ -582,9 +573,52 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
           <div className="mt-auto w-full pt-6">
             {!sidebarCollapsed && (
               <>
-                <div className="rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-gradient-to-br from-[#4F46E5]/5 to-transparent p-4 mb-4">
-                  <p className="text-[10px] leading-relaxed text-[#64748B] dark:text-[#94A3B8]">Advanced search and analytics coming soon.</p>
+                {/* LIVE TRENDING FEED */}
+                <div className="rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-4 mb-4 shadow-sm">
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]">
+                      <TrendingUp size={14} />
+                    </div>
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#0F172A] dark:text-[#F8FAFC]">
+                      Trending Now
+                    </h3>
+                  </div>
+                  
+                  {trendingDocs.length > 0 ? (
+                    <div className="space-y-3">
+                      {trendingDocs.map((doc, index) => (
+                        <button
+                          key={doc.id}
+                          onClick={() => {
+                            setPreviewDoc(doc);
+                            trackStudyActivity(doc);
+                            trackDocumentStat(doc.id, 'view');
+                          }}
+                          className="group flex w-full items-start gap-3 text-left transition-all hover:-translate-y-0.5 focus-visible:outline-none"
+                        >
+                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#E5E7EB]/50 dark:bg-[#1F2A44]/50 text-[10px] font-bold text-[#64748B] dark:text-[#94A3B8] group-hover:bg-[#4F46E5] group-hover:text-white transition-colors">
+                            {index + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] group-hover:text-[#4F46E5] dark:group-hover:text-[#6366F1] transition-colors">
+                              {doc.title}
+                            </p>
+                            <p className="truncate text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">
+                              {doc.subject} • {categoryLabel(doc.category)}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-4 text-center">
+                      <p className="text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">
+                        Start reading to rank resources!
+                      </p>
+                    </div>
+                  )}
                 </div>
+
                 <div className="px-3 flex flex-col gap-1">
                   <p className="text-[10px] font-semibold text-[#64748B]/70 dark:text-[#94A3B8]/70">Academic Portal v1.0.0</p>
                   <p className="text-[9px] text-[#64748B]/50 dark:text-[#94A3B8]/50">&copy; {new Date().getFullYear()} B.Tech Hub</p>
@@ -660,6 +694,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                         onClick={() => {
                           setPreviewDoc(recentStudy);
                           trackStudyActivity(recentStudy);
+                          trackDocumentStat(recentStudy.id, 'view');
                         }}
                         className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5]/10 px-4 py-2.5 text-xs font-bold text-[#4F46E5] dark:text-[#6366F1] transition-all hover:bg-[#4F46E5] hover:text-white"
                       >
@@ -668,7 +703,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                       <button
                         onClick={(e) => {
                           trackStudyActivity(recentStudy);
-                          handleForceDownload(e, recentStudy.file_url, recentStudy.title);
+                          handleForceDownload(e, recentStudy.file_url, recentStudy.title, recentStudy.id);
                         }}
                         className="inline-flex items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2.5 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1]"
                       >
@@ -736,24 +771,24 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#64748B] dark:text-[#94A3B8] transition-colors group-focus-within:text-[#4F46E5]">
                         <BookOpen size={16} />
                       </div>
-                          <select
-                            id="hero-subject"
-                            value={currentSubject?.slug || ""}
-                            onChange={(e) => {
-                              setSearchQuery(""); 
-                              router.push(`/subject/${e.target.value}`);
-                            }}
-                            className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] pl-9 pr-10 text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 truncate"
-                          >
-                            {subjects?.map((sub: any) => (
-                              <option key={sub.slug} value={sub.slug}>
-                                {sub.name}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronRight size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#64748B] dark:text-[#94A3B8]" />
-                        </div>
-                      </div>
+                      <select
+                        id="hero-subject"
+                        value={currentSubject?.slug || ""}
+                        onChange={(e) => {
+                          setSearchQuery(""); 
+                          router.push(`/subject/${e.target.value}`);
+                        }}
+                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] pl-9 pr-10 text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 truncate"
+                      >
+                        {subjects?.map((sub: any) => (
+                          <option key={sub.slug} value={sub.slug}>
+                            {sub.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronRight size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#64748B] dark:text-[#94A3B8]" />
+                    </div>
+                  </div>
 
                   {isAdmin && (
                     <button
@@ -859,85 +894,87 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                 {filteredDocuments.map((doc, idx) => {
                   const isBookmarked = bookmarks.includes(doc.id);
                   return (
-                  <article
-                    key={doc.id}
-                    className="animate-fade-up group flex flex-col rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#F8FAFC] dark:bg-[#131D33] p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#4F46E5]/40 hover:shadow-lg hover:shadow-[#4F46E5]/5 min-w-0"
-                    style={{ animationDelay: `${Math.min(idx * 40, 240)}ms` }}
-                  >
-                    <div className="flex items-start justify-between gap-3 min-w-0">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${CATEGORY_ICON_STYLES[doc.category] ?? "bg-[#4F46E5]/10 text-[#4F46E5]"}`}>
-                        <FileText size={18} />
+                    <article
+                      key={doc.id}
+                      className="animate-fade-up group flex flex-col rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#F8FAFC] dark:bg-[#131D33] p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#4F46E5]/40 hover:shadow-lg hover:shadow-[#4F46E5]/5 min-w-0"
+                      style={{ animationDelay: `${Math.min(idx * 40, 240)}ms` }}
+                    >
+                      <div className="flex items-start justify-between gap-3 min-w-0">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${CATEGORY_ICON_STYLES[doc.category] ?? "bg-[#4F46E5]/10 text-[#4F46E5]"}`}>
+                          <FileText size={18} />
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 shrink-0 ${CATEGORY_STYLES[doc.category] ?? "bg-[#FAFAF9] text-[#64748B] ring-[#E5E7EB]"}`}>
+                          {categoryLabel(doc.category)}
+                        </span>
                       </div>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 shrink-0 ${CATEGORY_STYLES[doc.category] ?? "bg-[#FAFAF9] text-[#64748B] ring-[#E5E7EB]"}`}>
-                        {categoryLabel(doc.category)}
-                      </span>
-                    </div>
 
-                    <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-snug text-[#0F172A] dark:text-[#F8FAFC] break-words" title={doc.title}>
-                      {doc.title}
-                    </h3>
+                      <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-snug text-[#0F172A] dark:text-[#F8FAFC] break-words" title={doc.title}>
+                        {doc.title}
+                      </h3>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                      {(isSearchingGlobal || activeNav === "recent" || activeNav === "bookmarks") && doc.subject && (
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#4F46E5] dark:text-[#6366F1] truncate">
-                          <BookOpen size={10} className="shrink-0" /> <span className="truncate">{doc.subject}</span>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                        {(isSearchingGlobal || activeNav === "recent" || activeNav === "bookmarks") && doc.subject && (
+                          <span className="inline-flex items-center gap-1 font-semibold text-[#4F46E5] dark:text-[#6366F1] truncate">
+                            <BookOpen size={10} className="shrink-0" /> <span className="truncate">{doc.subject}</span>
+                          </span>
+                        )}
+                        {doc.module_id && doc.category !== "syllabus" && !isNonModuleSubject(doc.subject) && (
+                          <span className="inline-flex items-center gap-1 font-medium whitespace-nowrap">
+                            <Layers size={10} className="shrink-0" /> Module {doc.module_id}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                          <Clock size={10} className="shrink-0" /> {formatDate(doc.created_at)}
                         </span>
-                      )}
-                      {doc.module_id && doc.category !== "syllabus" && !isNonModuleSubject(doc.subject) && (
-                        <span className="inline-flex items-center gap-1 font-medium whitespace-nowrap">
-                          <Layers size={10} className="shrink-0" /> Module {doc.module_id}
-                        </span>
-                      )}
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                        <Clock size={10} className="shrink-0" /> {formatDate(doc.created_at)}
-                      </span>
-                    </div>
+                      </div>
 
-                    <p className="mt-2 flex-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] truncate">
-                      By <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{doc.uploaded_by || "Admin"}</span>
-                    </p>
+                      <p className="mt-2 flex-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] truncate">
+                        By <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{doc.uploaded_by || "Admin"}</span>
+                      </p>
 
-                    <div className="mt-4 flex items-center gap-2 border-t border-[#E5E7EB] dark:border-[#1F2A44] pt-3">
-                      <button
-                        onClick={(e) => {
-                          trackStudyActivity(doc);
-                          handleForceDownload(e, doc.file_url, doc.title);
-                        }}
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 py-2 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] min-w-0"
-                      >
-                        <Download size={14} className="shrink-0" /> <span className="truncate">Download</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setPreviewDoc(doc);
-                          trackStudyActivity(doc);
-                        }}
-                        className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
-                        aria-label="Preview document"
-                        title="Preview PDF"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button
-                        onClick={() => toggleBookmark(doc.id)}
-                        className={`inline-flex shrink-0 items-center justify-center rounded-xl border p-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${isBookmarked ? 'border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#F59E0B]' : 'border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-[#64748B] dark:text-[#94A3B8] hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1]'}`}
-                        aria-label="Bookmark document"
-                        title={isBookmarked ? "Remove Bookmark" : "Bookmark PDF"}
-                      >
-                        <Bookmark size={16} className={isBookmarked ? "fill-[#F59E0B]" : ""} />
-                      </button>
-                      {isAdmin && (
+                      <div className="mt-4 flex items-center gap-2 border-t border-[#E5E7EB] dark:border-[#1F2A44] pt-3">
                         <button
-                          onClick={() => handleDelete(doc.id)}
-                          className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-red-500 hover:bg-red-500/10 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                          aria-label="Delete document"
+                          onClick={(e) => {
+                            trackStudyActivity(doc);
+                            handleForceDownload(e, doc.file_url, doc.title, doc.id);
+                          }}
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 py-2 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] min-w-0"
                         >
-                          <Trash2 size={16} />
+                          <Download size={14} className="shrink-0" /> <span className="truncate">Download</span>
                         </button>
-                      )}
-                    </div>
-                  </article>
-                )})}
+                        <button
+                          onClick={() => {
+                            setPreviewDoc(doc);
+                            trackStudyActivity(doc);
+                            trackDocumentStat(doc.id, 'view');
+                          }}
+                          className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
+                          aria-label="Preview document"
+                          title="Preview PDF"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => toggleBookmark(doc.id)}
+                          className={`inline-flex shrink-0 items-center justify-center rounded-xl border p-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${isBookmarked ? 'border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#F59E0B]' : 'border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-[#64748B] dark:text-[#94A3B8] hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1]'}`}
+                          aria-label="Bookmark document"
+                          title={isBookmarked ? "Remove Bookmark" : "Bookmark PDF"}
+                        >
+                          <Bookmark size={16} className={isBookmarked ? "fill-[#F59E0B]" : ""} />
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDelete(doc.id)}
+                            className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-red-500 hover:bg-red-500/10 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                            aria-label="Delete document"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1047,7 +1084,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
               
               <div className="flex shrink-0 items-center gap-2 pl-4">
                 <button
-                  onClick={(e) => handleForceDownload(e, previewDoc.file_url, previewDoc.title)}
+                  onClick={(e) => handleForceDownload(e, previewDoc.file_url, previewDoc.title, previewDoc.id)}
                   className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
                 >
                   <Download size={14} className="shrink-0" /> <span className="hidden md:inline">Download</span>
