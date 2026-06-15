@@ -35,6 +35,8 @@ export default function AdminLogin() {
       setAuthError(error.message);
       setLoggingIn(false);
     } else {
+      // 🛡️ THE MASTER KEY: Tells the main portal to unlock your admin controls
+      localStorage.setItem("admin_portal_access", "true");
       router.push("/");
     }
   };
