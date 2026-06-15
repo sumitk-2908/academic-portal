@@ -30,18 +30,78 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// --- FETCH DOCUMENTS ---
+
 export const getDocumentsByModule = async (moduleId: number) => {
-  const response = await api.get(`/api/v1/documents/module/${moduleId}`);
-  return response.data;
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('module_id', moduleId)
+    .order('created_at', { ascending: false }); // Newest first
+
+  if (error) {
+    console.error("Fetch by Module Error:", error);
+    return [];
+  }
+  return data || [];
 };
 
+export const searchDocuments = async (query: string) => {
+  let dbQuery = supabase.from('documents').select('*').order('created_at', { ascending: false });
+
+  if (query && query.trim() !== "") {
+    // Basic text search on title
+    dbQuery = dbQuery.ilike('title', `%${query}%`);
+  }
+
+  const { data, error } = await dbQuery;
+
+  if (error) {
+    console.error("Search Error:", error);
+    return [];
+  }
+  return data || [];
+};
+
+// --- UPLOAD ---
 export const uploadDocument = async (formData: FormData) => {
-  const response = await api.post('/api/v1/documents/upload/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
+  const file = formData.get("file") as File;
+  // Clean the filename to prevent URL issues
+  const filePath = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+
+  // 1. Upload to Storage Bucket
+  const { error: uploadError } = await supabase.storage
+    .from('documents') 
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error("STORAGE ERROR:", uploadError);
+    throw uploadError;
+  }
+
+  // 2. Get the public URL
+  const { data: publicUrlData } = supabase.storage
+    .from('documents')
+    .getPublicUrl(filePath);
+
+  // 3. Prepare the strict data payload
+  const insertPayload = {
+    title: formData.get("title")?.toString(),
+    category: formData.get("category")?.toString(),
+    file_url: publicUrlData.publicUrl,
+    uploaded_by: formData.get("uploaded_by")?.toString(),
+    module_id: formData.get("module_id") && formData.get("module_id") !== "null" ? Number(formData.get("module_id")) : null,
+    subject: formData.get("subject")?.toString(),
+    status: formData.get("status")?.toString() || 'pending'
+  };
+
+  // 4. Insert into the Database
+  const { error: dbError } = await supabase.from('documents').insert(insertPayload).select();
+
+  if (dbError) {
+    console.error("DATABASE INSERT ERROR:", dbError);
+    throw dbError; // This forces the UI to show the "Upload Failed" alert
+  }
 };
 
 export const deleteDocument = async (documentId: number) => {
@@ -49,12 +109,7 @@ export const deleteDocument = async (documentId: number) => {
   return response.data;
 };
 
-export const searchDocuments = async (query: string) => {
-  const response = await api.get(`/api/v1/documents/search`, {
-    params: { query }
-  });
-  return response.data;
-};
+
 
 // Add these to your existing api.ts file
 
@@ -174,19 +229,42 @@ export const trackDocumentStat = async (docId: number, type: 'view' | 'download'
   }
 };
 
-export const getTrendingDocumentIds = async () => {
+// --- ANALYTICS TRACKING ---
+
+export const getTrendingDocuments = async () => {
   try {
+    // We use Supabase's foreign key join to fetch the analytics AND the document data
     const { data, error } = await supabase
       .from('document_analytics')
-      .select('document_id')
+      .select(`
+        view_count,
+        documents (
+          id, title, category, file_url, uploaded_by, created_at, module_id, subject, status
+        )
+      `)
       .order('view_count', { ascending: false })
       .limit(5);
 
     if (error) throw error;
-    // Returns an array of the top 5 document IDs: [12, 5, 89, 2]
-    return data.map(d => d.document_id);
+
+    // Extract the nested document objects and ensure we only show approved ones
+    return data
+      .map((d: any) => d.documents)
+      .filter((doc: any) => doc !== null && doc.status === 'approved');
+      
   } catch (error) {
-    console.error("Failed to fetch trending:", error);
+    console.error("Failed to fetch global trending:", error);
     return [];
   }
+};
+
+// --- CROWDSOURCING / APPROVALS ---
+
+export const updateDocumentStatus = async (id: number, status: 'approved' | 'rejected') => {
+  const { error } = await supabase
+    .from('documents')
+    .update({ status })
+    .eq('id', id);
+    
+  if (error) throw error;
 };

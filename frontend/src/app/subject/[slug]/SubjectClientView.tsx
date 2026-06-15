@@ -7,7 +7,8 @@ import {
   deleteDocument,
   searchDocuments,
   trackDocumentStat,
-  getTrendingDocumentIds,
+  getTrendingDocuments,
+  updateDocumentStatus,
   supabase,
 } from "../../lib/api";
 import {
@@ -15,7 +16,7 @@ import {
   Trash2, LayoutDashboard, NotebookPen, FileQuestion, ListChecks,
   Search, BookOpen, Moon, Sun, Loader2, Bookmark, Clock,
   Layers, FolderOpen, ChevronRight, TrendingUp, Eye,
-  PanelLeft, PanelLeftClose
+  PanelLeft, PanelLeftClose, Inbox, CheckCircle
 } from "lucide-react";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -29,13 +30,14 @@ interface Document {
   created_at: string;
   module_id?: number;
   subject?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 interface StudyHistory extends Document {
   timestamp: number;
 }
 
-type NavKey = "dashboard" | "notes" | "pyq" | "syllabus" | "bookmarks" | "recent";
+type NavKey = "dashboard" | "notes" | "pyq" | "syllabus" | "bookmarks" | "recent" | "pending";
 
 const NAV_ITEMS: { key: NavKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -122,9 +124,8 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [recentStudy, setRecentStudy] = useState<StudyHistory | null>(null);
-
-  // --- Trending State ---
-  const [trendingIds, setTrendingIds] = useState<number[]>([]);
+  // --- Global Trending State ---
+  const [trendingDocs, setTrendingDocs] = useState<Document[]>([]);
 
   // --- Upload Form states ---
   const [uploading, setUploading] = useState(false);
@@ -138,7 +139,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
   useEffect(() => {
     setMounted(true);
     
-    // Theme setup
     const html = document.documentElement;
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme === "light") {
@@ -150,33 +150,23 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
       setIsDarkMode(true);
     }
 
-    // Load Guest Fallback Data
     const storedBookmarks = localStorage.getItem("portal_bookmarks");
     if (storedBookmarks) setBookmarks(JSON.parse(storedBookmarks));
     const history = localStorage.getItem("portal_study_history");
     if (history) setRecentStudy(JSON.parse(history));
 
-    // Fetch live trending stats
-    getTrendingDocumentIds().then(setTrendingIds);
+    getTrendingDocuments().then(setTrendingDocs);
   }, []);
 
-  // --- AUTHENTICATION & SECURITY LISTENER ---
+  // --- AUTHENTICATION LISTENER ---
   useEffect(() => {
     const checkUser = async (session: any) => {
       if (session?.user) {
         setUserId(session.user.id);
         setUserEmail(session.user.email);
         
-        // 1. Secure RBAC Role Check
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-          
+        const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
         const userRole = roleData?.role || 'student';
-        
-        // 2. Double-Layer Security Check
         const hasAdminToken = localStorage.getItem("admin_portal_access") === "true";
 
         if (userRole === 'admin' && hasAdminToken) {
@@ -185,18 +175,12 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
         } else {
           setIsAdmin(false);
           setIsStudent(true); 
+          // Default student uploader name to their email handle
+          setUploadedBy(session.user.email.split('@')[0]);
         }
 
-        // 3. Cloud Sync: Fetch User Bookmarks
-        const { data: bData } = await supabase
-          .from('student_bookmarks')
-          .select('document_id')
-          .eq('user_id', session.user.id);
-          
-        if (bData && bData.length > 0) {
-          setBookmarks(bData.map((b: any) => b.document_id));
-        }
-
+        const { data: bData } = await supabase.from('student_bookmarks').select('document_id').eq('user_id', session.user.id);
+        if (bData && bData.length > 0) setBookmarks(bData.map((b: any) => b.document_id));
       } else {
         setIsAdmin(false);
         setIsStudent(false);
@@ -206,11 +190,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => checkUser(session));
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      checkUser(session);
-    });
-    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => checkUser(session));
     return () => subscription.unsubscribe();
   }, []);
 
@@ -218,7 +198,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     e.preventDefault();
     setAuthLoading(true);
     setAuthError("");
-
     try {
       if (authMode === "signup") {
         const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
@@ -245,6 +224,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     setIsAdmin(false);
     setIsStudent(false);
     setShowForm(false);
+    if(activeNav === "pending") setActiveNav("dashboard");
     
     const storedBookmarks = localStorage.getItem("portal_bookmarks");
     setBookmarks(storedBookmarks ? JSON.parse(storedBookmarks) : []);
@@ -266,7 +246,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
   const toggleBookmark = async (id: number) => {
     const isBookmarked = bookmarks.includes(id);
     const nextBookmarks = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
-    
     setBookmarks(nextBookmarks);
 
     if (userId) { 
@@ -286,9 +265,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
 
     if (userId) {
       await supabase.from('student_history').upsert({
-        user_id: userId,
-        document_id: doc.id,
-        updated_at: new Date().toISOString()
+        user_id: userId, document_id: doc.id, updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' });
     } else {
       localStorage.setItem("portal_study_history", JSON.stringify(historyItem));
@@ -298,15 +275,9 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
   const handleForceDownload = (e: React.MouseEvent, url: string, title: string, docId?: number) => {
     e.stopPropagation();
     e.preventDefault();
-    
-    // Track Analytics
     if (docId) trackDocumentStat(docId, 'download');
-
     const safeTitle = title.replace(/[^a-zA-Z0-9 \-_]/g, '').trim() || 'document';
-    const downloadUrl = url.includes('?') 
-      ? `${url}&download=${encodeURIComponent(safeTitle)}.pdf` 
-      : `${url}?download=${encodeURIComponent(safeTitle)}.pdf`;
-      
+    const downloadUrl = url.includes('?') ? `${url}&download=${encodeURIComponent(safeTitle)}.pdf` : `${url}?download=${encodeURIComponent(safeTitle)}.pdf`;
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.setAttribute("download", `${safeTitle}.pdf`); 
@@ -320,8 +291,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     try {
       let data = [];
       const isNonModule = isNonModuleSubject(activeSubject);
-      
-      if (activeNav === "recent" || activeNav === "bookmarks" || activeNav === "syllabus" || isNonModule) {
+      if (activeNav === "recent" || activeNav === "bookmarks" || activeNav === "syllabus" || activeNav === "pending" || isNonModule) {
         data = await searchDocuments(""); 
       } else {
         data = await getDocumentsByModule(activeModule);
@@ -352,10 +322,10 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
         fetchDocs(); 
       }
     }, 400); 
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, activeModule, activeSubject, activeNav]); 
 
+  // --- UPLOAD HANDLER ---
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return alert("Please select a file!");
@@ -366,16 +336,23 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
     formData.append("title", title);
     formData.append("category", category);
     formData.append("module_id", String(uploadModule)); 
-    formData.append("uploaded_by", uploadedBy || "Admin");
+    formData.append("uploaded_by", uploadedBy || (isAdmin ? "Admin" : "Student"));
     formData.append("subject", uploadSubject); 
+    
+    // 🛡️ THE BOUNCER: Students = Pending, Admins = Approved
+    formData.append("status", isAdmin ? "approved" : "pending");
 
     try {
       await uploadDocument(formData);
       setFile(null);
       setTitle("");
-      setUploadedBy("");
       setShowForm(false);
       await fetchDocs();
+      router.refresh();
+      
+      if (!isAdmin) {
+        alert("Thank you! Your resource has been submitted and is pending admin approval.");
+      }
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Upload failed. Check terminal for details.");
@@ -385,49 +362,72 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this PDF forever?")) return;
+    if (!window.confirm("Are you sure you want to delete this resource?")) return;
     try {
       await deleteDocument(id);
       await fetchDocs();
+      router.refresh();
     } catch (error) {
       console.error("Failed to delete document:", error);
       alert("Failed to delete. Check your terminal.");
     }
   };
 
+  // --- APPROVAL HANDLER ---
+  const handleApprove = async (id: number) => {
+    try {
+      await updateDocumentStatus(id, 'approved');
+      await fetchDocs(); // Refresh to clear it from the inbox
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to approve document:", error);
+      alert("Failed to approve document.");
+    }
+  };
+
+  // --- FILTERING LOGIC ---
   const filteredDocuments = useMemo(() => {
-    if (isSearchingGlobal) return documents;
+    // 1. ADMIN INBOX MODE
+    if (activeNav === "pending" && isAdmin) {
+      return documents.filter(doc => doc.status === 'pending');
+    }
+
+    // 2. PUBLIC MODE (Strictly hide pending/rejected docs)
+    const approvedDocs = documents.filter(doc => doc.status !== 'pending' && doc.status !== 'rejected');
+
+    if (isSearchingGlobal) return approvedDocs;
     
     if (activeNav === "bookmarks") {
-      return documents.filter(doc => bookmarks.includes(doc.id));
+      return approvedDocs.filter(doc => bookmarks.includes(doc.id));
     }
     
     if (activeNav === "recent") {
-      return [...documents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20);
+      return [...approvedDocs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20);
     }
 
-    return documents.filter((doc) => {
-      const matchesSubject = doc.subject === activeSubject;
+    return approvedDocs.filter((doc) => {
+      // 🛡️ FIXED: Case-insensitive matching prevents the "invisible PDF" bug
+      const matchesSubject = doc.subject?.toLowerCase() === activeSubject?.toLowerCase();
       const matchesCategory = activeNav === "dashboard" || doc.category === activeNav;
       const isNonModule = isNonModuleSubject(activeSubject);
       const matchesModule = (activeNav === "syllabus" || isNonModule) ? true : doc.module_id === activeModule;
+      
       return matchesSubject && matchesCategory && matchesModule;
     });
-  }, [documents, isSearchingGlobal, activeSubject, activeNav, bookmarks, activeModule]);
+  }, [documents, isSearchingGlobal, activeSubject, activeNav, bookmarks, activeModule, isAdmin]);
 
-  const trendingDocs = useMemo(() => {
-    if (trendingIds.length === 0 || documents.length === 0) return [];
-    return trendingIds
-      .map(id => documents.find(d => d.id === id))
-      .filter((doc): doc is Document => doc !== undefined);
-  }, [trendingIds, documents]);
+  
 
-  const subjectDocs = useMemo(() => documents.filter((d) => d.subject === activeSubject), [documents, activeSubject]);
+  const subjectDocs = useMemo(() => 
+    documents.filter((d) => d.subject?.toLowerCase() === activeSubject?.toLowerCase() && d.status !== 'pending'), 
+  [documents, activeSubject]);
   const subjectModules = useMemo(() => new Set(subjectDocs.map((d) => d.module_id)).size, [subjectDocs]);
+  const pendingCount = documents.filter(d => d.status === 'pending').length;
 
   const activeLabel = 
     activeNav === "bookmarks" ? "Your Bookmarks" :
     activeNav === "recent" ? "Recently Uploaded" :
+    activeNav === "pending" ? "Approval Inbox" :
     NAV_ITEMS.find((item) => item.key === activeNav)?.label ?? "Dashboard";
 
   const isCurrentNonModule = isNonModuleSubject(activeSubject);
@@ -445,7 +445,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
             <button 
               onClick={() => setSidebarCollapsed((v) => !v)} 
               className="hidden rounded-xl p-2 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] lg:inline-flex"
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
             </button>
@@ -560,20 +559,30 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                     key={item.key}
                     onClick={() => setActiveNav(item.key as NavKey)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${active ? "bg-[#4F46E5] text-white shadow-sm shadow-[#4F46E5]/30" : "text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC]"} ${sidebarCollapsed ? 'justify-center' : ''}`}
-                    title={sidebarCollapsed ? item.label : undefined}
                   >
                     <Icon size={18} className="shrink-0" />
                     {!sidebarCollapsed && <span className="flex-1 text-left">{item.label}</span>}
                   </button>
                 );
               })}
+              
+              {/* ADMIN APPROVAL INBOX */}
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveNav("pending")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${activeNav === "pending" ? "bg-amber-500 text-white shadow-sm shadow-amber-500/30" : "text-amber-600 dark:text-amber-500 hover:bg-amber-500/10"} ${sidebarCollapsed ? 'justify-center' : ''}`}
+                >
+                  <Inbox size={18} className="shrink-0" />
+                  {!sidebarCollapsed && <span className="flex-1 text-left">Approval Inbox</span>}
+                  {!sidebarCollapsed && pendingCount > 0 && <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">{pendingCount}</span>}
+                </button>
+              )}
             </nav>
           </div>
 
           <div className="mt-auto w-full pt-6">
             {!sidebarCollapsed && (
               <>
-                {/* LIVE TRENDING FEED */}
                 <div className="rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-4 mb-4 shadow-sm">
                   <div className="flex items-center gap-2.5 mb-4">
                     <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1]">
@@ -633,7 +642,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
           <div className="mx-auto w-full max-w-6xl space-y-5 md:space-y-6">
 
             {/* HERO & DYNAMIC HEADERS */}
-            {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && (
+            {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && activeNav !== "pending" && (
               <section className="animate-fade-up relative overflow-hidden w-full rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-5 shadow-sm md:p-6">
                 <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#4F46E5]/5 blur-3xl" />
                 <div className="relative">
@@ -665,7 +674,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
               </section>
             )}
 
-            {/* CONTINUE STUDYING FEATURE */}
             {activeNav === "dashboard" && !isSearchingGlobal && (
               <section className="animate-fade-up w-full mt-2 mb-2">
                 <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-3 px-1">
@@ -719,6 +727,20 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
               </section>
             )}
 
+            {activeNav === "pending" && isAdmin && !isSearchingGlobal && (
+               <section className="animate-fade-up w-full rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 md:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm shadow-amber-500/30">
+                    <Inbox size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-lg font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] md:text-xl truncate">Student Submissions</h1>
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-500 truncate">Review and approve resources uploaded by the community.</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {isSearchingGlobal && (
               <section className="animate-fade-up w-full rounded-2xl border border-[#4F46E5]/20 bg-[#4F46E5]/5 p-5 md:p-6">
                 <div className="flex items-center gap-3">
@@ -762,7 +784,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
             )}
 
             {/* SUBJECT + MODULE CONTROLS */}
-            {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && (
+            {!isSearchingGlobal && activeNav !== "bookmarks" && activeNav !== "recent" && activeNav !== "pending" && (
               <section className="animate-fade-up w-full space-y-4 rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-4 shadow-sm">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between w-full">
                   <div className="w-full space-y-1.5 sm:max-w-xs min-w-0">
@@ -790,12 +812,13 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                     </div>
                   </div>
 
-                  {isAdmin && (
+                  {/* DYNAMIC UPLOAD BUTTON */}
+                  {(isAdmin || isStudent) && (
                     <button
                       onClick={() => setShowForm(true)}
                       className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white shadow-sm shadow-[#4F46E5]/30 transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
                     >
-                      <Plus size={16} /> Upload Resource
+                      <Plus size={16} /> {isAdmin ? "Upload Resource" : "Contribute Notes"}
                     </button>
                   )}
                 </div>
@@ -817,7 +840,6 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                                 ? "border-[#4F46E5] bg-[#4F46E5] text-white shadow-sm shadow-[#4F46E5]/30"
                                 : "border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] text-[#64748B] dark:text-[#94A3B8] hover:border-[#4F46E5]/40 hover:text-[#0F172A] dark:hover:text-[#F8FAFC]"
                             }`}
-                            aria-pressed={active}
                           >
                             <Layers size={14} className={`shrink-0 ${active ? "text-white" : "text-[#64748B] dark:text-[#94A3B8]"}`} />
                             <span className="truncate">{mod.name || `Module ${mod.module_number}`}</span>
@@ -878,11 +900,15 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
             ) : filteredDocuments.length === 0 ? (
               <div className="animate-fade-up flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-6 py-16 text-center w-full">
                 <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#4F46E5]/10 text-[#4F46E5] dark:text-[#6366F1] ring-1 ring-[#4F46E5]/20">
-                  <BookOpen size={24} />
+                  {activeNav === "pending" ? <Inbox size={24} /> : <BookOpen size={24} />}
                 </div>
-                <h3 className="text-base font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">No resources available yet</h3>
+                <h3 className="text-base font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">
+                  {activeNav === "pending" ? "Inbox zero!" : "No resources available yet"}
+                </h3>
                 <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
-                  {isSearchingGlobal
+                  {activeNav === "pending"
+                    ? "There are currently no student submissions pending your review."
+                    : isSearchingGlobal
                     ? "Try a different keyword, or browse subjects directly."
                     : activeNav === "bookmarks"
                     ? "You haven't bookmarked any documents yet."
@@ -893,18 +919,20 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 w-full">
                 {filteredDocuments.map((doc, idx) => {
                   const isBookmarked = bookmarks.includes(doc.id);
+                  const isPending = doc.status === 'pending';
+                  
                   return (
                     <article
                       key={doc.id}
-                      className="animate-fade-up group flex flex-col rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#F8FAFC] dark:bg-[#131D33] p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#4F46E5]/40 hover:shadow-lg hover:shadow-[#4F46E5]/5 min-w-0"
+                      className={`animate-fade-up group flex flex-col rounded-2xl border bg-[#F8FAFC] dark:bg-[#131D33] p-4 shadow-sm transition-all duration-200 min-w-0 ${isPending ? 'border-amber-500/30' : 'border-[#E5E7EB] dark:border-[#1F2A44] hover:-translate-y-0.5 hover:border-[#4F46E5]/40 hover:shadow-lg hover:shadow-[#4F46E5]/5'}`}
                       style={{ animationDelay: `${Math.min(idx * 40, 240)}ms` }}
                     >
                       <div className="flex items-start justify-between gap-3 min-w-0">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${CATEGORY_ICON_STYLES[doc.category] ?? "bg-[#4F46E5]/10 text-[#4F46E5]"}`}>
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${isPending ? "bg-amber-500/10 text-amber-500" : CATEGORY_ICON_STYLES[doc.category] ?? "bg-[#4F46E5]/10 text-[#4F46E5]"}`}>
                           <FileText size={18} />
                         </div>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 shrink-0 ${CATEGORY_STYLES[doc.category] ?? "bg-[#FAFAF9] text-[#64748B] ring-[#E5E7EB]"}`}>
-                          {categoryLabel(doc.category)}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 shrink-0 ${isPending ? "bg-amber-500/10 text-amber-600 ring-amber-500/30" : CATEGORY_STYLES[doc.category] ?? "bg-[#FAFAF9] text-[#64748B] ring-[#E5E7EB]"}`}>
+                          {isPending ? "PENDING REVIEW" : categoryLabel(doc.category)}
                         </span>
                       </div>
 
@@ -913,7 +941,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                       </h3>
 
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                        {(isSearchingGlobal || activeNav === "recent" || activeNav === "bookmarks") && doc.subject && (
+                        {(isSearchingGlobal || activeNav === "recent" || activeNav === "bookmarks" || activeNav === "pending") && doc.subject && (
                           <span className="inline-flex items-center gap-1 font-semibold text-[#4F46E5] dark:text-[#6366F1] truncate">
                             <BookOpen size={10} className="shrink-0" /> <span className="truncate">{doc.subject}</span>
                           </span>
@@ -929,47 +957,77 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                       </div>
 
                       <p className="mt-2 flex-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] truncate">
-                        By <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{doc.uploaded_by || "Admin"}</span>
+                        By <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{doc.uploaded_by || "Student"}</span>
                       </p>
 
                       <div className="mt-4 flex items-center gap-2 border-t border-[#E5E7EB] dark:border-[#1F2A44] pt-3">
-                        <button
-                          onClick={(e) => {
-                            trackStudyActivity(doc);
-                            handleForceDownload(e, doc.file_url, doc.title, doc.id);
-                          }}
-                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 py-2 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] min-w-0"
-                        >
-                          <Download size={14} className="shrink-0" /> <span className="truncate">Download</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setPreviewDoc(doc);
-                            trackStudyActivity(doc);
-                            trackDocumentStat(doc.id, 'view');
-                          }}
-                          className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] dark:hover:text-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
-                          aria-label="Preview document"
-                          title="Preview PDF"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={() => toggleBookmark(doc.id)}
-                          className={`inline-flex shrink-0 items-center justify-center rounded-xl border p-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] ${isBookmarked ? 'border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#F59E0B]' : 'border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-[#64748B] dark:text-[#94A3B8] hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1]'}`}
-                          aria-label="Bookmark document"
-                          title={isBookmarked ? "Remove Bookmark" : "Bookmark PDF"}
-                        >
-                          <Bookmark size={16} className={isBookmarked ? "fill-[#F59E0B]" : ""} />
-                        </button>
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleDelete(doc.id)}
-                            className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-red-500 hover:bg-red-500/10 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                            aria-label="Delete document"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                        
+                        {/* INBOX APPROVAL CONTROLS */}
+                        {isPending && isAdmin ? (
+                          <>
+                            <button
+                              onClick={() => handleApprove(doc.id)}
+                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white min-w-0"
+                            >
+                              <CheckCircle size={14} className="shrink-0" /> <span className="truncate">Approve</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPreviewDoc(doc);
+                                trackStudyActivity(doc);
+                              }}
+                              className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]"
+                              title="Preview Submission"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(doc.id)}
+                              className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-red-500 hover:bg-red-500/10 hover:text-red-500"
+                              title="Reject & Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        ) : (
+                          /* STANDARD CONTROLS */
+                          <>
+                            <button
+                              onClick={(e) => {
+                                trackStudyActivity(doc);
+                                handleForceDownload(e, doc.file_url, doc.title, doc.id);
+                              }}
+                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 py-2 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5] dark:hover:text-[#6366F1] min-w-0"
+                            >
+                              <Download size={14} className="shrink-0" /> <span className="truncate">Download</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPreviewDoc(doc);
+                                trackStudyActivity(doc);
+                                trackDocumentStat(doc.id, 'view');
+                              }}
+                              className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]"
+                              title="Preview PDF"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => toggleBookmark(doc.id)}
+                              className={`inline-flex shrink-0 items-center justify-center rounded-xl border p-2 transition-all ${isBookmarked ? 'border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#F59E0B]' : 'border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-[#64748B] dark:text-[#94A3B8] hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 hover:text-[#4F46E5]'}`}
+                              title={isBookmarked ? "Remove Bookmark" : "Bookmark PDF"}
+                            >
+                              <Bookmark size={16} className={isBookmarked ? "fill-[#F59E0B]" : ""} />
+                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDelete(doc.id)}
+                                className="inline-flex shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:border-red-500 hover:bg-red-500/10 hover:text-red-500"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </article>
@@ -982,9 +1040,9 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
       </div>
 
       {/* ============================ UPLOAD MODAL ============================ */}
-      {isAdmin && showForm && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div className="absolute inset-0 bg-[#FAFAF9]/80 dark:bg-[#0B1020]/80 backdrop-blur-sm" onClick={() => setShowForm(false)} aria-hidden="true" />
+      {(isAdmin || isStudent) && showForm && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6">
+          <div className="absolute inset-0 bg-[#FAFAF9]/80 dark:bg-[#0B1020]/80 backdrop-blur-sm" onClick={() => setShowForm(false)} />
           <div className="animate-fade-up relative z-10 w-full max-w-xl overflow-hidden rounded-t-3xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] shadow-2xl sm:rounded-3xl">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-5 py-4">
               <div className="flex items-center gap-3">
@@ -992,15 +1050,11 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                   <Upload size={14} />
                 </div>
                 <div>
-                  <h2 id="modal-title" className="text-sm font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">Upload Resource</h2>
-                  <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">Add files to the central library</p>
+                  <h2 className="text-sm font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC]">{isAdmin ? "Upload Resource" : "Contribute Notes"}</h2>
+                  <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">{isAdmin ? "Add files directly to the library" : "Submit resources for admin review"}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowForm(false)}
-                className="rounded-xl p-2 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
-                aria-label="Close modal"
-              >
+              <button onClick={() => setShowForm(false)} className="rounded-xl p-2 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC]">
                 <X size={16} />
               </button>
             </div>
@@ -1008,51 +1062,50 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
             <form onSubmit={handleUpload} className="max-h-[70vh] space-y-4 overflow-y-auto px-5 py-5">
               <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label htmlFor="target-subject" className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Subject</label>
-                  <select id="target-subject" value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 text-xs font-medium text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Subject</label>
+                  <select value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 text-xs font-medium text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20">
                     {SUBJECTS.map((sub) => <option key={sub} value={sub}>{sub}</option>)}
                   </select>
                 </div>
-                
                 <div className={`space-y-1 ${hideUploadModule ? "opacity-50 pointer-events-none" : ""}`}>
-                  <label htmlFor="target-module" className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Module</label>
-                  <select id="target-module" value={hideUploadModule ? 1 : uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} disabled={hideUploadModule} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 text-xs font-medium text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 disabled:cursor-not-allowed">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Module</label>
+                  <select value={hideUploadModule ? 1 : uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} disabled={hideUploadModule} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] px-3 text-xs font-medium text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20">
                     {[1, 2, 3, 4, 5].map((mod) => <option key={mod} value={mod}>Module {mod}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="doc-title" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Document Title</label>
-                <input id="doc-title" required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Newton's Laws Summary" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
+                <label className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Document Title</label>
+                <input required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Newton's Laws Summary" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label htmlFor="doc-category" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Category</label>
-                  <select id="doc-category" value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20">
+                  <label className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Category</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20">
                     <option value="notes">Notes</option>
                     <option value="pyq">PYQ (Previous Year Question)</option>
                     <option value="syllabus">Syllabus</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor="doc-uploader" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">Uploader Name</label>
-                  <input id="doc-uploader" type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} placeholder="Admin" className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
+                  <label className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{isAdmin ? "Uploader Name" : "Your Name / Alias"}</label>
+                  <input type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} placeholder={isAdmin ? "Admin" : "e.g. John Doe"} className="h-10 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-3 text-xs text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all placeholder:[#64748B] dark:placeholder:[#94A3B8] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="doc-file" className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">PDF File</label>
+                <label className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">PDF File</label>
                 <div className="rounded-xl border border-dashed border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-1.5 transition-colors focus-within:border-[#4F46E5] hover:border-[#4F46E5]/50">
-                  <input id="doc-file" required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full cursor-pointer text-xs font-medium text-[#64748B] dark:text-[#94A3B8] outline-none file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-[#E5E7EB] dark:file:border-[#1F2A44] file:bg-[#FFFFFF] dark:file:bg-[#111827] file:px-3 file:py-1.5 file:font-semibold file:text-[#0F172A] dark:file:text-[#F8FAFC] hover:file:bg-[#E5E7EB]/50 dark:hover:file:bg-[#1F2A44]/50" />
+                  <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full cursor-pointer text-xs font-medium text-[#64748B] dark:text-[#94A3B8] outline-none file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-[#E5E7EB] dark:file:border-[#1F2A44] file:bg-[#FFFFFF] dark:file:bg-[#111827] file:px-3 file:py-1.5 file:font-semibold file:text-[#0F172A] dark:file:text-[#F8FAFC] hover:file:bg-[#E5E7EB]/50 dark:hover:file:bg-[#1F2A44]/50" />
                 </div>
               </div>
 
               <div className="mt-5 flex gap-3 border-t border-[#E5E7EB] dark:border-[#1F2A44] pt-4">
-                <button type="button" onClick={() => setShowForm(false)} className="h-10 flex-1 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-xs font-semibold text-[#64748B] dark:text-[#94A3B8] transition-all hover:bg-[#FAFAF9] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]">Cancel</button>
-                <button disabled={uploading} type="submit" className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#4F46E5] text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#6366F1] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]">
-                  {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : "Submit"}
+                <button type="button" onClick={() => setShowForm(false)} className="h-10 flex-1 rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF] dark:bg-[#111827] text-xs font-semibold text-[#64748B] dark:text-[#94A3B8] transition-all hover:bg-[#FAFAF9] dark:hover:bg-[#131D33] hover:text-[#0F172A] dark:hover:text-[#F8FAFC]">Cancel</button>
+                <button disabled={uploading} type="submit" className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#4F46E5] text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#6366F1] disabled:opacity-60">
+                  {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : isAdmin ? "Submit Resource" : "Submit for Review"}
                 </button>
               </div>
             </form>
@@ -1085,14 +1138,13 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
               <div className="flex shrink-0 items-center gap-2 pl-4">
                 <button
                   onClick={(e) => handleForceDownload(e, previewDoc.file_url, previewDoc.title, previewDoc.id)}
-                  className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-[#6366F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]"
+                  className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-[#6366F1]"
                 >
                   <Download size={14} className="shrink-0" /> <span className="hidden md:inline">Download</span>
                 </button>
                 <button
                   onClick={() => setPreviewDoc(null)}
-                  className="rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
-                  aria-label="Close preview"
+                  className="rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] p-2 text-[#64748B] dark:text-[#94A3B8] transition-all hover:bg-[#E5E7EB]/50 hover:text-[#0F172A]"
                 >
                   <X size={16} />
                 </button>
@@ -1125,7 +1177,7 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                   {authMode === "signin" ? "Sign in to sync your bookmarks & history." : "Join the portal to save your progress."}
                 </p>
               </div>
-              <button onClick={() => setShowAuthModal(false)} className="rounded-xl p-2 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#E5E7EB]/50 dark:hover:bg-[#1F2A44]/50 hover:text-[#0F172A] dark:hover:text-[#F8FAFC]">
+              <button onClick={() => setShowAuthModal(false)} className="rounded-xl p-2 text-[#64748B] dark:text-[#94A3B8] transition-colors hover:bg-[#E5E7EB]/50 hover:text-[#0F172A]">
                 <X size={18} />
               </button>
             </div>
@@ -1147,13 +1199,13 @@ export default function SubjectClientView({ subjects, modules, initialDocs, curr
                 <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="••••••••" className="h-11 w-full rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-4 text-sm font-medium text-[#0F172A] dark:text-[#F8FAFC] outline-none transition-all focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
               </div>
 
-              <button disabled={authLoading} type="submit" className="mt-2 flex h-11 w-full items-center justify-center rounded-xl bg-[#4F46E5] text-sm font-bold text-white shadow-sm transition-all hover:bg-[#6366F1] disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1020]">
+              <button disabled={authLoading} type="submit" className="mt-2 flex h-11 w-full items-center justify-center rounded-xl bg-[#4F46E5] text-sm font-bold text-white shadow-sm transition-all hover:bg-[#6366F1] disabled:opacity-70">
                 {authLoading ? <><Loader2 size={16} className="mr-2 animate-spin" /> Processing...</> : authMode === "signin" ? "Sign In" : "Create Account"}
               </button>
             </form>
 
             <div className="border-t border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] px-6 py-4 text-center">
-              <button type="button" onClick={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setAuthError(""); }} className="text-xs font-semibold text-[#64748B] dark:text-[#94A3B8] transition-colors hover:text-[#4F46E5] focus-visible:outline-none focus-visible:underline">
+              <button type="button" onClick={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setAuthError(""); }} className="text-xs font-semibold text-[#64748B] dark:text-[#94A3B8] transition-colors hover:text-[#4F46E5]">
                 {authMode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
               </button>
             </div>
