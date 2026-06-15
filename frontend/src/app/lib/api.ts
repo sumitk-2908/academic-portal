@@ -55,3 +55,104 @@ export const searchDocuments = async (query: string) => {
   });
   return response.data;
 };
+
+// Add these to your existing api.ts file
+
+export interface Subject {
+  id: number;
+  name: string;
+  slug: string; // e.g., "maths-1"
+  is_non_module: boolean;
+}
+
+export interface Module {
+  id: number;
+  subject_id: number;
+  module_number: number;
+  name: string;
+}
+
+export const getSubjects = async () => {
+  const { data, error } = await supabase
+    .from('subjects')
+    .select('*')
+    .order('name');
+  if (error) throw error;
+  return data as Subject[];
+};
+
+export const getModulesBySubject = async (subjectId: number) => {
+  const { data, error } = await supabase
+    .from('modules')
+    .select('*')
+    .eq('subject_id', subjectId)
+    .order('module_number');
+  if (error) throw error;
+  return data as Module[];
+};
+
+// Fetch documents for the initial server render
+export const getDocumentsBySubjectSlug = async (slug: string) => {
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('subject_slug', slug) // Assuming you have a slug or join via subject id
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
+// --- CLOUD SYNC: BOOKMARKS ---
+
+export const getStudentBookmarks = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('student_bookmarks')
+    .select('document_id')
+    .eq('user_id', userId);
+    
+  if (error) throw error;
+  // Return a simple array of document IDs: [1, 5, 12]
+  return data.map(b => b.document_id);
+};
+
+export const addBookmark = async (userId: string, documentId: number) => {
+  const { error } = await supabase
+    .from('student_bookmarks')
+    .insert({ user_id: userId, document_id: documentId });
+  if (error) throw error;
+};
+
+export const removeBookmark = async (userId: string, documentId: number) => {
+  const { error } = await supabase
+    .from('student_bookmarks')
+    .delete()
+    .match({ user_id: userId, document_id: documentId });
+  if (error) throw error;
+};
+
+// --- CLOUD SYNC: STUDY HISTORY ---
+
+export const getStudentHistory = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('student_history')
+    .select('document_id, updated_at')
+    .eq('user_id', userId)
+    .single(); // We only keep one "Continue Studying" item per user
+    
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 means no rows found, which is fine
+  return data;
+};
+
+export const updateStudentHistory = async (userId: string, documentId: number) => {
+  // Upsert (Update if exists, Insert if new)
+  const { error } = await supabase
+    .from('student_history')
+    .upsert({ 
+      user_id: userId, 
+      document_id: documentId,
+      updated_at: new Date().toISOString()
+    }, { 
+      onConflict: 'user_id' 
+    });
+  if (error) throw error;
+};

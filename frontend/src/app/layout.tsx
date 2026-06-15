@@ -39,7 +39,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${jakarta.variable} ${geistSans.variable} ${geistMono.variable} bg-background`}>
+    <html 
+      lang="en" 
+      suppressHydrationWarning 
+      data-scroll-behavior="smooth"
+      className={`scroll-smooth ${jakarta.variable} ${geistSans.variable} ${geistMono.variable} bg-background`}
+    >
       <head>
         {/* Synchronous script to prevent Flash of Incorrect Theme (FOIT) */}
         <script
