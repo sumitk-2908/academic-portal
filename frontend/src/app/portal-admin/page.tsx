@@ -1,131 +1,96 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { supabase } from "../lib/api";
-import { Lock, Loader2, GraduationCap, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Shield, Lock, Loader2 } from "lucide-react";
 
-export default function AdminLogin() {
+export default function AdminPortalLogin() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [loggingIn, setLoggingIn] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push("/");
-      } else {
-        setLoading(false);
-      }
-    });
-  }, [router]);
+  const [loading, setLoading] = useState(false);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthError("");
-    setLoggingIn(true);
-    
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (error) {
-      setAuthError(error.message);
-      setLoggingIn(false);
-    } else {
-      // 🛡️ THE MASTER KEY: Tells the main portal to unlock your admin controls
-      localStorage.setItem("admin_portal_access", "true");
+    setLoading(true);
+
+    try {
+      // 1. Authenticate user
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) throw authError;
+
+      // 2. Validate DB Role immediately
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authData.user.id)
+        .single();
+
+      if (roleError || roleData?.role !== 'admin') {
+        // If not an admin, instantly log them out and reject access
+        await supabase.auth.signOut();
+        throw new Error("Unauthorized: Account lacks administrator privileges.");
+      }
+
+      // 3. Set secure context flag (SessionStorage clears automatically on tab close)
+      sessionStorage.setItem("admin_portal_auth", "true");
+      
+      // 4. Route to dashboard
       router.push("/");
+      
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors duration-300">
-      
-      {/* Simple Header */}
-      <header className="border-b border-border bg-surface/80 px-6 py-4 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/30">
-            <GraduationCap size={20} />
+    <div className="flex min-h-screen items-center justify-center bg-[#FAFAF9] dark:bg-[#0B1020] p-4">
+      <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-8 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+            <Shield size={32} />
           </div>
-          <div>
-            <p className="text-sm font-extrabold tracking-tight text-foreground">Academic Portal</p>
-            <p className="text-[11px] font-medium text-muted">Admin Access Area</p>
-          </div>
+          <h1 className="text-2xl font-extrabold text-[#0F172A] dark:text-white">Admin Gateway</h1>
+          <p className="mt-2 text-sm text-[#64748B] dark:text-[#94A3B8]">Secure authentication required.</p>
         </div>
-      </header>
 
-      {/* Centered Login UI */}
-      <main className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          
-          <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg px-2 py-1 -ml-2">
-            <ArrowLeft size={16} /> Back to Public Portal
-          </Link>
-          
-          <div className="animate-fade-up rounded-3xl border border-border bg-surface p-8 shadow-xl">
-            <div className="mb-8 flex flex-col items-center text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
-                <Lock size={24} />
-              </div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">System Admin</h1>
-              <p className="mt-1 text-sm font-medium text-muted">Sign in to manage portal resources</p>
-            </div>
-
-            <form onSubmit={handleAdminLogin} className="space-y-4">
-              <div className="space-y-1.5">
-                <label htmlFor="login-email" className="text-xs font-bold uppercase tracking-wider text-muted">Email address</label>
-                <input 
-                  id="login-email" 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="admin@example.com" 
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm font-medium text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20" 
-                  required 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="login-password" className="text-xs font-bold uppercase tracking-wider text-muted">Password</label>
-                <input 
-                  id="login-password" 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20" 
-                  required 
-                />
-              </div>
-
-              {authError && (
-                <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3">
-                  <p className="text-xs font-semibold text-destructive text-center">{authError}</p>
-                </div>
-              )}
-
-              <button 
-                type="submit" 
-                disabled={loggingIn}
-                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background"
-              >
-                {loggingIn ? <><Loader2 size={16} className="animate-spin" /> Authenticating...</> : "Sign In"}
-              </button>
-            </form>
+        <form onSubmit={handleAdminLogin} className="space-y-4">
+          <div className="relative">
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Administrator Email"
+              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-amber-500 dark:border-[#1F2A44] dark:text-white"
+            />
           </div>
-        </div>
-      </main>
-
+          <div className="relative">
+            <input
+              required
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Secure Password"
+              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-amber-500 dark:border-[#1F2A44] dark:text-white"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-500 font-bold text-white transition-colors hover:bg-amber-600"
+          >
+            {loading ? <Loader2 className="animate-spin" size={18} /> : <><Lock size={18} /> Authenticate Session</>}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

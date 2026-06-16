@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase, getTrendingDocuments, uploadDocument, getStudentBookmarks, getRecentStudyActivity } from "./lib/api";
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
@@ -51,7 +52,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [uploadSubject, setUploadSubject] = useState("MATHS 1");
   const [uploadModule, setUploadModule] = useState(1);
 
-  const refreshSidebarData = async (currentUserId?: string) => {
+  const refreshSidebarData = useCallback(async (currentUserId?: string) => {
     const { data: docs } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
     if (docs) setAllDocs(docs);
 
@@ -62,7 +63,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     const userBookmarks = await getStudentBookmarks(currentUserId);
     setBookmarks(userBookmarks);
-  };
+  }, []);
+
+  const syncUserFromSession = useCallback(async (session: Session | null) => {
+    if (session?.user) {
+      const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
+      
+      const isDbAdmin = roleData?.role === 'admin';
+      const isPortalAdminFlow = sessionStorage.getItem("admin_portal_auth") === "true";
+
+      // Strict enforcement: DB Role + Admin Portal Login Context required
+      if (isDbAdmin && isPortalAdminFlow) {
+        setIsAdmin(true); setIsStudent(false);
+      } else {
+        setIsAdmin(false); setIsStudent(true);
+        // Safely split the email, falling back to "Student" if undefined
+        setUploadedBy(session.user.email?.split('@')[0] || "Student");
+      }
+      refreshSidebarData(session.user.id);
+    } else {
+      setIsAdmin(false); setIsStudent(false);
+      refreshSidebarData();
+    }
+  }, [refreshSidebarData]);
 
   useEffect(() => {
     setMounted(true);
@@ -84,23 +107,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, [pathname]);
 
   useEffect(() => {
-    const checkUser = async (session: any) => {
-      if (session?.user) {
-        const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
-        if (roleData?.role === 'admin' || localStorage.getItem("admin_portal_access") === "true") {
-          setIsAdmin(true); setIsStudent(false);
-        } else {
-          setIsAdmin(false); setIsStudent(true);
-          setUploadedBy(session.user.email.split('@')[0]);
-        }
-        refreshSidebarData(session.user.id);
-      } else {
-        setIsAdmin(false); setIsStudent(false);
-        refreshSidebarData();
-      }
-    };
-    supabase.auth.getSession().then(({ data: { session } }) => checkUser(session));
-  }, []);
+    supabase.auth.getSession().then(({ data: { session } }) => syncUserFromSession(session));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncUserFromSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [syncUserFromSession]);
 
   const toggleTheme = () => {
     const html = document.documentElement;
@@ -114,13 +128,33 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
+    
+    // SECURITY: Ensure standard student login clears any residual admin context
+    sessionStorage.removeItem("admin_portal_auth");
+
     try {
       if (authMode === "signup") {
-        await supabase.auth.signUp({ email: authEmail, password: authPassword });
-        alert("Registration complete! You can now log in.");
-        setAuthMode("signin");
+        const { data, error } = await supabase.auth.signUp({ 
+          email: authEmail, 
+          password: authPassword,
+          options: { emailRedirectTo: window.location.origin } // PRODUCTION REDIRECT FIX
+        });
+        if (error) throw error;
+
+        if (data.session) {
+          await syncUserFromSession(data.session);
+          setAuthPassword("");
+          setShowAuthModal(false);
+        } else {
+          alert("Registration complete! Please check your email to verify your account before logging in.");
+          setAuthMode("signin");
+        }
       } else {
-        await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+        const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+        if (error) throw error;
+
+        await syncUserFromSession(data.session);
+        setAuthPassword("");
         setShowAuthModal(false);
       }
     } catch (err: any) {
@@ -128,6 +162,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  // Dedicated secure logout handler
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    sessionStorage.removeItem("admin_portal_auth");
+    setIsAdmin(false);
+    setIsStudent(false);
+    router.push('/');
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -244,7 +287,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <button onClick={() => setShowUploadForm(true)} className="flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white hover:bg-[#6366F1]">
                   <Plus size={14} /> <span className="hidden sm:inline">{isAdmin ? "Upload" : "Contribute"}</span>
                 </button>
-                <button onClick={async () => { await supabase.auth.signOut(); setIsAdmin(false); setIsStudent(false); router.push('/'); }} className="flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm text-[#64748B] hover:bg-red-50 hover:text-red-500 dark:border-[#1F2A44]">
+                <button onClick={handleLogout} className="flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm text-[#64748B] hover:bg-red-50 hover:text-red-500 dark:border-[#1F2A44]">
                   <LogOut size={16} />
                 </button>
               </div>
