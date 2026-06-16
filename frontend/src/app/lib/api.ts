@@ -37,7 +37,7 @@ export const getDocumentsByModule = async (moduleId: number) => {
     .from('documents')
     .select('*')
     .eq('module_id', moduleId)
-    .order('created_at', { ascending: false }); // Newest first
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error("Fetch by Module Error:", error);
@@ -50,7 +50,6 @@ export const searchDocuments = async (query: string) => {
   let dbQuery = supabase.from('documents').select('*').order('created_at', { ascending: false });
 
   if (query && query.trim() !== "") {
-    // Basic text search on title
     dbQuery = dbQuery.ilike('title', `%${query}%`);
   }
 
@@ -63,13 +62,12 @@ export const searchDocuments = async (query: string) => {
   return data || [];
 };
 
-// --- UPLOAD ---
+// --- UPLOAD & DELETE ---
+
 export const uploadDocument = async (formData: FormData) => {
   const file = formData.get("file") as File;
-  // Clean the filename to prevent URL issues
   const filePath = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
 
-  // 1. Upload to Storage Bucket
   const { error: uploadError } = await supabase.storage
     .from('documents') 
     .upload(filePath, file);
@@ -79,12 +77,10 @@ export const uploadDocument = async (formData: FormData) => {
     throw uploadError;
   }
 
-  // 2. Get the public URL
   const { data: publicUrlData } = supabase.storage
     .from('documents')
     .getPublicUrl(filePath);
 
-  // 3. Prepare the strict data payload
   const insertPayload = {
     title: formData.get("title")?.toString(),
     category: formData.get("category")?.toString(),
@@ -95,28 +91,25 @@ export const uploadDocument = async (formData: FormData) => {
     status: formData.get("status")?.toString() || 'pending'
   };
 
-  // 4. Insert into the Database
   const { error: dbError } = await supabase.from('documents').insert(insertPayload).select();
 
   if (dbError) {
     console.error("DATABASE INSERT ERROR:", dbError);
-    throw dbError; // This forces the UI to show the "Upload Failed" alert
+    throw dbError;
   }
 };
 
 export const deleteDocument = async (documentId: number) => {
-  const response = await api.delete(`/api/v1/documents/${documentId}`);
-  return response.data;
+  const { error } = await supabase.from('documents').delete().eq('id', documentId);
+  if (error) throw error;
 };
 
-
-
-// Add these to your existing api.ts file
+// --- SUBJECTS & MODULES ---
 
 export interface Subject {
   id: number;
   name: string;
-  slug: string; // e.g., "maths-1"
+  slug: string;
   is_non_module: boolean;
 }
 
@@ -128,88 +121,110 @@ export interface Module {
 }
 
 export const getSubjects = async () => {
-  const { data, error } = await supabase
-    .from('subjects')
-    .select('*')
-    .order('name');
+  const { data, error } = await supabase.from('subjects').select('*').order('name');
   if (error) throw error;
   return data as Subject[];
 };
 
 export const getModulesBySubject = async (subjectId: number) => {
-  const { data, error } = await supabase
-    .from('modules')
-    .select('*')
-    .eq('subject_id', subjectId)
-    .order('module_number');
+  const { data, error } = await supabase.from('modules').select('*').eq('subject_id', subjectId).order('module_number');
   if (error) throw error;
   return data as Module[];
 };
 
-// Fetch documents for the initial server render
-export const getDocumentsBySubjectSlug = async (slug: string) => {
-  const { data, error } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('subject_slug', slug) // Assuming you have a slug or join via subject id
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
-};
 
-// --- CLOUD SYNC: BOOKMARKS ---
+// ==========================================
+// --- CLOUD SYNC: HYBRID BOOKMARKS ---
+// ==========================================
 
-export const getStudentBookmarks = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('student_bookmarks')
-    .select('document_id')
-    .eq('user_id', userId);
+export const getStudentBookmarks = async (userId?: string) => {
+  if (userId) {
+    const { data, error } = await supabase
+      .from('student_bookmarks')
+      .select('documents(*)')
+      .eq('user_id', userId);
+      
+    if (!error && data) {
+      return data.map((b: any) => b.documents).filter(d => d !== null);
+    }
+  }
+  
+  // DEFENSIVE FALLBACK: Safely parse LocalStorage
+  try {
+    const stored = localStorage.getItem("portal_bookmarks");
+    const localIds = stored ? JSON.parse(stored) : [];
     
-  if (error) throw error;
-  // Return a simple array of document IDs: [1, 5, 12]
-  return data.map(b => b.document_id);
-};
-
-export const addBookmark = async (userId: string, documentId: number) => {
-  const { error } = await supabase
-    .from('student_bookmarks')
-    .insert({ user_id: userId, document_id: documentId });
-  if (error) throw error;
-};
-
-export const removeBookmark = async (userId: string, documentId: number) => {
-  const { error } = await supabase
-    .from('student_bookmarks')
-    .delete()
-    .match({ user_id: userId, document_id: documentId });
-  if (error) throw error;
-};
-
-// --- CLOUD SYNC: STUDY HISTORY ---
-
-export const getStudentHistory = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('student_history')
-    .select('document_id, updated_at')
-    .eq('user_id', userId)
-    .single(); // We only keep one "Continue Studying" item per user
+    if (!Array.isArray(localIds) || localIds.length === 0) return [];
     
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 means no rows found, which is fine
-  return data;
+    const { data } = await supabase.from('documents').select('*').in('id', localIds).eq('status', 'approved');
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.warn("Resetting corrupted bookmarks local storage");
+    return [];
+  }
 };
 
-export const updateStudentHistory = async (userId: string, documentId: number) => {
-  // Upsert (Update if exists, Insert if new)
-  const { error } = await supabase
-    .from('student_history')
-    .upsert({ 
-      user_id: userId, 
-      document_id: documentId,
-      updated_at: new Date().toISOString()
-    }, { 
-      onConflict: 'user_id' 
-    });
-  if (error) throw error;
+// ==========================================
+// --- CLOUD SYNC: HYBRID STUDY HISTORY ---
+// ==========================================
+
+export const getRecentStudyActivity = async (userId?: string) => {
+  if (userId) {
+    const { data, error } = await supabase
+      .from('study_history')
+      .select('documents(*)')
+      .eq('user_id', userId)
+      .order('accessed_at', { ascending: false })
+      .limit(5);
+
+    if (!error && data) {
+      return data.map((h: any) => h.documents).filter(d => d !== null);
+    }
+  }
+  
+  // DEFENSIVE FALLBACK: Safely parse LocalStorage
+  try {
+    const stored = localStorage.getItem("portal_study_history");
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("Resetting corrupted history local storage");
+    return [];
+  }
+};
+
+export const logRecentStudyActivity = async (doc: any) => {
+  // Step 1: Safely parse and validate local storage history
+  let history = [];
+  try {
+    const stored = localStorage.getItem("portal_study_history");
+    const parsed = stored ? JSON.parse(stored) : [];
+    // If it's a valid array, use it. Otherwise, fallback to empty array.
+    if (Array.isArray(parsed)) {
+      history = parsed;
+    }
+  } catch (e) {
+    console.warn("Reset corrupted local storage history");
+  }
+
+  history = history.filter((d: any) => d.id !== doc.id); // Remove duplicates
+  history.unshift(doc); // Add to front
+  history = history.slice(0, 5); // Keep top 5
+  localStorage.setItem("portal_study_history", JSON.stringify(history));
+
+  // Fire event to update Sidebar instantly
+  window.dispatchEvent(new Event("sidebar_update"));
+
+  // Step 2: Silent Cloud Sync (If logged in)
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData?.session?.user) {
+    const userId = sessionData.session.user.id;
+    await supabase.from('study_history').upsert({
+      user_id: userId,
+      document_id: doc.id,
+      accessed_at: new Date().toISOString()
+    }, { onConflict: 'user_id, document_id' }); // Overwrites timestamp if it already exists
+  }
 };
 
 
@@ -221,19 +236,14 @@ export const trackDocumentStat = async (docId: number, type: 'view' | 'download'
       doc_id: docId,
       stat_type: type
     });
-    
     if (error) throw error;
   } catch (error) {
-    // We intentionally fail silently so tracking errors never interrupt the user
     console.error("Failed to track analytics:", error);
   }
 };
 
-// --- ANALYTICS TRACKING ---
-
 export const getTrendingDocuments = async () => {
   try {
-    // We use Supabase's foreign key join to fetch the analytics AND the document data
     const { data, error } = await supabase
       .from('document_analytics')
       .select(`
@@ -247,7 +257,6 @@ export const getTrendingDocuments = async () => {
 
     if (error) throw error;
 
-    // Extract the nested document objects and ensure we only show approved ones
     return data
       .map((d: any) => d.documents)
       .filter((doc: any) => doc !== null && doc.status === 'approved');

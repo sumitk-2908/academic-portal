@@ -1,0 +1,100 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase, getStudentBookmarks, trackDocumentStat, deleteDocument, logRecentStudyActivity } from "../lib/api";
+import { Bookmark, Download, Eye, Trash2, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
+import Link from "next/link";
+
+const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+
+export default function BookmarksPage() {
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const fetchBookmarks = async () => {
+      setLoading(true);
+      const { data: sess } = await supabase.auth.getSession();
+      const currentUserId = sess?.session?.user?.id;
+      
+      if (currentUserId) {
+        setUserId(currentUserId);
+        const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', currentUserId).single();
+        if (roleData?.role === 'admin' && localStorage.getItem("admin_portal_access") === "true") setIsAdmin(true);
+      }
+
+      const userBookmarks = await getStudentBookmarks(currentUserId);
+      setDocuments(userBookmarks);
+      setLoading(false);
+    };
+
+    fetchBookmarks();
+  }, []);
+
+  const toggleBookmark = async (id: number) => {
+    const nextDocs = documents.filter(d => d.id !== id);
+    setDocuments(nextDocs);
+    const nextIds = nextDocs.map(d => d.id);
+    localStorage.setItem("portal_bookmarks", JSON.stringify(nextIds));
+    
+    if (userId) {
+      await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
+    }
+    window.dispatchEvent(new Event("sidebar_update"));
+  };
+
+  const handleDownload = (e: React.MouseEvent, doc: any) => {
+    e.preventDefault();
+    trackDocumentStat(doc.id, 'download');
+    const link = document.createElement("a");
+    link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
+      <div className="rounded-3xl border border-amber-500/20 bg-amber-500/5 p-6 shadow-sm flex items-center gap-4">
+        <div className="h-12 w-12 rounded-xl bg-amber-500 text-white flex items-center justify-center"><Bookmark size={24} /></div>
+        <div>
+          <h1 className="text-xl font-extrabold sm:text-3xl">My Bookmarks</h1>
+          <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">Your saved PDFs and study materials</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-amber-500" /></div>
+        ) : documents.map(doc => {
+          const Icon = CATEGORY_ICONS[doc.category] || FileText;
+          return (
+            <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-500 dark:border-[#1F2A44] dark:bg-[#111827]">
+              <div className="flex items-start justify-between">
+                <div className="h-9 w-9 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center"><Icon size={16} /></div>
+                <span className="text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.subject}</span>
+              </div>
+              <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
+              <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
+                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]">
+                  <Download size={12} /> Download
+                </button>
+                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-amber-500 text-white py-2 rounded-xl">
+                  <Eye size={12} /> View
+                </Link>
+                <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border bg-amber-500/10 text-amber-500 border-amber-500/30">
+                  <Bookmark size={14} className="fill-amber-500" />
+                </button>
+              </div>
+            </article>
+          );
+        })}
+        {documents.length === 0 && !loading && (
+          <p className="col-span-full text-center py-12 text-xs text-[#64748B]">You haven't bookmarked any documents yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}

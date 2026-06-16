@@ -1,35 +1,55 @@
-import { redirect } from 'next/navigation';
-import { getSubjects } from './lib/api';
+"use client";
 
-export default async function RootPage() {
-  let subjects = [];
+import Link from "next/link";
+import { BookOpen } from "lucide-react";
 
-  // 1. Only wrap the actual database call in the try...catch
-  try {
-    subjects = await getSubjects();
-  } catch (error) {
-    console.error("Failed to fetch subjects for root redirect:", error);
-    
-    // Fallback UI if the Supabase connection genuinely fails
-    return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-2 bg-[#FAFAF9] dark:bg-[#0B1020]">
-        <p className="text-sm font-bold text-red-500">Database Connection Error</p>
-        <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Could not load the academic portal.</p>
-      </div>
-    );
-  }
+const SUBJECTS = [
+  { name: "MATHS 1", slug: "maths-1" },
+  { name: "MATHS 2", slug: "maths-2" },
+  { name: "PHYSICS", slug: "physics" },
+  { name: "BEE", slug: "bee" },
+  { name: "PPS", slug: "pps" },
+  { name: "BIOLOGY", slug: "biology" },
+  { name: "WORKSHOP", slug: "workshop" },
+  { name: "PHYSICS LAB", slug: "physics-lab" },
+  { name: "CHEMISTRY", slug: "chemistry" },
+  { name: "ENGINEERING GRAPHICS", slug: "engineering-graphics" },
+  { name: "BE", slug: "be" },
+  { name: "BME", slug: "bme" },
+  { name: "COMMUNICATION SKILLS", slug: "communication-skills" },
+  { name: "ENVIRONMENTAL SCIENCE", slug: "environmental-science" },
+  { name: "NSS", slug: "nss" },
+  { name: "BEE LAB", slug: "bee-lab" },
+  { name: "CHEMISTRY LAB", slug: "chemistry-lab" },
+  { name: "BE LAB", slug: "be-lab" }
+];
 
-  // 2. Perform the redirect OUTSIDE the try...catch block!
-  if (subjects && subjects.length > 0) {
-    redirect(`/subject/${subjects[0].slug}`);
-  }
-
-  // Fallback UI if your database connects but has 0 subjects
+export default function SubjectDirectory() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-[#FAFAF9] dark:bg-[#0B1020]">
-      <p className="text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">
-        No subjects found in the database. Please add a subject first.
-      </p>
+    <div className="mx-auto w-full max-w-6xl animate-fade-up">
+      <section className="mb-10 text-center pt-8">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-4">
+          Academic <span className="text-[#4F46E5]">Resource Hub</span>
+        </h1>
+        <p className="text-[#64748B] dark:text-[#94A3B8] max-w-2xl mx-auto">
+          Select a subject domain below to access modules, notes, assignments, and previous year questions.
+        </p>
+      </section>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {SUBJECTS.map((sub) => (
+          <Link 
+            key={sub.slug} 
+            href={`/subject/${sub.slug}`}
+            className="group flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center transition-all hover:-translate-y-1 hover:border-[#4F46E5] hover:shadow-lg dark:border-[#1F2A44] dark:bg-[#111827]"
+          >
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4F46E5]/10 text-[#4F46E5] transition-transform group-hover:scale-110 group-hover:bg-[#4F46E5] group-hover:text-white dark:text-[#6366F1]">
+              <BookOpen size={24} />
+            </div>
+            <h2 className="text-xs font-bold tracking-tight">{sub.name}</h2>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

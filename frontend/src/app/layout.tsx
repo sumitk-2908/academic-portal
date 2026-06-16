@@ -1,70 +1,41 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import Script from "next/script";
+import ClientLayout from "./ClientLayout";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
-  subsets: ["latin"],
-  display: "swap",
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Academic Portal | Premium Student Learning Platform",
-  description:
-    "Everything a first-year B.Tech student needs — notes, PYQs, syllabus, and resources in one beautifully organized place.",
+  title: "Academic Portal",
+  description: "First-Year B.Tech Hub",
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0f19" },
-  ],
-  width: "device-width",
-  initialScale: 1,
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html 
-      lang="en" 
-      suppressHydrationWarning 
-      data-scroll-behavior="smooth"
-      className={`scroll-smooth ${jakarta.variable} ${geistSans.variable} ${geistMono.variable} bg-background`}
-    >
+    <html lang="en" suppressHydrationWarning className={`${jakarta.variable} ${geistSans.variable} ${geistMono.variable} bg-background`}>
       <head>
-        {/* Synchronous script to prevent Flash of Incorrect Theme (FOIT) */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                let theme = localStorage.getItem('theme');
-                let prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (theme === 'dark' || (!theme && prefersDark)) {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
-              } catch (_) {}
-            `,
-          }}
-        />
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
+            try {
+              if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            } catch (_) {}
+          `}
+        </Script>
       </head>
-      <body className="min-h-screen flex flex-col font-sans bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary">
-        {children}
+      <body suppressHydrationWarning className="min-h-screen flex flex-col font-sans antialiased">
+        
+        {/* THIS IS YOUR SINGLE APP SHELL */}
+        <ClientLayout>
+          {children}
+        </ClientLayout>
+
       </body>
     </html>
   );
