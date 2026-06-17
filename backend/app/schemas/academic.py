@@ -22,5 +22,10 @@ class DocumentResponse(BaseModel):
     module_id: int
     subject: Optional[str] = None
 
+    # --- ADDED DYNAMIC METADATA FIELDS ---
+    file_size: Optional[float] = None
+    page_count: Optional[int] = None
+    thumbnail_url: Optional[str] = None
+
     # This tells Pydantic to read data directly from your SQLAlchemy database models
     model_config = ConfigDict(from_attributes=True)
