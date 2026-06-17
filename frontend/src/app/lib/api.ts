@@ -62,46 +62,32 @@ export const searchDocuments = async (query: string) => {
   return data || [];
 };
 
-// --- UPLOAD & DELETE ---
+// --- UPLOAD & DELETE (Routed through FastAPI) ---
 
 export const uploadDocument = async (formData: FormData) => {
-  const file = formData.get("file") as File;
-  const filePath = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('documents') 
-    .upload(filePath, file);
-
-  if (uploadError) {
-    console.error("STORAGE ERROR:", uploadError);
-    throw uploadError;
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from('documents')
-    .getPublicUrl(filePath);
-
-  const insertPayload = {
-    title: formData.get("title")?.toString(),
-    category: formData.get("category")?.toString(),
-    file_url: publicUrlData.publicUrl,
-    uploaded_by: formData.get("uploaded_by")?.toString(),
-    module_id: formData.get("module_id") && formData.get("module_id") !== "null" ? Number(formData.get("module_id")) : null,
-    subject: formData.get("subject")?.toString(),
-    status: formData.get("status")?.toString() || 'pending'
-  };
-
-  const { error: dbError } = await supabase.from('documents').insert(insertPayload).select();
-
-  if (dbError) {
-    console.error("DATABASE INSERT ERROR:", dbError);
-    throw dbError;
+  try {
+    const response = await api.post('/documents/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    console.error("FastAPI Upload Error:", error.response?.data || error);
+    throw new Error(error.response?.data?.detail || "Failed to upload document via FastAPI.");
   }
 };
 
 export const deleteDocument = async (documentId: number) => {
-  const { error } = await supabase.from('documents').delete().eq('id', documentId);
-  if (error) throw error;
+  try {
+    // Calling the FastAPI delete route ensures both the cloud file AND the DB record are safely deleted
+    const response = await api.delete(`/documents/${documentId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("FastAPI Delete Error:", error.response?.data || error);
+    throw new Error(error.response?.data?.detail || "Failed to delete document via FastAPI.");
+  }
 };
 
 // --- SUBJECTS & MODULES ---
