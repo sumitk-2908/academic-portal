@@ -64,25 +64,54 @@ export const searchDocuments = async (query: string) => {
 
 // --- UPLOAD & DELETE (Routed through FastAPI) ---
 
-export const uploadDocument = async (formData: FormData) => {
+export const uploadDocument = async (rawFormData: FormData) => {
   try {
-    const response = await api.post('/documents/upload/', formData, {
+    const cleanData = new FormData();
+    const file = rawFormData.get("file");
+    if (file) cleanData.append("file", file as Blob);
+    
+    const title = rawFormData.get("title");
+    if (title) cleanData.append("title", title.toString());
+    
+    const category = rawFormData.get("category");
+    if (category) cleanData.append("category", category.toString());
+    
+    const subject = rawFormData.get("subject");
+    if (subject) cleanData.append("subject", subject.toString());
+    
+    const uploadedBy = rawFormData.get("uploaded_by");
+    if (uploadedBy) cleanData.append("uploaded_by", uploadedBy.toString());
+    
+    const moduleId = rawFormData.get("module_id");
+    if (moduleId && moduleId !== "null" && moduleId !== "undefined") {
+      cleanData.append("module_id", moduleId.toString());
+    } else {
+      cleanData.append("module_id", "1");
+    }
+
+    // FIX: Added the /api/v1/ prefix to match main.py
+    const response = await api.post('/api/v1/documents/upload/', cleanData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+        'Content-Type': 'multipart/form-data'
+      }
     });
     
     return response.data;
   } catch (error: any) {
-    console.error("FastAPI Upload Error:", error.response?.data || error);
-    throw new Error(error.response?.data?.detail || "Failed to upload document via FastAPI.");
+    const errorDetail = error.response?.data?.detail;
+    console.error("FastAPI Upload Error Detailed:", errorDetail || error.message);
+    const errorMessage = Array.isArray(errorDetail) 
+      ? errorDetail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ')
+      : (errorDetail || "Failed to upload document via FastAPI.");
+      
+    throw new Error(errorMessage);
   }
 };
 
 export const deleteDocument = async (documentId: number) => {
   try {
-    // Calling the FastAPI delete route ensures both the cloud file AND the DB record are safely deleted
-    const response = await api.delete(`/documents/${documentId}`);
+    // FIX: Added the /api/v1/ prefix to match main.py
+    const response = await api.delete(`/api/v1/documents/${documentId}`);
     return response.data;
   } catch (error: any) {
     console.error("FastAPI Delete Error:", error.response?.data || error);
