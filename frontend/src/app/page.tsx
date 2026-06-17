@@ -18,25 +18,26 @@ import {
   Users 
 } from "lucide-react";
 
+// Expanded colors to include brighter (-400) shades and 20% opacity backgrounds for Dark Mode
 const SUBJECTS = [
-  { name: "MATHS 1", slug: "maths-1", icon: Calculator, color: "text-blue-500", bg: "bg-blue-500/10", hoverBg: "group-hover:bg-blue-500" },
-  { name: "MATHS 2", slug: "maths-2", icon: Calculator, color: "text-blue-500", bg: "bg-blue-500/10", hoverBg: "group-hover:bg-blue-500" },
-  { name: "PHYSICS", slug: "physics", icon: Atom, color: "text-amber-500", bg: "bg-amber-500/10", hoverBg: "group-hover:bg-amber-500" },
-  { name: "BEE", slug: "bee", icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10", hoverBg: "group-hover:bg-yellow-500" },
-  { name: "PPS", slug: "pps", icon: Terminal, color: "text-indigo-500", bg: "bg-indigo-500/10", hoverBg: "group-hover:bg-indigo-500" },
-  { name: "BIOLOGY", slug: "biology", icon: Leaf, color: "text-green-500", bg: "bg-green-500/10", hoverBg: "group-hover:bg-green-500" },
-  { name: "WORKSHOP", slug: "workshop", icon: Wrench, color: "text-orange-500", bg: "bg-orange-500/10", hoverBg: "group-hover:bg-orange-500" },
-  { name: "PHYSICS LAB", slug: "physics-lab", icon: Beaker, color: "text-amber-500", bg: "bg-amber-500/10", hoverBg: "group-hover:bg-amber-500" },
-  { name: "CHEMISTRY", slug: "chemistry", icon: Beaker, color: "text-teal-500", bg: "bg-teal-500/10", hoverBg: "group-hover:bg-teal-500" },
-  { name: "ENGINEERING GRAPHICS", slug: "engineering-graphics", icon: PenTool, color: "text-purple-500", bg: "bg-purple-500/10", hoverBg: "group-hover:bg-purple-500" },
-  { name: "BE", slug: "be", icon: BookOpen, color: "text-rose-500", bg: "bg-rose-500/10", hoverBg: "group-hover:bg-rose-500" },
-  { name: "BME", slug: "bme", icon: Wrench, color: "text-orange-500", bg: "bg-orange-500/10", hoverBg: "group-hover:bg-orange-500" },
-  { name: "COMMUNICATION SKILLS", slug: "communication-skills", icon: MessageSquare, color: "text-pink-500", bg: "bg-pink-500/10", hoverBg: "group-hover:bg-pink-500" },
-  { name: "ENVIRONMENTAL SCIENCE", slug: "environmental-science", icon: Globe, color: "text-emerald-500", bg: "bg-emerald-500/10", hoverBg: "group-hover:bg-emerald-500" },
-  { name: "NSS", slug: "nss", icon: Users, color: "text-red-500", bg: "bg-red-500/10", hoverBg: "group-hover:bg-red-500" },
-  { name: "BEE LAB", slug: "bee-lab", icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10", hoverBg: "group-hover:bg-yellow-500" },
-  { name: "CHEMISTRY LAB", slug: "chemistry-lab", icon: Beaker, color: "text-teal-500", bg: "bg-teal-500/10", hoverBg: "group-hover:bg-teal-500" },
-  { name: "BE LAB", slug: "be-lab", icon: BookOpen, color: "text-rose-500", bg: "bg-rose-500/10", hoverBg: "group-hover:bg-rose-500" }
+  { name: "MATHS 1", slug: "maths-1", icon: Calculator, color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-400/20", hoverBg: "group-hover:bg-blue-500 dark:group-hover:bg-blue-400" },
+  { name: "MATHS 2", slug: "maths-2", icon: Calculator, color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-400/20", hoverBg: "group-hover:bg-blue-500 dark:group-hover:bg-blue-400" },
+  { name: "PHYSICS", slug: "physics", icon: Atom, color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-400/20", hoverBg: "group-hover:bg-amber-500 dark:group-hover:bg-amber-400" },
+  { name: "BEE", slug: "bee", icon: Zap, color: "text-yellow-500 dark:text-yellow-400", bg: "bg-yellow-500/10 dark:bg-yellow-400/20", hoverBg: "group-hover:bg-yellow-500 dark:group-hover:bg-yellow-400" },
+  { name: "PPS", slug: "pps", icon: Terminal, color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-500/10 dark:bg-indigo-400/20", hoverBg: "group-hover:bg-indigo-500 dark:group-hover:bg-indigo-400" },
+  { name: "BIOLOGY", slug: "biology", icon: Leaf, color: "text-green-500 dark:text-green-400", bg: "bg-green-500/10 dark:bg-green-400/20", hoverBg: "group-hover:bg-green-500 dark:group-hover:bg-green-400" },
+  { name: "WORKSHOP", slug: "workshop", icon: Wrench, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-500/10 dark:bg-orange-400/20", hoverBg: "group-hover:bg-orange-500 dark:group-hover:bg-orange-400" },
+  { name: "PHYSICS LAB", slug: "physics-lab", icon: Beaker, color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-400/20", hoverBg: "group-hover:bg-amber-500 dark:group-hover:bg-amber-400" },
+  { name: "CHEMISTRY", slug: "chemistry", icon: Beaker, color: "text-teal-500 dark:text-teal-400", bg: "bg-teal-500/10 dark:bg-teal-400/20", hoverBg: "group-hover:bg-teal-500 dark:group-hover:bg-teal-400" },
+  { name: "ENGINEERING GRAPHICS", slug: "engineering-graphics", icon: PenTool, color: "text-purple-500 dark:text-purple-400", bg: "bg-purple-500/10 dark:bg-purple-400/20", hoverBg: "group-hover:bg-purple-500 dark:group-hover:bg-purple-400" },
+  { name: "BE", slug: "be", icon: BookOpen, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-400/20", hoverBg: "group-hover:bg-rose-500 dark:group-hover:bg-rose-400" },
+  { name: "BME", slug: "bme", icon: Wrench, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-500/10 dark:bg-orange-400/20", hoverBg: "group-hover:bg-orange-500 dark:group-hover:bg-orange-400" },
+  { name: "COMMUNICATION SKILLS", slug: "communication-skills", icon: MessageSquare, color: "text-pink-500 dark:text-pink-400", bg: "bg-pink-500/10 dark:bg-pink-400/20", hoverBg: "group-hover:bg-pink-500 dark:group-hover:bg-pink-400" },
+  { name: "ENVIRONMENTAL SCIENCE", slug: "environmental-science", icon: Globe, color: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-400/20", hoverBg: "group-hover:bg-emerald-500 dark:group-hover:bg-emerald-400" },
+  { name: "NSS", slug: "nss", icon: Users, color: "text-red-500 dark:text-red-400", bg: "bg-red-500/10 dark:bg-red-400/20", hoverBg: "group-hover:bg-red-500 dark:group-hover:bg-red-400" },
+  { name: "BEE LAB", slug: "bee-lab", icon: Zap, color: "text-yellow-500 dark:text-yellow-400", bg: "bg-yellow-500/10 dark:bg-yellow-400/20", hoverBg: "group-hover:bg-yellow-500 dark:group-hover:bg-yellow-400" },
+  { name: "CHEMISTRY LAB", slug: "chemistry-lab", icon: Beaker, color: "text-teal-500 dark:text-teal-400", bg: "bg-teal-500/10 dark:bg-teal-400/20", hoverBg: "group-hover:bg-teal-500 dark:group-hover:bg-teal-400" },
+  { name: "BE LAB", slug: "be-lab", icon: BookOpen, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-400/20", hoverBg: "group-hover:bg-rose-500 dark:group-hover:bg-rose-400" }
 ];
 
 export default function SubjectDirectory() {
@@ -92,17 +93,17 @@ export default function SubjectDirectory() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 sm:px-0">
         {filteredSubjects.map((sub) => {
-          // Dynamically grab the icon or fallback to BookOpen
           const Icon = sub.icon || BookOpen;
           
           return (
             <Link 
               key={sub.slug} 
               href={`/subject/${sub.slug}`}
-              className="group flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center transition-all hover:-translate-y-1 hover:border-indigo-400 hover:shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]"
+              // Added dark mode specific hover background and border glow here to make the cards stand out more
+              className="group flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center transition-all hover:-translate-y-1 hover:border-indigo-400 hover:shadow-md dark:border-[#1F2A44] dark:bg-[#111827] dark:hover:border-indigo-400/60 dark:hover:bg-[#161f33]"
             >
-              {/* This is the fixed line injecting the specific colors and hover states */}
-              <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${sub.bg || 'bg-[#4F46E5]/10'} ${sub.color || 'text-[#4F46E5]'} transition-transform group-hover:scale-110 ${sub.hoverBg || 'group-hover:bg-[#4F46E5]'} group-hover:text-white dark:text-[#6366F1]`}>
+              {/* Removed the hardcoded dark:text-[#6366F1] that was overriding everything! */}
+              <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${sub.bg || 'bg-[#4F46E5]/10'} ${sub.color || 'text-[#4F46E5]'} transition-transform group-hover:scale-110 ${sub.hoverBg || 'group-hover:bg-[#4F46E5]'} group-hover:text-white`}>
                 <Icon size={24} />
               </div>
               <h2 className="text-xs font-bold tracking-tight text-[#111827] dark:text-white">{sub.name}</h2>
