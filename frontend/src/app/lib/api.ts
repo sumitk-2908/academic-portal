@@ -65,43 +65,28 @@ export const searchDocuments = async (query: string) => {
 // --- UPLOAD & DELETE ---
 
 export const uploadDocument = async (formData: FormData) => {
-  const file = formData.get("file") as File;
-  const filePath = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('documents') 
-    .upload(filePath, file);
-
-  if (uploadError) {
-    console.error("STORAGE ERROR:", uploadError);
-    throw uploadError;
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from('documents')
-    .getPublicUrl(filePath);
-
-  const insertPayload = {
-    title: formData.get("title")?.toString(),
-    category: formData.get("category")?.toString(),
-    file_url: publicUrlData.publicUrl,
-    uploaded_by: formData.get("uploaded_by")?.toString(),
-    module_id: formData.get("module_id") && formData.get("module_id") !== "null" ? Number(formData.get("module_id")) : null,
-    subject: formData.get("subject")?.toString(),
-    status: formData.get("status")?.toString() || 'pending'
-  };
-
-  const { error: dbError } = await supabase.from('documents').insert(insertPayload).select();
-
-  if (dbError) {
-    console.error("DATABASE INSERT ERROR:", dbError);
-    throw dbError;
+  try {
+    // 🔥 ROUTED TO RENDER BACKEND: Triggers PyMuPDF for size, pages, and thumbnail!
+    const { data } = await api.post('/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  } catch (error) {
+    console.error("BACKEND UPLOAD ERROR:", error);
+    throw error;
   }
 };
 
 export const deleteDocument = async (documentId: number) => {
-  const { error } = await supabase.from('documents').delete().eq('id', documentId);
-  if (error) throw error;
+  try {
+    // 🔥 ROUTED TO RENDER BACKEND: Ensures both the PDF AND the thumbnail are deleted from Cloud Storage
+    await api.delete(`/${documentId}`);
+  } catch (error) {
+    console.error("BACKEND DELETE ERROR:", error);
+    throw error;
+  }
 };
 
 // --- SUBJECTS & MODULES ---
@@ -151,7 +136,6 @@ export const getStudentBookmarks = async (userId?: string) => {
     }
   }
   
-  // FIX: Safely parse LocalStorage and MERGE with Cloud Data instead of skipping it
   try {
     const stored = localStorage.getItem("portal_bookmarks");
     const localIds = stored ? JSON.parse(stored) : [];
@@ -161,7 +145,6 @@ export const getStudentBookmarks = async (userId?: string) => {
     const { data, error } = await supabase.from('documents').select('*').in('id', localIds).eq('status', 'approved');
     const localBookmarks = (!error && Array.isArray(data)) ? data : [];
 
-    // Merge cloud and local arrays, preventing duplicate documents
     const allBookmarks = [...cloudBookmarks];
     for (const lb of localBookmarks) {
       if (!allBookmarks.find(b => b.id === lb.id)) {
@@ -197,7 +180,6 @@ export const getRecentStudyActivity = async (userId?: string) => {
     }
   }
   
-  // FIX: Safely parse LocalStorage and MERGE with Cloud Data
   try {
     const stored = localStorage.getItem("portal_study_history");
     const parsed = stored ? JSON.parse(stored) : [];
@@ -205,7 +187,6 @@ export const getRecentStudyActivity = async (userId?: string) => {
     
     if (cloudHistory.length === 0) return localHistory;
 
-    // Merge keeping unique documents (max 5)
     const combined = [...cloudHistory];
     for (const lh of localHistory) {
        if (!combined.find(h => h.id === lh.id)) {
@@ -222,12 +203,10 @@ export const getRecentStudyActivity = async (userId?: string) => {
 };
 
 export const logRecentStudyActivity = async (doc: any) => {
-  // Step 1: Safely parse and validate local storage history
   let history: any[] = [];
   try {
     const stored = localStorage.getItem("portal_study_history");
     const parsed = stored ? JSON.parse(stored) : [];
-    // If it's a valid array, use it. Otherwise, fallback to empty array.
     if (Array.isArray(parsed)) {
       history = parsed;
     }
@@ -235,15 +214,13 @@ export const logRecentStudyActivity = async (doc: any) => {
     console.warn("Reset corrupted local storage history");
   }
 
-  history = history.filter((d: any) => d.id !== doc.id); // Remove duplicates
-  history.unshift(doc); // Add to front
-  history = history.slice(0, 5); // Keep top 5
+  history = history.filter((d: any) => d.id !== doc.id);
+  history.unshift(doc);
+  history = history.slice(0, 5);
   localStorage.setItem("portal_study_history", JSON.stringify(history));
 
-  // Fire event to update Sidebar instantly
   window.dispatchEvent(new Event("sidebar_update"));
 
-  // Step 2: Silent Cloud Sync (If logged in)
   const { data: sessionData } = await supabase.auth.getSession();
   if (sessionData?.session?.user) {
     const userId = sessionData.session.user.id;
@@ -251,7 +228,7 @@ export const logRecentStudyActivity = async (doc: any) => {
       user_id: userId,
       document_id: doc.id,
       accessed_at: new Date().toISOString()
-    }, { onConflict: 'user_id, document_id' }); // Overwrites timestamp if it already exists
+    }, { onConflict: 'user_id, document_id' });
   }
 };
 

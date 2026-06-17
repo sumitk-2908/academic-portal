@@ -39,6 +39,7 @@ async def upload_document(
     module_id: int = Form(1),
     subject: str = Form("General"),
     uploaded_by: str = Form("Admin"),
+    status: str = Form("pending"),
     file: UploadFile = File(...),
     user: dict = Depends(verify_token),       # 🛡️ General Token Security intact
     admin_user: dict = Depends(verify_admin), # 🛡️ Admin Security intact
@@ -117,7 +118,8 @@ async def upload_document(
         file_url=public_url,
         file_size=file_size_mb,
         page_count=page_count,
-        thumbnail_url=thumbnail_url
+        thumbnail_url=thumbnail_url,
+        status=status
     )
     
     db.add(new_doc)
