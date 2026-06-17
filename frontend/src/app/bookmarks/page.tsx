@@ -14,24 +14,43 @@ export default function BookmarksPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const fetchBookmarks = async () => {
-      setLoading(true);
+    let isMounted = true;
+
+    const fetchBookmarks = async (silent = false) => {
+      // Avoid flickering if we are just doing a silent background update
+      if (!silent) setLoading(true); 
+      
       const { data: sess } = await supabase.auth.getSession();
       const currentUserId = sess?.session?.user?.id;
       
-      if (currentUserId) {
+      if (currentUserId && isMounted) {
         setUserId(currentUserId);
         const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', currentUserId).single();
-        // Fixed storage key to match the architecture in ClientLayout
         if (roleData?.role === 'admin' && sessionStorage.getItem("admin_portal_auth") === "true") setIsAdmin(true);
       }
 
       const userBookmarks = await getStudentBookmarks(currentUserId);
-      setDocuments(userBookmarks);
-      setLoading(false);
+      if (isMounted) {
+        setDocuments(userBookmarks);
+        if (!silent) setLoading(false);
+      }
     };
 
+    // Initial fetch
     fetchBookmarks();
+
+    const handleUpdate = () => fetchBookmarks(true);
+
+    // FIX: Listen for global updates to bypass Next.js Mobile Router caching
+    window.addEventListener("sidebar_update", handleUpdate);
+    // FIX: Also ensure the state updates if the user switches browser tabs
+    window.addEventListener("focus", handleUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("sidebar_update", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+    };
   }, []);
 
   const toggleBookmark = async (id: number) => {
@@ -68,7 +87,6 @@ export default function BookmarksPage() {
         </div>
       </div>
 
-      {/* FIXED: Explicitly added grid-cols-1 and w-full to prevent mobile WebKit collapse */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
           <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-amber-500" /></div>
