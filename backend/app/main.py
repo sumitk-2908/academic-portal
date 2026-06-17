@@ -6,6 +6,7 @@ from app.config import settings
 from app.database import engine
 from app.models.academic import Base
 # --------------------------------------
+from sqlalchemy import text
 
 from app.routers import documents
 
@@ -13,6 +14,13 @@ from dotenv import load_dotenv
 
 # This forces Python to read your .env file immediately
 load_dotenv()
+with engine.connect() as conn:
+    conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_size REAL;"))
+    conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS page_count INTEGER;"))
+    conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR;"))
+    conn.commit()
+
+
 
 
 # 2. Recreate them perfectly with all new columns
