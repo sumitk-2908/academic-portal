@@ -62,7 +62,7 @@ export const searchDocuments = async (query: string) => {
   return data || [];
 };
 
-// --- UPLOAD & DELETE ---
+// --- UPLOAD & DELETE (Routed through FastAPI) ---
 
 export const uploadDocument = async (formData: FormData) => {
   try {
