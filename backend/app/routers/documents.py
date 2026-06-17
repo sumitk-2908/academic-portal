@@ -36,13 +36,13 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 async def upload_document(
     title: str = Form(...),
     category: DocCategory = Form(...),
-    module_id: int = Form(1),
+    module_id: int = Form("1"),
     subject: str = Form("General"),
     uploaded_by: str = Form("Admin"),
     status: str = Form("pending"),
     file: UploadFile = File(...),
     user: dict = Depends(verify_token),       # 🛡️ General Token Security intact
-    admin_user: dict = Depends(verify_admin), # 🛡️ Admin Security intact
+    
     db: Session = Depends(get_db)
 ):
     """Uploads a PDF directly via REST API, completely bypassing the buggy Supabase SDK."""
@@ -50,9 +50,14 @@ async def upload_document(
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
 
-    module = db.query(Module).filter(Module.id == module_id).first()
-    if not module:
-        raise HTTPException(status_code=404, detail="Module not found")
+    # <-- FIX 2: Safely parse "null" into an actual Python None
+    parsed_module_id = None if module_id == "null" else int(module_id)
+
+    # Only verify the module exists if one was actually provided
+    if parsed_module_id is not None:
+        module = db.query(Module).filter(Module.id == parsed_module_id).first()
+        if not module:
+            raise HTTPException(status_code=404, detail="Module not found")
 
     safe_filename = file.filename.replace(" ", "_")
     file_bytes = await file.read()
@@ -112,7 +117,7 @@ async def upload_document(
     new_doc = Document(
         title=title,
         category=category,
-        module_id=module_id,
+        module_id=parsed_module_id,
         subject=subject,
         uploaded_by=uploaded_by,
         file_url=public_url,

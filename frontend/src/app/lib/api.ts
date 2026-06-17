@@ -66,12 +66,8 @@ export const searchDocuments = async (query: string) => {
 
 export const uploadDocument = async (formData: FormData) => {
   try {
-    // 🔥 ROUTED TO RENDER BACKEND: Triggers PyMuPDF for size, pages, and thumbnail!
-    const { data } = await api.post('/upload/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // FIX: Removed the manual headers block so Axios can auto-generate the file boundary
+    const { data } = await api.post('/upload/', formData);
     return data;
   } catch (error) {
     console.error("BACKEND UPLOAD ERROR:", error);
