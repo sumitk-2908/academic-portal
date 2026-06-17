@@ -36,7 +36,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 async def upload_document(
     title: str = Form(...),
     category: DocCategory = Form(...),
-    module_id: int = Form("1"),
+    module_id: str = Form("null"),
     subject: str = Form("General"),
     uploaded_by: str = Form("Admin"),
     status: str = Form("pending"),
@@ -51,7 +51,7 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
 
     # <-- FIX 2: Safely parse "null" into an actual Python None
-    parsed_module_id = None if module_id == "null" else int(module_id)
+    parsed_module_id = None if module_id == "null" or module_id == "" else int(module_id)
 
     # Only verify the module exists if one was actually provided
     if parsed_module_id is not None:

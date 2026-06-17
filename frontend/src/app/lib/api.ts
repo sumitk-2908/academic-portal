@@ -66,11 +66,29 @@ export const searchDocuments = async (query: string) => {
 
 export const uploadDocument = async (formData: FormData) => {
   try {
-    // FIX: Removed the manual headers block so Axios can auto-generate the file boundary
-    const { data } = await api.post('/upload/', formData);
-    return data;
+    // Grab the auth token directly to ensure the backend accepts it
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Use native fetch to bypass the Axios JSON header completely
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
+        // CRITICAL: Do NOT set Content-Type here. Fetch automatically sets 
+        // the multipart/form-data boundary when it sees FormData.
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("SERVER REJECTED UPLOAD:", errorText);
+      throw new Error(`Upload failed: ${errorText}`);
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error("BACKEND UPLOAD ERROR:", error);
+    console.error("UPLOAD CRASH:", error);
     throw error;
   }
 };
