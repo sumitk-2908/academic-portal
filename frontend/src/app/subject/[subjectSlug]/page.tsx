@@ -94,6 +94,16 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
     });
   }, [documents, activeTab, bookmarks]);
 
+  // Derive counts for the tab badges
+  const tabCounts = useMemo(() => {
+    return {
+      dashboard: -1, // Dashboards don't need counts
+      notes: documents.filter(d => d.category === "notes").length,
+      pyq: documents.filter(d => d.category === "pyq").length,
+      syllabus: documents.filter(d => d.category === "syllabus").length,
+    };
+  }, [documents]);
+
   return (
     <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
       {/* Subject Header */}
@@ -104,15 +114,27 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
 
       {/* Tabs */}
       <div className="flex gap-1 overflow-x-auto border-b border-[#E5E7EB] pb-1 dark:border-[#1F2A44]">
-        {["dashboard", "notes", "pyq", "syllabus"].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`px-4 py-2 text-xs font-bold border-b-2 capitalize transition-colors ${activeTab === tab ? "border-[#4F46E5] text-[#4F46E5]" : "border-transparent text-[#64748B] hover:text-[#0F172A]"}`}
-          >
-            {tab}
-          </button>
-        ))}
+        {["dashboard", "notes", "pyq", "syllabus"].map(tab => {
+          const count = tabCounts[tab as keyof typeof tabCounts];
+          const isZero = count === 0;
+
+          return (
+            <button
+              key={tab}
+              onClick={() => !isZero && setActiveTab(tab as any)}
+              disabled={isZero}
+              className={`px-4 py-2 text-xs font-bold border-b-2 capitalize transition-colors ${
+                activeTab === tab 
+                  ? "border-[#4F46E5] text-[#4F46E5]" 
+                  : isZero 
+                    ? "border-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed" 
+                    : "border-transparent text-[#64748B] hover:text-[#0F172A] dark:hover:text-gray-300"
+              }`}
+            >
+              {tab} {count >= 0 && `(${count})`}
+            </button>
+          );
+        })}
       </div>
 
       {/* Grid Content */}
