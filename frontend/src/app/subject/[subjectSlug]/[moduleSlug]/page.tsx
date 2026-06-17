@@ -79,14 +79,14 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
   };
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl space-y-6 animate-fade-up">
       <Link href={`/subject/${subjectSlug}`} className="inline-flex items-center gap-2 text-xs font-semibold text-[#64748B] hover:text-[#4F46E5]">
         <ArrowLeft size={14} /> Back to {subjectName}
       </Link>
 
       <div className="border-b pb-4 dark:border-[#1F2A44]">
         <h1 className="text-xl font-extrabold sm:text-2xl">{subjectName}</h1>
-        <p className="text-xs font-bold text-[#4F46E5] mt-1">Module {moduleNumber} Repository</p>
+        <p className="mt-1 text-xs font-bold text-[#4F46E5]">Module {moduleNumber} Repository</p>
       </div>
 
       {loading ? (
@@ -98,22 +98,30 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
             return (
               <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827]">
                 <div className="flex items-start justify-between">
-                  <div className="h-9 w-9 bg-[#4F46E5]/10 text-[#4F46E5] rounded-xl flex items-center justify-center"><Icon size={16} /></div>
-                  <span className="text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.category}</span>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5]"><Icon size={16} /></div>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-extrabold uppercase dark:bg-slate-800">{doc.category}</span>
                 </div>
-                <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
+                <h3 className="mt-3 min-h-[2rem] text-xs font-bold line-clamp-2">{doc.title}</h3>
                 <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
-                  <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44]">
+                  <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border bg-[#F8FAFC] py-2 text-[11px] font-bold dark:bg-[#1F2A44]">
                     <Download size={12} /> Download
                   </button>
-                  <Link href={`/subject/${subjectSlug}/${moduleSlug}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl">
+                  <Link href={`/subject/${subjectSlug}/${moduleSlug}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4F46E5] py-2 text-[11px] font-bold text-white">
                     <Eye size={12} /> View
                   </Link>
-                  <button onClick={() => toggleBookmark(doc.id)} className={`p-2 rounded-xl border ${bookmarks.includes(doc.id) ? "bg-amber-500/10 text-amber-500 border-amber-500/30" : ""}`}>
-                    <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-amber-500" : ""} />
+                  {/* --- UPDATED GHOST/FILL BOOKMARK BUTTON --- */}
+                  <button 
+                    onClick={() => toggleBookmark(doc.id)} 
+                    className={`rounded-xl border p-2 transition-colors ${
+                      bookmarks.includes(doc.id) 
+                        ? "bg-amber-400 text-white border-amber-400" 
+                        : "border-amber-400 text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-400/10"
+                    }`}
+                  >
+                    <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-white text-white" : "text-amber-400"} />
                   </button>
                   {isAdmin && (
-                    <button onClick={() => handleDelete(doc.id)} className="p-2 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/5">
+                    <button onClick={() => handleDelete(doc.id)} className="rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/5">
                       <Trash2 size={14} />
                     </button>
                   )}
@@ -122,7 +130,7 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
             );
           })}
           {documents.length === 0 && (
-            <p className="col-span-full text-center py-12 text-xs text-[#64748B]">No items indexed for this module.</p>
+            <p className="col-span-full py-12 text-center text-xs text-[#64748B]">No items indexed for this module.</p>
           )}
         </div>
       )}

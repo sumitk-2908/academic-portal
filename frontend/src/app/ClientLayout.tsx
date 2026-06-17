@@ -207,17 +207,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   };
 
-  // --- OMNIPRESENT GLOBAL SEARCH ENGINE ---
   const globalSearchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     
-    // Split user query into individual words (e.g. "Maths 1 module 1" -> ["maths", "1", "module", "1"])
     const queryTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
 
     return allDocs.filter(doc => {
       if (doc.status !== 'approved') return false;
 
-      // Create a combined searchable string, explicitly injecting "module X"
       const searchableText = [
         doc.title,
         doc.subject,
@@ -225,7 +222,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         doc.module_id ? `module ${doc.module_id}` : ''
       ].join(' ').toLowerCase();
 
-      // The document matches if EVERY typed term exists somewhere in its searchable string
       return queryTerms.every(term => searchableText.includes(term));
     }).slice(0, 8);
   }, [searchQuery, allDocs]);
@@ -260,13 +256,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           <div className="flex flex-1 justify-center min-w-0 relative group">
             <div className="w-full max-w-2xl relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 dark:text-[#94A3B8]" size={18} />
               <input
                 type="text"
                 placeholder="Search globally for PDFs, subjects, modules..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-full border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] pl-11 pr-10 text-sm outline-none focus:border-[#4F46E5]"
+                className="h-10 w-full rounded-full border border-gray-200 bg-gray-100 pl-11 pr-10 text-sm outline-none transition-colors focus:border-indigo-400 focus:bg-white dark:border-[#1F2A44] dark:bg-[#0B1020]"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B]">
@@ -325,16 +321,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* ========================================= */}
         {/* 2. THE ONLY OMNIPRESENT SIDEBAR (DESKTOP) */}
         {/* ========================================= */}
-        <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2' : 'w-[280px] px-4'}`}>
+        <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 transition-all duration-200 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-16 px-2' : 'w-[220px] px-4'}`}>
           <div className="space-y-6 flex-1">
             
             <div>
               {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Navigation</p>}
-              <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-[#4F46E5] dark:hover:bg-[#111827]">
+              <Link href="/" title={sidebarCollapsed ? "Back to Homepage" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-[#4F46E5] dark:hover:bg-[#111827]">
                 <Home size={18} /> {!sidebarCollapsed && "Back to Homepage"}
               </Link>
               {isAdmin && (
-                <Link href="/subject/admin/inbox" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-amber-600 hover:bg-amber-500/10 mt-1">
+                <Link href="/subject/admin/inbox" title={sidebarCollapsed ? "Approval Inbox" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-amber-600 hover:bg-amber-500/10">
                   <Inbox size={18} /> {!sidebarCollapsed && <span className="flex-1">Approval Inbox</span>}
                   {!sidebarCollapsed && pendingCount > 0 && <span className="rounded-full bg-amber-500/20 px-2 text-[10px]">{pendingCount}</span>}
                 </Link>
@@ -344,15 +340,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div>
               {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Student Workspace</p>}
               
-              <Link href="/continue-studying" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-indigo-500 dark:hover:bg-[#111827]">
+              <Link href="/continue-studying" title={sidebarCollapsed ? "Continue Studying" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-indigo-500 dark:hover:bg-[#111827]">
                 <Clock size={18} /> {!sidebarCollapsed && "Continue Studying"}
               </Link>
 
-              <Link href="/bookmarks" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-amber-500 dark:hover:bg-[#111827] mt-1">
+              <Link href="/bookmarks" title={sidebarCollapsed ? "Bookmarks" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-amber-500 dark:hover:bg-[#111827]">
                 <Bookmark size={18} /> {!sidebarCollapsed && "Bookmarks"}
               </Link>
 
-              <Link href="/recent-uploads" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-emerald-500 dark:hover:bg-[#111827] mt-1">
+              <Link href="/recent-uploads" title={sidebarCollapsed ? "Recent Uploads" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-emerald-500 dark:hover:bg-[#111827]">
                 <Upload size={18} /> {!sidebarCollapsed && "Recent Uploads"}
               </Link>
             </div>
@@ -360,7 +356,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {!sidebarCollapsed && trendingDocs.length > 0 && (
               <div>
                 <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Discovery</p>
-                <div className="rounded-2xl bg-white p-3 border border-[#E5E7EB] dark:bg-[#111827] dark:border-[#1F2A44] space-y-2.5">
+                <div className="rounded-2xl border border-[#E5E7EB] bg-white p-3 space-y-2.5 dark:border-[#1F2A44] dark:bg-[#111827]">
                   <div className="flex items-center gap-2 text-[#4F46E5]"><TrendingUp size={13} /><h3 className="text-[10px] font-extrabold uppercase tracking-wider">Trending Now</h3></div>
                   {trendingDocs.slice(0, 3).map((doc, idx) => (
                     <Link key={`tr-${doc.id}`} href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="block text-xs group">
@@ -373,7 +369,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </div>
 
           {!sidebarCollapsed && (
-            <div className="mt-auto border-t border-[#E5E7EB] pt-4 px-3 text-[10px] font-medium text-[#94A3B8] space-y-0.5 dark:border-[#1F2A44]">
+            <div className="mt-auto space-y-0.5 border-t border-[#E5E7EB] px-3 pt-4 text-[10px] font-medium text-[#94A3B8] dark:border-[#1F2A44]">
               <p>Academic Portal • Version 1.6</p>
               <p>© {new Date().getFullYear()} All Rights Reserved.</p>
             </div>
@@ -391,11 +387,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* ========================================= */}
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       {/* ========================================= */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-[#E5E7EB] bg-[#FFFFFF]/90 backdrop-blur-xl dark:border-[#1F2A44] dark:bg-[#111827]/90 lg:hidden pb-safe">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-[#E5E7EB] bg-[#FFFFFF]/90 backdrop-blur-xl pb-safe dark:border-[#1F2A44] dark:bg-[#111827]/90 lg:hidden">
         <Link 
           href="/" 
           onClick={() => setShowMobileMenu(false)} 
-          className={`flex flex-col items-center gap-1 min-w-[64px] ${pathname === '/' ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/' ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
         >
           <Home size={22} />
           <span className="text-[10px] font-bold">Home</span>
@@ -403,7 +399,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <Link 
           href="/continue-studying" 
           onClick={() => setShowMobileMenu(false)} 
-          className={`flex flex-col items-center gap-1 min-w-[64px] ${pathname === '/continue-studying' ? 'text-indigo-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/continue-studying' ? 'text-indigo-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
         >
           <Clock size={22} />
           <span className="text-[10px] font-bold">Continue</span>
@@ -411,14 +407,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <Link 
           href="/bookmarks" 
           onClick={() => setShowMobileMenu(false)} 
-          className={`flex flex-col items-center gap-1 min-w-[64px] ${pathname === '/bookmarks' ? 'text-amber-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/bookmarks' ? 'text-amber-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
         >
           <Bookmark size={22} />
           <span className="text-[10px] font-bold">Bookmarks</span>
         </Link>
         <button 
           onClick={() => setShowMobileMenu(true)} 
-          className={`flex flex-col items-center gap-1 min-w-[64px] ${showMobileMenu ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          className={`flex min-w-[64px] flex-col items-center gap-1 ${showMobileMenu ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
         >
           <Menu size={22} />
           <span className="text-[10px] font-bold">More</span>
@@ -431,12 +427,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {showMobileMenu && (
         <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setShowMobileMenu(false)}>
           <div 
-            className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-6 pb-28 shadow-2xl dark:bg-[#111827] border-t border-[#E5E7EB] dark:border-[#1F2A44]" 
+            className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-[#E5E7EB] bg-white p-6 pb-28 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]" 
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">More Options</h2>
-              <button onClick={() => setShowMobileMenu(false)} className="rounded-full p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+              <button onClick={() => setShowMobileMenu(false)} className="rounded-full bg-gray-100 p-2 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                 <X size={20}/>
               </button>
             </div>
@@ -447,9 +443,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <Link 
                   href="/recent-uploads" 
                   onClick={() => setShowMobileMenu(false)} 
-                  className="flex items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent dark:border-[#1F2A44]"
+                  className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
                 >
-                  <div className="bg-emerald-500/10 p-2 rounded-lg text-emerald-500"><Upload size={18} /></div>
+                  <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-500"><Upload size={18} /></div>
                   Recent Uploads
                 </Link>
               </div>
@@ -457,7 +453,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               {trendingDocs.length > 0 && (
                 <div className="space-y-2">
                   <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Trending Now</p>
-                  <div className="rounded-2xl bg-[#FAFAF9] p-4 border border-[#E5E7EB] dark:bg-[#0B1020] dark:border-[#1F2A44] space-y-3">
+                  <div className="rounded-2xl border border-[#E5E7EB] bg-[#FAFAF9] p-4 space-y-3 dark:border-[#1F2A44] dark:bg-[#0B1020]">
                     <div className="flex items-center gap-2 text-[#4F46E5]">
                       <TrendingUp size={16} />
                       <h3 className="text-xs font-extrabold uppercase tracking-wider">Top Documents</h3>
@@ -469,8 +465,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         onClick={() => setShowMobileMenu(false)}
                         className="block text-sm group"
                       >
-                        <p className="truncate font-semibold text-[#111827] dark:text-white group-hover:text-[#4F46E5]">{idx + 1}. {doc.title}</p>
-                        <p className="text-[10px] text-[#64748B] mt-0.5">{doc.subject} • {doc.category}</p>
+                        <p className="truncate font-semibold text-[#111827] group-hover:text-[#4F46E5] dark:text-white">{idx + 1}. {doc.title}</p>
+                        <p className="mt-0.5 text-[10px] text-[#64748B]">{doc.subject} • {doc.category}</p>
                       </Link>
                     ))}
                   </div>
@@ -483,9 +479,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <Link 
                     href="/subject/admin/inbox" 
                     onClick={() => setShowMobileMenu(false)} 
-                    className="flex items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent dark:border-[#1F2A44]"
+                    className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
                   >
-                    <div className="bg-amber-500/10 p-2 rounded-lg text-amber-500"><Inbox size={18} /></div>
+                    <div className="rounded-lg bg-amber-500/10 p-2 text-amber-500"><Inbox size={18} /></div>
                     Approval Inbox
                     {pendingCount > 0 && (
                       <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-600">{pendingCount} pending</span>
@@ -495,10 +491,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               )}
 
               {(isAdmin || isStudent) && (
-                <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
                   <button 
                     onClick={() => { setShowMobileMenu(false); handleLogout(); }} 
-                    className="w-full flex justify-center items-center gap-2 rounded-xl border border-red-200 dark:border-red-900/50 p-3 text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 p-3 text-sm font-semibold text-red-500 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20"
                   >
                     <LogOut size={18} /> Sign Out
                   </button>
@@ -512,16 +508,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* AUTH & UPLOAD MODALS */}
       {showAuthModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1F2A44]">
-            <div className="flex justify-between items-center mb-6">
+          <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-extrabold">{authMode === "signin" ? "Sign In" : "Sign Up"}</h2>
               <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
             </div>
             <form onSubmit={handleAuthSubmit} className="space-y-4">
-              <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border px-4 bg-transparent outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
-              <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border px-4 bg-transparent outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
+              <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
+              <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
               <button type="submit" disabled={authLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">{authLoading ? "Processing..." : authMode === "signin" ? "Login" : "Create Account"}</button>
-              <button type="button" onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")} className="w-full text-xs text-[#4F46E5] font-bold hover:underline">
+              <button type="button" onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">
                 {authMode === "signin" ? "New student? Create an account" : "Already have an account? Sign In"}
               </button>
             </form>
@@ -531,8 +527,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       {showUploadForm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1F2A44]">
-            <div className="flex justify-between items-center mb-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-extrabold">{isAdmin ? "Admin Database Upload" : "Student Contribution"}</h2>
               <button onClick={() => setShowUploadForm(false)}><X size={20}/></button>
             </div>
@@ -574,7 +570,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <input type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020]" />
                 </div>
               </div>
-              <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-xs py-2" />
+              <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs" />
               <button type="submit" disabled={uploading} className="h-11 w-full rounded-xl bg-[#4F46E5] text-sm font-bold text-white hover:bg-[#6366F1]">
                 {uploading ? "Uploading..." : "Publish Resource"}
               </button>
