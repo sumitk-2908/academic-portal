@@ -156,11 +156,11 @@ async def delete_document(
         document = doc_response.data[0]
         filename = document.get("file_url", "").split("/")[-1]
         
-        # 2. CLEAR FOREIGN KEYS FIRST (Fixes the Database Crash)
-        # We must delete the tracking records before the main document, or PostgreSQL will block the deletion.
+        # 2. CLEAR FOREIGN KEYS FIRST
+        # FIX: Changed "doc_id" to "document_id" to match your schema
         supabase.table("student_bookmarks").delete().eq("document_id", document_id).execute()
         supabase.table("study_history").delete().eq("document_id", document_id).execute()
-        supabase.table("document_analytics").delete().eq("doc_id", document_id).execute()
+        supabase.table("document_analytics").delete().eq("document_id", document_id).execute()
         
         # 3. Delete from Supabase Storage Bucket
         try:
