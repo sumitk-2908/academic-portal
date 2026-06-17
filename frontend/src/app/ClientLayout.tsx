@@ -257,12 +257,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="flex flex-1 justify-center min-w-0 relative group">
             <div className="w-full max-w-2xl relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 dark:text-[#94A3B8]" size={18} />
+              {/* --- FIXED DARK MODE FOCUS BACKGROUND --- */}
               <input
                 type="text"
                 placeholder="Search globally for PDFs, subjects, modules..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-full border border-gray-200 bg-gray-100 pl-11 pr-10 text-sm outline-none transition-colors focus:border-indigo-400 focus:bg-white dark:border-[#1F2A44] dark:bg-[#0B1020]"
+                className="h-10 w-full rounded-full border border-gray-200 bg-gray-100 pl-11 pr-10 text-sm outline-none transition-colors focus:border-indigo-400 focus:bg-white dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white dark:focus:bg-[#111827]"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B]">
