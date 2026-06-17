@@ -96,10 +96,12 @@ export const uploadDocument = async (formData: FormData) => {
 export const deleteDocument = async (documentId: number) => {
   try {
     // 🔥 ROUTED TO RENDER BACKEND: Ensures both the PDF AND the thumbnail are deleted from Cloud Storage
-    await api.delete(`/${documentId}`);
-  } catch (error) {
-    console.error("BACKEND DELETE ERROR:", error);
-    throw error;
+    // FIX: Added the exact /api/v1/documents prefix so it finds the backend route
+    const response = await api.delete(`/api/v1/documents/${documentId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("FastAPI Delete Error:", error.response?.data || error);
+    throw new Error(error.response?.data?.detail || "Failed to delete document via FastAPI.");
   }
 };
 
