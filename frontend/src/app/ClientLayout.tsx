@@ -18,6 +18,12 @@ const SUBJECTS_LIST = [
   "ENGINEERING GRAPHICS"
 ];
 
+// Helper to determine if a subject should have its module selection disabled
+const isNonModuleSubject = (subjectName: string) => {
+  const nonModules = ["WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS"];
+  return nonModules.includes(subjectName) || subjectName.endsWith("LAB");
+};
+
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -167,12 +173,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   // Dedicated secure logout handler
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    sessionStorage.removeItem("admin_portal_auth");
-    setIsAdmin(false);
-    setIsStudent(false);
-    router.push('/');
-  };
+  await supabase.auth.signOut();
+  sessionStorage.removeItem("admin_portal_auth");
+  
+  // FIX: Prevent cross-user data merging on shared computers
+  localStorage.removeItem("portal_bookmarks");
+  localStorage.removeItem("portal_study_history");
+  
+  setIsAdmin(false);
+  setIsStudent(false);
+  router.push('/');
+};
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,7 +191,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file); formData.append("title", uploadTitle);
-    formData.append("category", uploadCategory); formData.append("module_id", String(uploadModule));
+    formData.append("category", uploadCategory); 
+    
+    // Evaluate if module should be disabled on submit to cleanly pass "null"
+    const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
+    formData.append("module_id", isModuleDisabled ? "null" : String(uploadModule));
+    
     formData.append("uploaded_by", uploadedBy || (isAdmin ? "Admin" : "Student"));
     formData.append("subject", uploadSubject); formData.append("status", isAdmin ? "approved" : "pending");
 
@@ -211,6 +227,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const pendingCount = allDocs.filter(d => d.status === 'pending').length;
   const recentUploads = allDocs.filter(d => d.status === 'approved').slice(0, 5);
+
+  // Determine if the module dropdown should be disabled
+  const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
 
   return (
     <div className="flex min-h-[100dvh] flex-col transition-colors duration-300">
@@ -367,7 +386,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         {/* ========================================= */}
         {/* 3. INJECTED PAGE CONTENT CONTAINER */}
-        {/* Added extra padding bottom for mobile so bottom nav doesn't hide content */}
         {/* ========================================= */}
         <main className="flex-1 w-full min-w-0 p-4 md:p-6 lg:p-8 overflow-x-clip pb-24 lg:pb-8">
           {children}
@@ -536,7 +554,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </div>
                 <div>
                   <label className="text-[10px] font-bold uppercase text-[#64748B]">Module</label>
-                  <select value={uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
+                  <select 
+                    value={uploadModule} 
+                    onChange={(e) => setUploadModule(Number(e.target.value))} 
+                    disabled={isModuleDisabled}
+                    className={`h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white ${isModuleDisabled ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500' : ''}`}
+                  >
                     {[1, 2, 3, 4, 5].map(m => <option key={m} value={m} className="bg-white dark:bg-[#0B1020]">Module {m}</option>)}
                   </select>
                 </div>
