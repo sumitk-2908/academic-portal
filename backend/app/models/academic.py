@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime, func
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime, func, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 import enum
@@ -64,6 +64,12 @@ class Document(Base):
     title = Column(String(255), nullable=False)
     category = Column(Enum(DocCategory), nullable=False)
     file_url = Column(String, nullable=False)
+    
+    # --- ADDED DYNAMIC FILE METADATA COLUMNS ---
+    file_size = Column(Float, nullable=True) # Stored in MB
+    page_count = Column(Integer, nullable=True)
+    thumbnail_url = Column(String, nullable=True)
+    
     uploaded_by = Column(String(100), nullable=True)
     status = Column(Enum(ReviewStatus), default=ReviewStatus.approved)
     created_at = Column(DateTime, server_default=func.now())

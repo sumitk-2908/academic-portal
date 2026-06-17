@@ -17,6 +17,7 @@ interface Document {
   status?: string;
   file_size?: number;
   page_count?: number;
+  thumbnail_url?: string;
 }
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
@@ -102,21 +103,34 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
         {loading ? (
           <>
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-40 w-full animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-800/50" />
+              <div key={i} className="h-64 w-full animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-800/50" />
             ))}
           </>
         ) : documents.map(doc => {
           const Icon = CATEGORY_ICONS[doc.category] || FileText;
           return (
             <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827]">
-              <div className="flex items-start justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5]"><Icon size={16} /></div>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-extrabold uppercase dark:bg-slate-800">{doc.category}</span>
-              </div>
-              <h3 className="mt-3 min-h-[2rem] text-xs font-bold line-clamp-2">{doc.title}</h3>
               
-              <p className="mt-1.5 text-[10px] text-[#64748B] dark:text-[#94A3B8]">
-                {doc.page_count || 12} pages · {doc.file_size ? (doc.file_size / 1024 / 1024).toFixed(1) : '2.4'} MB · uploaded {getTimeAgo(doc.created_at)}
+              {/* --- DYNAMIC THUMBNAIL RENDERER --- */}
+              <div className="relative mb-3 h-32 w-full overflow-hidden rounded-xl bg-gray-100 flex items-center justify-center dark:bg-[#0B1020]">
+                {doc.thumbnail_url ? (
+                  <img src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} className="object-cover object-top w-full h-full opacity-90 transition-opacity group-hover:opacity-100" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-[#64748B] dark:text-[#94A3B8]">
+                    <Icon size={32} className="opacity-50" />
+                  </div>
+                )}
+                {/* Category Badge overlaying the thumbnail */}
+                <span className="absolute top-2 right-2 rounded-full bg-slate-900/70 backdrop-blur-md px-2 py-0.5 text-[9px] font-extrabold uppercase text-white shadow-sm">
+                  {doc.category}
+                </span>
+              </div>
+
+              <h3 className="text-xs font-bold mt-1 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
+              
+              {/* --- DYNAMIC METADATA RENDERER --- */}
+              <p className="mt-1.5 text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">
+                {doc.page_count ? `${doc.page_count} pages` : 'PDF Document'} · {doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'Unknown size'} · uploaded {getTimeAgo(doc.created_at)}
               </p>
 
               <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">

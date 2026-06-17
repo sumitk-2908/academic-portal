@@ -17,3 +17,5 @@ httpx>=0.24.0
 
 # Standard utility for system paths
 email-validator>=2.0.0
+
+PyMuPDF>=1.23.0
