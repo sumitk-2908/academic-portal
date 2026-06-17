@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, getStudentBookmarks, trackDocumentStat, deleteDocument, logRecentStudyActivity } from "../lib/api";
-import { Bookmark, Download, Eye, Trash2, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
+import { supabase, getStudentBookmarks, trackDocumentStat, logRecentStudyActivity } from "../lib/api";
+import { Bookmark, Download, Eye, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
@@ -22,7 +22,8 @@ export default function BookmarksPage() {
       if (currentUserId) {
         setUserId(currentUserId);
         const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', currentUserId).single();
-        if (roleData?.role === 'admin' && localStorage.getItem("admin_portal_access") === "true") setIsAdmin(true);
+        // Fixed storage key to match the architecture in ClientLayout
+        if (roleData?.role === 'admin' && sessionStorage.getItem("admin_portal_auth") === "true") setIsAdmin(true);
       }
 
       const userBookmarks = await getStudentBookmarks(currentUserId);
@@ -56,16 +57,19 @@ export default function BookmarksPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
+    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto w-full">
       <div className="rounded-3xl border border-amber-500/20 bg-amber-500/5 p-6 shadow-sm flex items-center gap-4">
-        <div className="h-12 w-12 rounded-xl bg-amber-500 text-white flex items-center justify-center"><Bookmark size={24} /></div>
+        <div className="h-12 w-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+          <Bookmark size={24} />
+        </div>
         <div>
           <h1 className="text-xl font-extrabold sm:text-3xl">My Bookmarks</h1>
           <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">Your saved PDFs and study materials</p>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* FIXED: Explicitly added grid-cols-1 and w-full to prevent mobile WebKit collapse */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
           <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-amber-500" /></div>
         ) : documents.map(doc => {
@@ -84,7 +88,7 @@ export default function BookmarksPage() {
                 <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-amber-500 text-white py-2 rounded-xl">
                   <Eye size={12} /> View
                 </Link>
-                <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border bg-amber-500/10 text-amber-500 border-amber-500/30">
+                <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border bg-amber-500/10 text-amber-500 border-amber-500/30 shrink-0">
                   <Bookmark size={14} className="fill-amber-500" />
                 </button>
               </div>
