@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { supabase, trackDocumentStat, deleteDocument, logRecentStudyActivity } from "../../../lib/api";
-import { ArrowLeft, FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
 
 interface Document {
@@ -15,9 +15,18 @@ interface Document {
   module_id?: number;
   subject?: string;
   status?: string;
+  file_size?: number;
+  page_count?: number;
 }
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+
+const getTimeAgo = (dateStr: string) => {
+  const days = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / (1000 * 3600 * 24));
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+};
 
 export default function ModulePage({ params }: { params: Promise<{ subjectSlug: string, moduleSlug: string }> }) {
   const { subjectSlug, moduleSlug } = use(params);
@@ -89,51 +98,57 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
         <p className="mt-1 text-xs font-bold text-[#4F46E5]">Module {moduleNumber} Repository</p>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-[#4F46E5]" /></div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {documents.map(doc => {
-            const Icon = CATEGORY_ICONS[doc.category] || FileText;
-            return (
-              <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827]">
-                <div className="flex items-start justify-between">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5]"><Icon size={16} /></div>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-extrabold uppercase dark:bg-slate-800">{doc.category}</span>
-                </div>
-                <h3 className="mt-3 min-h-[2rem] text-xs font-bold line-clamp-2">{doc.title}</h3>
-                <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
-                  <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border bg-[#F8FAFC] py-2 text-[11px] font-bold dark:bg-[#1F2A44]">
-                    <Download size={12} /> Download
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          <>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-40 w-full animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-800/50" />
+            ))}
+          </>
+        ) : documents.map(doc => {
+          const Icon = CATEGORY_ICONS[doc.category] || FileText;
+          return (
+            <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827]">
+              <div className="flex items-start justify-between">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4F46E5]/10 text-[#4F46E5]"><Icon size={16} /></div>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-extrabold uppercase dark:bg-slate-800">{doc.category}</span>
+              </div>
+              <h3 className="mt-3 min-h-[2rem] text-xs font-bold line-clamp-2">{doc.title}</h3>
+              
+              <p className="mt-1.5 text-[10px] text-[#64748B] dark:text-[#94A3B8]">
+                {doc.page_count || 12} pages · {doc.file_size ? (doc.file_size / 1024 / 1024).toFixed(1) : '2.4'} MB · uploaded {getTimeAgo(doc.created_at)}
+              </p>
+
+              <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
+                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border bg-[#F8FAFC] py-2 text-[11px] font-bold dark:bg-[#1F2A44]">
+                  <Download size={12} /> Download
+                </button>
+                <Link href={`/subject/${subjectSlug}/${moduleSlug}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4F46E5] py-2 text-[11px] font-bold text-white">
+                  <Eye size={12} /> View
+                </Link>
+                <button 
+                  onClick={() => toggleBookmark(doc.id)} 
+                  className={`rounded-xl border p-2 transition-colors ${
+                    bookmarks.includes(doc.id) 
+                      ? "bg-amber-400 text-white border-amber-400" 
+                      : "border-amber-400 text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-400/10"
+                  }`}
+                >
+                  <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-white text-white" : "text-amber-400"} />
+                </button>
+                {isAdmin && (
+                  <button onClick={() => handleDelete(doc.id)} className="rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/5">
+                    <Trash2 size={14} />
                   </button>
-                  <Link href={`/subject/${subjectSlug}/${moduleSlug}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4F46E5] py-2 text-[11px] font-bold text-white">
-                    <Eye size={12} /> View
-                  </Link>
-                  {/* --- UPDATED GHOST/FILL BOOKMARK BUTTON --- */}
-                  <button 
-                    onClick={() => toggleBookmark(doc.id)} 
-                    className={`rounded-xl border p-2 transition-colors ${
-                      bookmarks.includes(doc.id) 
-                        ? "bg-amber-400 text-white border-amber-400" 
-                        : "border-amber-400 text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-400/10"
-                    }`}
-                  >
-                    <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-white text-white" : "text-amber-400"} />
-                  </button>
-                  {isAdmin && (
-                    <button onClick={() => handleDelete(doc.id)} className="rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/5">
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-          {documents.length === 0 && (
-            <p className="col-span-full py-12 text-center text-xs text-[#64748B]">No items indexed for this module.</p>
-          )}
-        </div>
-      )}
+                )}
+              </div>
+            </article>
+          );
+        })}
+        {documents.length === 0 && !loading && (
+          <p className="col-span-full py-12 text-center text-xs text-[#64748B]">No items indexed for this module.</p>
+        )}
+      </div>
     </div>
   );
 }

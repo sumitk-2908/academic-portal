@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState, useMemo } from "react";
 import { supabase, trackDocumentStat, deleteDocument, logRecentStudyActivity } from "../../lib/api";
-import { Layers, Bookmark, NotebookPen, FileQuestion, ListChecks, Download, Eye, Trash2, FileText, Loader2 } from "lucide-react";
+import { Layers, Bookmark, NotebookPen, FileQuestion, ListChecks, Download, Eye, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 
 interface Document {
@@ -15,9 +15,18 @@ interface Document {
   module_id?: number;
   subject?: string;
   status?: string;
+  file_size?: number;
+  page_count?: number;
 }
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+
+const getTimeAgo = (dateStr: string) => {
+  const days = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / (1000 * 3600 * 24));
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+};
 
 export default function SubjectPage({ params }: { params: Promise<{ subjectSlug: string }> }) {
   const { subjectSlug } = use(params);
@@ -94,10 +103,9 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
     });
   }, [documents, activeTab, bookmarks]);
 
-  // Derive counts for the tab badges
   const tabCounts = useMemo(() => {
     return {
-      dashboard: -1, // Dashboards don't need counts
+      dashboard: -1, 
       notes: documents.filter(d => d.category === "notes").length,
       pyq: documents.filter(d => d.category === "pyq").length,
       syllabus: documents.filter(d => d.category === "syllabus").length,
@@ -106,13 +114,11 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
 
   return (
     <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
-      {/* Subject Header */}
       <div className="rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]">
         <h1 className="text-xl font-extrabold sm:text-3xl">{subjectName}</h1>
         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">Core Subject Curricular Interface</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 overflow-x-auto border-b border-[#E5E7EB] pb-1 dark:border-[#1F2A44]">
         {["dashboard", "notes", "pyq", "syllabus"].map(tab => {
           const count = tabCounts[tab as keyof typeof tabCounts];
@@ -137,7 +143,6 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
         })}
       </div>
 
-      {/* Grid Content */}
       {activeTab === "dashboard" && !isNonModuleSubject ? (
         <div className="space-y-4">
           <h2 className="text-xs font-extrabold uppercase text-[#64748B] tracking-wider">Course Modules</h2>
@@ -157,7 +162,11 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {loading ? (
-            <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-[#4F46E5]" /></div>
+            <>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-40 w-full animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-800/50" />
+              ))}
+            </>
           ) : filteredDocs.map(doc => {
             const Icon = CATEGORY_ICONS[doc.category] || FileText;
             return (
@@ -167,6 +176,11 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
                   <span className="text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.category}</span>
                 </div>
                 <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
+                
+                <p className="mt-1.5 text-[10px] text-[#64748B] dark:text-[#94A3B8]">
+                  {doc.page_count || 12} pages · {doc.file_size ? (doc.file_size / 1024 / 1024).toFixed(1) : '2.4'} MB · uploaded {getTimeAgo(doc.created_at)}
+                </p>
+
                 <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
                   <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44]">
                     <Download size={12} /> Download
