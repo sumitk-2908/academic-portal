@@ -147,26 +147,40 @@ async def delete_document(
     document_id: int, 
     admin_user: dict = Depends(verify_admin)
 ):
-    # 1. Find document in Supabase Database (Bypassing Neon)
-    doc_response = supabase.table("documents").select("*").eq("id", document_id).execute()
-    if not doc_response.data:
-        raise HTTPException(status_code=404, detail="Document not found in Supabase")
-        
-    document = doc_response.data[0]
-    filename = document.get("file_url", "").split("/")[-1]
-    
     try:
-        # 2. Delete from Supabase Storage
-        files_to_delete = [filename]
-        if document.get("thumbnail_url"):
-            thumb_filename = document.get("thumbnail_url").split("/")[-1]
-            files_to_delete.append(thumb_filename)
+        # 1. Find the document in Supabase Database
+        doc_response = supabase.table("documents").select("*").eq("id", document_id).execute()
+        if not doc_response.data:
+            raise HTTPException(status_code=404, detail="Document not found in Supabase")
             
-        supabase.storage.from_("documents").remove(files_to_delete)
-    except Exception as e:
-        print(f"Warning: Failed to delete cloud files: {e}")
+        document = doc_response.data[0]
+        filename = document.get("file_url", "").split("/")[-1]
         
-    # 3. Delete from Supabase Database
-    supabase.table("documents").delete().eq("id", document_id).execute()
-    
-    return {"message": f"Document {document_id} and cloud files deleted successfully"}
+        # 2. CLEAR FOREIGN KEYS FIRST (Fixes the Database Crash)
+        # We must delete the tracking records before the main document, or PostgreSQL will block the deletion.
+        supabase.table("student_bookmarks").delete().eq("document_id", document_id).execute()
+        supabase.table("study_history").delete().eq("document_id", document_id).execute()
+        supabase.table("document_analytics").delete().eq("doc_id", document_id).execute()
+        
+        # 3. Delete from Supabase Storage Bucket
+        try:
+            files_to_delete = [filename]
+            if document.get("thumbnail_url"):
+                thumb_filename = document.get("thumbnail_url").split("/")[-1]
+                files_to_delete.append(thumb_filename)
+                
+            supabase.storage.from_("documents").remove(files_to_delete)
+        except Exception as e:
+            print(f"Warning: Failed to delete cloud files: {e}")
+            
+        # 4. Delete the actual document from the database
+        supabase.table("documents").delete().eq("id", document_id).execute()
+        
+        return {"message": f"Document {document_id} and all associated cloud files deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Backend Delete Crash: {str(e)}")
