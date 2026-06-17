@@ -52,7 +52,10 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
 
     try:
-        module = db.query(Module).filter(Module.id == module_id).first()
+        # FIX: Explicitly cast to integer to prevent PostgreSQL Type Errors
+        safe_module_id = int(module_id)
+        
+        module = db.query(Module).filter(Module.id == safe_module_id).first()
         if not module:
             raise HTTPException(status_code=404, detail="Module not found")
 
@@ -114,7 +117,7 @@ async def upload_document(
         new_doc = Document(
             title=title,
             category=category,
-            module_id=module_id,
+            module_id=safe_module_id,
             subject=subject,
             uploaded_by=uploaded_by,
             file_url=public_url,
