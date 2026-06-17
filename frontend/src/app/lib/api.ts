@@ -138,6 +138,8 @@ export const getModulesBySubject = async (subjectId: number) => {
 // ==========================================
 
 export const getStudentBookmarks = async (userId?: string) => {
+  let cloudBookmarks: any[] = [];
+
   if (userId) {
     const { data, error } = await supabase
       .from('student_bookmarks')
@@ -145,22 +147,33 @@ export const getStudentBookmarks = async (userId?: string) => {
       .eq('user_id', userId);
       
     if (!error && data) {
-      return data.map((b: any) => b.documents).filter(d => d !== null);
+      cloudBookmarks = data.map((b: any) => b.documents).filter(d => d !== null);
     }
   }
   
-  // DEFENSIVE FALLBACK: Safely parse LocalStorage
+  // FIX: Safely parse LocalStorage and MERGE with Cloud Data instead of skipping it
   try {
     const stored = localStorage.getItem("portal_bookmarks");
     const localIds = stored ? JSON.parse(stored) : [];
     
-    if (!Array.isArray(localIds) || localIds.length === 0) return [];
+    if (!Array.isArray(localIds) || localIds.length === 0) return cloudBookmarks;
     
-    const { data } = await supabase.from('documents').select('*').in('id', localIds).eq('status', 'approved');
-    return Array.isArray(data) ? data : [];
+    const { data, error } = await supabase.from('documents').select('*').in('id', localIds).eq('status', 'approved');
+    const localBookmarks = (!error && Array.isArray(data)) ? data : [];
+
+    // Merge cloud and local arrays, preventing duplicate documents
+    const allBookmarks = [...cloudBookmarks];
+    for (const lb of localBookmarks) {
+      if (!allBookmarks.find(b => b.id === lb.id)) {
+        allBookmarks.push(lb);
+      }
+    }
+    
+    return allBookmarks;
+
   } catch (error) {
     console.warn("Resetting corrupted bookmarks local storage");
-    return [];
+    return cloudBookmarks;
   }
 };
 
@@ -169,6 +182,8 @@ export const getStudentBookmarks = async (userId?: string) => {
 // ==========================================
 
 export const getRecentStudyActivity = async (userId?: string) => {
+  let cloudHistory: any[] = [];
+
   if (userId) {
     const { data, error } = await supabase
       .from('study_history')
@@ -178,24 +193,37 @@ export const getRecentStudyActivity = async (userId?: string) => {
       .limit(5);
 
     if (!error && data) {
-      return data.map((h: any) => h.documents).filter(d => d !== null);
+      cloudHistory = data.map((h: any) => h.documents).filter(d => d !== null);
     }
   }
   
-  // DEFENSIVE FALLBACK: Safely parse LocalStorage
+  // FIX: Safely parse LocalStorage and MERGE with Cloud Data
   try {
     const stored = localStorage.getItem("portal_study_history");
     const parsed = stored ? JSON.parse(stored) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const localHistory = Array.isArray(parsed) ? parsed : [];
+    
+    if (cloudHistory.length === 0) return localHistory;
+
+    // Merge keeping unique documents (max 5)
+    const combined = [...cloudHistory];
+    for (const lh of localHistory) {
+       if (!combined.find(h => h.id === lh.id)) {
+         combined.push(lh);
+       }
+    }
+    
+    return combined.slice(0, 5); 
+
   } catch (error) {
     console.warn("Resetting corrupted history local storage");
-    return [];
+    return cloudHistory;
   }
 };
 
 export const logRecentStudyActivity = async (doc: any) => {
   // Step 1: Safely parse and validate local storage history
-  let history = [];
+  let history: any[] = [];
   try {
     const stored = localStorage.getItem("portal_study_history");
     const parsed = stored ? JSON.parse(stored) : [];

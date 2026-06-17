@@ -1,48 +1,77 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { supabase } from "@/app/lib/api"; 
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { supabase, trackDocumentStat, logRecentStudyActivity } from "../../../../lib/api"; 
 
-export default function FullscreenPDFViewer({ params }: { params: Promise<{ subjectSlug: string, moduleSlug: string, pdfId: string }> }) {
-  // UNWRAP THE PARAMS PROMISE
-  const { subjectSlug, moduleSlug, pdfId } = use(params);
+export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlug: string, moduleSlug: string, pdfId: string }> }) {
+  // Unwrap Next.js 15 App Router dynamic params
+  const { pdfId } = use(params);
+  const router = useRouter();
   
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [document, setDocument] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchPdf = async () => {
+      // Fetch the entire document object instead of just the URL
+      // so we can log it into the "Continue Studying" history
       const { data } = await supabase
         .from('documents')
-        .select('file_url')
+        .select('*')
         .eq('id', pdfId)
         .single();
         
-      if (data) setPdfUrl(data.file_url);
+      if (data) {
+        setDocument(data);
+        
+        // Ensure direct visits/refreshes count towards analytics and history
+        trackDocumentStat(data.id, 'view');
+        logRecentStudyActivity(data);
+      }
     };
     
     fetchPdf();
   }, [pdfId]);
 
-  if (!pdfUrl) return <div className="flex h-screen items-center justify-center bg-black text-white">Loading Document...</div>;
+  if (!document) {
+    return (
+      <div className="flex h-[60vh] w-full items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="animate-spin text-[#4F46E5]" size={32} />
+          <p className="text-xs font-bold text-[#64748B]">Loading Document...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-black overflow-hidden">
-      <div className="flex h-14 shrink-0 items-center border-b border-gray-800 bg-gray-950 px-4">
-        <Link 
-          href={`/subject/${subjectSlug}/${moduleSlug}`}
-          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+    // Fits perfectly inside your ClientLayout <main> container without overflowing
+    <div className="flex flex-col h-[calc(100vh-10rem)] w-full overflow-hidden rounded-3xl border border-[#E5E7EB] bg-white shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]">
+      
+      {/* Viewer Header */}
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#E5E7EB] bg-[#FAFAF9] px-2 sm:px-4 dark:border-[#1F2A44] dark:bg-[#0B1020]">
+        <button 
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-[#64748B] transition-colors hover:bg-[#E5E7EB] dark:hover:bg-[#1F2A44] dark:text-[#94A3B8] dark:hover:text-white"
         >
-          <ArrowLeft size={16} /> Back to {moduleSlug.replace('-', ' ').toUpperCase()}
-        </Link>
+          <ArrowLeft size={16} /> <span className="hidden sm:inline">Go Back</span><span className="sm:hidden">Back</span>
+        </button>
+        
+        <p className="text-xs font-extrabold truncate px-4 flex-1 text-center text-[#111827] dark:text-white">
+          {document.title}
+        </p>
+        
+        {/* Spacer to keep title perfectly centered */}
+        <div className="w-[70px] sm:w-[90px]" /> 
       </div>
 
-      <div className="flex-1 w-full bg-gray-900">
+      {/* PDF Iframe container */}
+      <div className="flex-1 w-full bg-[#FAFAF9] dark:bg-black relative">
         <iframe
-          src={`${pdfUrl}#view=FitH`}
-          className="h-full w-full border-none"
-          title="PDF Viewer"
+          src={`${document.file_url}#view=FitH`}
+          className="absolute inset-0 h-full w-full border-none"
+          title={document.title}
         />
       </div>
     </div>
