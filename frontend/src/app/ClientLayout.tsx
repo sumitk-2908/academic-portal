@@ -6,7 +6,7 @@ import { supabase, getTrendingDocuments, uploadDocument, getStudentBookmarks, ge
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
   PanelLeftClose, TrendingUp, X, BookOpen, Bookmark, Clock, 
-  Upload, Inbox, Plus, FileText, Home
+  Upload, Inbox, Plus, FileText, Home, Menu
 } from "lucide-react";
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -25,6 +25,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [mounted, setMounted] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Global Data States
   const [searchQuery, setSearchQuery] = useState("");
@@ -287,13 +288,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <button onClick={() => setShowUploadForm(true)} className="flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white hover:bg-[#6366F1]">
                   <Plus size={14} /> <span className="hidden sm:inline">{isAdmin ? "Upload" : "Contribute"}</span>
                 </button>
-                <button onClick={handleLogout} className="flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm text-[#64748B] hover:bg-red-50 hover:text-red-500 dark:border-[#1F2A44]">
+                <button onClick={handleLogout} className="hidden sm:flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm text-[#64748B] hover:bg-red-50 hover:text-red-500 dark:border-[#1F2A44]">
                   <LogOut size={16} />
                 </button>
               </div>
             ) : (
               <button onClick={() => setShowAuthModal(true)} className="flex h-9 items-center rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white shadow-sm hover:bg-[#6366F1]">
-                Sign In / Sign Up
+                Sign In <span className="hidden sm:inline">&nbsp;/ Sign Up</span>
               </button>
             )}
           </div>
@@ -303,7 +304,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <div className="mx-auto flex w-full max-w-[1600px] flex-1">
         
         {/* ========================================= */}
-        {/* 2. THE ONLY OMNIPRESENT SIDEBAR */}
+        {/* 2. THE ONLY OMNIPRESENT SIDEBAR (DESKTOP) */}
         {/* ========================================= */}
         <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2' : 'w-[280px] px-4'}`}>
           <div className="space-y-6 flex-1">
@@ -366,11 +367,137 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         {/* ========================================= */}
         {/* 3. INJECTED PAGE CONTENT CONTAINER */}
+        {/* Added extra padding bottom for mobile so bottom nav doesn't hide content */}
         {/* ========================================= */}
-        <main className="flex-1 w-full min-w-0 p-4 md:p-6 lg:p-8 overflow-x-clip">
+        <main className="flex-1 w-full min-w-0 p-4 md:p-6 lg:p-8 overflow-x-clip pb-24 lg:pb-8">
           {children}
         </main>
       </div>
+
+      {/* ========================================= */}
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      {/* ========================================= */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-[#E5E7EB] bg-[#FFFFFF]/90 backdrop-blur-xl dark:border-[#1F2A44] dark:bg-[#111827]/90 lg:hidden pb-safe">
+        <Link 
+          href="/" 
+          onClick={() => setShowMobileMenu(false)} 
+          className={`flex flex-col items-center gap-1 min-w-[64px] ${pathname === '/' ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+        >
+          <Home size={22} />
+          <span className="text-[10px] font-bold">Home</span>
+        </Link>
+        <Link 
+          href="/continue-studying" 
+          onClick={() => setShowMobileMenu(false)} 
+          className={`flex flex-col items-center gap-1 min-w-[64px] ${pathname === '/continue-studying' ? 'text-indigo-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+        >
+          <Clock size={22} />
+          <span className="text-[10px] font-bold">Continue</span>
+        </Link>
+        <Link 
+          href="/bookmarks" 
+          onClick={() => setShowMobileMenu(false)} 
+          className={`flex flex-col items-center gap-1 min-w-[64px] ${pathname === '/bookmarks' ? 'text-amber-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+        >
+          <Bookmark size={22} />
+          <span className="text-[10px] font-bold">Bookmarks</span>
+        </Link>
+        <button 
+          onClick={() => setShowMobileMenu(true)} 
+          className={`flex flex-col items-center gap-1 min-w-[64px] ${showMobileMenu ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+        >
+          <Menu size={22} />
+          <span className="text-[10px] font-bold">More</span>
+        </button>
+      </nav>
+
+      {/* ========================================= */}
+      {/* MOBILE MORE MENU DRAWER */}
+      {/* ========================================= */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setShowMobileMenu(false)}>
+          <div 
+            className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-6 pb-28 shadow-2xl dark:bg-[#111827] border-t border-[#E5E7EB] dark:border-[#1F2A44]" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">More Options</h2>
+              <button onClick={() => setShowMobileMenu(false)} className="rounded-full p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                <X size={20}/>
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Extra Utilities */}
+              <div className="space-y-2">
+                <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Discovery & Uploads</p>
+                <Link 
+                  href="/recent-uploads" 
+                  onClick={() => setShowMobileMenu(false)} 
+                  className="flex items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent dark:border-[#1F2A44]"
+                >
+                  <div className="bg-emerald-500/10 p-2 rounded-lg text-emerald-500"><Upload size={18} /></div>
+                  Recent Uploads
+                </Link>
+              </div>
+
+              {/* Trending Now for Mobile */}
+              {trendingDocs.length > 0 && (
+                <div className="space-y-2">
+                  <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Trending Now</p>
+                  <div className="rounded-2xl bg-[#FAFAF9] p-4 border border-[#E5E7EB] dark:bg-[#0B1020] dark:border-[#1F2A44] space-y-3">
+                    <div className="flex items-center gap-2 text-[#4F46E5]">
+                      <TrendingUp size={16} />
+                      <h3 className="text-xs font-extrabold uppercase tracking-wider">Top Documents</h3>
+                    </div>
+                    {trendingDocs.slice(0, 5).map((doc, idx) => (
+                      <Link 
+                        key={`mob-tr-${doc.id}`} 
+                        href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} 
+                        onClick={() => setShowMobileMenu(false)}
+                        className="block text-sm group"
+                      >
+                        <p className="truncate font-semibold text-[#111827] dark:text-white group-hover:text-[#4F46E5]">{idx + 1}. {doc.title}</p>
+                        <p className="text-[10px] text-[#64748B] mt-0.5">{doc.subject} • {doc.category}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Mobile Admin Controls */}
+              {isAdmin && (
+                <div className="space-y-2">
+                  <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Admin Controls</p>
+                  <Link 
+                    href="/subject/admin/inbox" 
+                    onClick={() => setShowMobileMenu(false)} 
+                    className="flex items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent dark:border-[#1F2A44]"
+                  >
+                    <div className="bg-amber-500/10 p-2 rounded-lg text-amber-500"><Inbox size={18} /></div>
+                    Approval Inbox
+                    {pendingCount > 0 && (
+                      <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-600">{pendingCount} pending</span>
+                    )}
+                  </Link>
+                </div>
+              )}
+
+              {/* Mobile Logout (Since header logout was hidden on sm breakpoints to save space) */}
+              {(isAdmin || isStudent) && (
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <button 
+                    onClick={() => { setShowMobileMenu(false); handleLogout(); }} 
+                    className="w-full flex justify-center items-center gap-2 rounded-xl border border-red-200 dark:border-red-900/50 p-3 text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <LogOut size={18} /> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AUTH & UPLOAD MODALS */}
       {showAuthModal && (
