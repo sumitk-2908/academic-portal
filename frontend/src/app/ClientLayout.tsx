@@ -79,12 +79,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       const isDbAdmin = roleData?.role === 'admin';
       const isPortalAdminFlow = sessionStorage.getItem("admin_portal_auth") === "true";
 
-      // Strict enforcement: DB Role + Admin Portal Login Context required
       if (isDbAdmin && isPortalAdminFlow) {
         setIsAdmin(true); setIsStudent(false);
       } else {
         setIsAdmin(false); setIsStudent(true);
-        // Safely split the email, falling back to "Student" if undefined
         setUploadedBy(session.user.email?.split('@')[0] || "Student");
       }
       refreshSidebarData(session.user.id);
@@ -135,8 +133,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
-    
-    // SECURITY: Ensure standard student login clears any residual admin context
     sessionStorage.removeItem("admin_portal_auth");
 
     try {
@@ -144,7 +140,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         const { data, error } = await supabase.auth.signUp({ 
           email: authEmail, 
           password: authPassword,
-          options: { emailRedirectTo: window.location.origin } // PRODUCTION REDIRECT FIX
+          options: { emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
 
@@ -171,19 +167,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   };
 
-  // Dedicated secure logout handler
   const handleLogout = async () => {
-  await supabase.auth.signOut();
-  sessionStorage.removeItem("admin_portal_auth");
-  
-  // FIX: Prevent cross-user data merging on shared computers
-  localStorage.removeItem("portal_bookmarks");
-  localStorage.removeItem("portal_study_history");
-  
-  setIsAdmin(false);
-  setIsStudent(false);
-  router.push('/');
-};
+    await supabase.auth.signOut();
+    sessionStorage.removeItem("admin_portal_auth");
+    
+    // Prevent cross-user data merging on shared computers
+    localStorage.removeItem("portal_bookmarks");
+    localStorage.removeItem("portal_study_history");
+    
+    setIsAdmin(false);
+    setIsStudent(false);
+    router.push('/');
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +188,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     formData.append("file", file); formData.append("title", uploadTitle);
     formData.append("category", uploadCategory); 
     
-    // Evaluate if module should be disabled on submit to cleanly pass "null"
     const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
     formData.append("module_id", isModuleDisabled ? "null" : String(uploadModule));
     
@@ -216,19 +210,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // --- OMNIPRESENT GLOBAL SEARCH ENGINE ---
   const globalSearchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    const query = searchQuery.toLowerCase();
-    return allDocs.filter(doc => 
-      doc.status === 'approved' &&
-      (doc.title.toLowerCase().includes(query) || 
-       doc.subject.toLowerCase().includes(query) || 
-       doc.category.toLowerCase().includes(query))
-    ).slice(0, 8);
+    
+    // Split user query into individual words (e.g. "Maths 1 module 1" -> ["maths", "1", "module", "1"])
+    const queryTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+
+    return allDocs.filter(doc => {
+      if (doc.status !== 'approved') return false;
+
+      // Create a combined searchable string, explicitly injecting "module X"
+      const searchableText = [
+        doc.title,
+        doc.subject,
+        doc.category,
+        doc.module_id ? `module ${doc.module_id}` : ''
+      ].join(' ').toLowerCase();
+
+      // The document matches if EVERY typed term exists somewhere in its searchable string
+      return queryTerms.every(term => searchableText.includes(term));
+    }).slice(0, 8);
   }, [searchQuery, allDocs]);
 
   const pendingCount = allDocs.filter(d => d.status === 'pending').length;
   const recentUploads = allDocs.filter(d => d.status === 'approved').slice(0, 5);
 
-  // Determine if the module dropdown should be disabled
   const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
 
   return (
@@ -240,7 +244,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <header className="sticky top-0 z-40 border-b border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF]/90 dark:bg-[#111827]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-4 px-4 md:px-6">
           
-          {/* Branding */}
           <div className="flex shrink-0 items-center gap-2.5">
             <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden rounded-xl p-2 text-[#64748B] hover:bg-[#E5E7EB]/50 lg:inline-flex dark:text-[#94A3B8] dark:hover:bg-[#1F2A44]/50">
               {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
@@ -255,13 +258,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </Link>
           </div>
 
-          {/* Omnipresent Search Bar */}
           <div className="flex flex-1 justify-center min-w-0 relative group">
             <div className="w-full max-w-2xl relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
               <input
                 type="text"
-                placeholder="Search globally for PDFs, PYQs, subjects..."
+                placeholder="Search globally for PDFs, subjects, modules..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-10 w-full rounded-full border border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FAFAF9] dark:bg-[#0B1020] pl-11 pr-10 text-sm outline-none focus:border-[#4F46E5]"
@@ -272,7 +274,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </button>
               )}
 
-              {/* Search Results Dropdown */}
               {searchQuery && (
                 <div className="absolute top-12 left-0 w-full rounded-2xl border border-[#E5E7EB] bg-white p-2 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] z-50">
                   <p className="px-3 py-2 text-[10px] font-bold uppercase text-[#64748B]">Global Search Results</p>
@@ -286,7 +287,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       <FileText size={16} className="text-[#4F46E5]" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate">{doc.title}</p>
-                        <p className="text-[10px] text-[#64748B] uppercase">{doc.subject} • {doc.category}</p>
+                        <p className="text-[10px] text-[#64748B] uppercase">{doc.subject} • Module {doc.module_id || "N/A"} • {doc.category}</p>
                       </div>
                     </Link>
                   ))}
@@ -296,7 +297,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
           </div>
 
-          {/* Theme & Auth Actions */}
           <div className="flex shrink-0 items-center gap-2">
             <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44]">
               {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : null}
@@ -328,7 +328,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-[72px] px-2' : 'w-[280px] px-4'}`}>
           <div className="space-y-6 flex-1">
             
-            {/* Section: Navigation */}
             <div>
               {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Navigation</p>}
               <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-[#4F46E5] dark:hover:bg-[#111827]">
@@ -342,7 +341,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               )}
             </div>
 
-            {/* Section: Student Workspace */}
             <div>
               {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Student Workspace</p>}
               
@@ -359,7 +357,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </Link>
             </div>
 
-            {/* Section: Discovery */}
             {!sidebarCollapsed && trendingDocs.length > 0 && (
               <div>
                 <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Discovery</p>
@@ -375,7 +372,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
           </div>
 
-          {/* Section: Footer */}
           {!sidebarCollapsed && (
             <div className="mt-auto border-t border-[#E5E7EB] pt-4 px-3 text-[10px] font-medium text-[#94A3B8] space-y-0.5 dark:border-[#1F2A44]">
               <p>Academic Portal • Version 1.6</p>
@@ -446,7 +442,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
             
             <div className="space-y-6">
-              {/* Extra Utilities */}
               <div className="space-y-2">
                 <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Discovery & Uploads</p>
                 <Link 
@@ -459,7 +454,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </Link>
               </div>
 
-              {/* Trending Now for Mobile */}
               {trendingDocs.length > 0 && (
                 <div className="space-y-2">
                   <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Trending Now</p>
@@ -483,7 +477,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </div>
               )}
               
-              {/* Mobile Admin Controls */}
               {isAdmin && (
                 <div className="space-y-2">
                   <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Admin Controls</p>
@@ -501,7 +494,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </div>
               )}
 
-              {/* Mobile Logout (Since header logout was hidden on sm breakpoints to save space) */}
               {(isAdmin || isStudent) && (
                 <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
                   <button 
