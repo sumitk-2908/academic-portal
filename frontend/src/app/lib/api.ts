@@ -70,7 +70,7 @@ export const uploadDocument = async (formData: FormData) => {
     const { data: { session } } = await supabase.auth.getSession();
     
     // Use native fetch to bypass the Axios JSON header completely
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload/`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session?.access_token}`
