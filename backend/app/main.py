@@ -3,11 +3,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+# --- SlowAPI Imports ---
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 # Import the optimized documents router
 from app.routers import documents
 
 # Force Python to read your .env file locally (Render will use its own environment variables)
 load_dotenv()
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="Academic Portal API",
@@ -16,6 +23,9 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Configuration: Allow frontend to communicate with backend
 origins=["http://localhost:3000", "https://academic-portal-git-beta-sumitk2408-s-projects.vercel.app", "https://academic-portal-blush.vercel.app"]
@@ -32,5 +42,6 @@ app.add_middleware(
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 
 @app.get("/health", tags=["Health"])
+@limiter.limit("20/minute")
 async def health_check():
     return {"status": "healthy", "version": "1.0.0", "engine": "supabase-direct"}

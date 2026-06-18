@@ -1,18 +1,19 @@
 import os
 import uuid
 import asyncio
-import fitz  # PyMuPDF
+import fitz  
 import httpx
 from enum import Enum
-from fastapi import APIRouter, File, Form, UploadFile, HTTPException
+from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request
 from supabase import create_client, Client
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 # --- CONFIGURATION ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-# CRITICAL: Use the SERVICE_ROLE key here so the backend can bypass RLS 
-# and manage file uploads/deletions with admin privileges.
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")  
 
 if not SUPABASE_URL or not SUPABASE_KEY:
@@ -43,7 +44,9 @@ def extract_pdf_metadata(file_bytes: bytes):
 
 # --- UPLOAD ENDPOINT ---
 @router.post("/upload/")
+@limiter.limit("5/minute")
 async def upload_document(
+    request: Request,
     title: str = Form(...),
     category: DocCategory = Form(...),
     module_id: str = Form("null"), # Accepts "null" string from frontend for non-module subjects
@@ -157,7 +160,8 @@ async def upload_document(
 
 # --- DELETE ENDPOINT ---
 @router.delete("/{document_id}")
-async def delete_document(document_id: int):
+@limiter.limit("15/minute")
+async def delete_document(request: Request, document_id: int):
     """Safely deletes document from Tracking Tables, Database, and Cloud Storage."""
     try:
         # 1. Fetch document to get file URLs so we can delete from Cloud Storage
