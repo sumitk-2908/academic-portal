@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { StudyHistoryProvider } from "@/app/context/StudyHistoryContext";
 
 const SUBJECTS_LIST = [
   "MATHS 1", "MATHS 2", "PHYSICS", "BEE", "PPS", "BIOLOGY", "WORKSHOP",
@@ -25,6 +26,7 @@ const isNonModuleSubject = (subjectName: string) => {
 };
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  
   const router = useRouter();
   const pathname = usePathname();
   
@@ -232,353 +234,355 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col transition-colors duration-300">
-      
-      {/* ========================================= */}
-      {/* 1. THE ONLY GLOBAL HEADER */}
-      {/* ========================================= */}
-      <header className="sticky top-0 z-40 border-b border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF]/90 dark:bg-[#111827]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-4 px-4 md:px-6">
-          
-          <div className="flex shrink-0 items-center gap-2.5">
-            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden rounded-xl p-2 text-[#64748B] hover:bg-[#E5E7EB]/50 lg:inline-flex dark:text-[#94A3B8] dark:hover:bg-[#1F2A44]/50">
-              {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
-            </button>
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-sm">
-                <GraduationCap size={20} />
-              </div>
-              <div className="hidden leading-tight sm:block">
-                <p className="text-sm font-extrabold tracking-tight">Academic Portal</p>
-              </div>
-            </Link>
-          </div>
-
-          <div className="flex flex-1 justify-center min-w-0 relative group">
-            <div className="w-full max-w-2xl relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 dark:text-[#94A3B8]" size={18} />
-              {/* --- FIXED DARK MODE FOCUS BACKGROUND --- */}
-              <input
-                type="text"
-                placeholder="Search globally for PDFs, subjects, modules..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-full border border-gray-200 bg-gray-100 pl-11 pr-10 text-sm outline-none transition-colors focus:border-indigo-400 focus:bg-white dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white dark:focus:bg-[#111827]"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B]">
-                  <X size={14} />
-                </button>
-              )}
-
-              {searchQuery && (
-                <div className="absolute top-12 left-0 w-full rounded-2xl border border-[#E5E7EB] bg-white p-2 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] z-50">
-                  <p className="px-3 py-2 text-[10px] font-bold uppercase text-[#64748B]">Global Search Results</p>
-                  {globalSearchResults.map(doc => (
-                    <Link 
-                      key={doc.id} 
-                      href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`}
-                      onClick={() => setSearchQuery("")}
-                      className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-[#F8FAFC] dark:hover:bg-[#1F2A44]"
-                    >
-                      <FileText size={16} className="text-[#4F46E5]" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold truncate">{doc.title}</p>
-                        <p className="text-[10px] text-[#64748B] uppercase">{doc.subject} • Module {doc.module_id || "N/A"} • {doc.category}</p>
-                      </div>
-                    </Link>
-                  ))}
-                  {globalSearchResults.length === 0 && <p className="p-4 text-xs text-center text-[#64748B]">No matching documents found.</p>}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44]">
-              {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : null}
-            </button>
-            
-            {(isAdmin || isStudent) ? (
-              <div className="flex items-center gap-2">
-                <button onClick={() => setShowUploadForm(true)} className="flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white hover:bg-[#6366F1]">
-                  <Plus size={14} /> <span className="hidden sm:inline">{isAdmin ? "Upload" : "Contribute"}</span>
-                </button>
-                <button onClick={handleLogout} className="hidden sm:flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm text-[#64748B] hover:bg-red-50 hover:text-red-500 dark:border-[#1F2A44]">
-                  <LogOut size={16} />
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => setShowAuthModal(true)} className="flex h-9 items-center rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white shadow-sm hover:bg-[#6366F1]">
-                Sign In <span className="hidden sm:inline">&nbsp;/ Sign Up</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto flex w-full max-w-[1600px] flex-1">
+    <StudyHistoryProvider>
+      <div className="flex min-h-[100dvh] flex-col transition-colors duration-300">
         
         {/* ========================================= */}
-        {/* 2. THE ONLY OMNIPRESENT SIDEBAR (DESKTOP) */}
+        {/* 1. THE ONLY GLOBAL HEADER */}
         {/* ========================================= */}
-        <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 transition-all duration-200 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-16 px-2' : 'w-[220px] px-4'}`}>
-          <div className="space-y-6 flex-1">
+        <header className="sticky top-0 z-40 border-b border-[#E5E7EB] dark:border-[#1F2A44] bg-[#FFFFFF]/90 dark:bg-[#111827]/90 backdrop-blur-xl">
+          <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-4 px-4 md:px-6">
             
-            <div>
-              {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Navigation</p>}
-              <Link href="/" title={sidebarCollapsed ? "Back to Homepage" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-[#4F46E5] dark:hover:bg-[#111827]">
-                <Home size={18} /> {!sidebarCollapsed && "Back to Homepage"}
+            <div className="flex shrink-0 items-center gap-2.5">
+              <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden rounded-xl p-2 text-[#64748B] hover:bg-[#E5E7EB]/50 lg:inline-flex dark:text-[#94A3B8] dark:hover:bg-[#1F2A44]/50">
+                {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
+              </button>
+              <Link href="/" className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-sm">
+                  <GraduationCap size={20} />
+                </div>
+                <div className="hidden leading-tight sm:block">
+                  <p className="text-sm font-extrabold tracking-tight">Academic Portal</p>
+                </div>
               </Link>
-              {isAdmin && (
-                <Link href="/subject/admin/inbox" title={sidebarCollapsed ? "Approval Inbox" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-amber-600 hover:bg-amber-500/10">
-                  <Inbox size={18} /> {!sidebarCollapsed && <span className="flex-1">Approval Inbox</span>}
-                  {!sidebarCollapsed && pendingCount > 0 && <span className="rounded-full bg-amber-500/20 px-2 text-[10px]">{pendingCount}</span>}
-                </Link>
+            </div>
+
+            <div className="flex flex-1 justify-center min-w-0 relative group">
+              <div className="w-full max-w-2xl relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 dark:text-[#94A3B8]" size={18} />
+                {/* --- FIXED DARK MODE FOCUS BACKGROUND --- */}
+                <input
+                  type="text"
+                  placeholder="Search globally for PDFs, subjects, modules..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 w-full rounded-full border border-gray-200 bg-gray-100 pl-11 pr-10 text-sm outline-none transition-colors focus:border-indigo-400 focus:bg-white dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white dark:focus:bg-[#111827]"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B]">
+                    <X size={14} />
+                  </button>
+                )}
+
+                {searchQuery && (
+                  <div className="absolute top-12 left-0 w-full rounded-2xl border border-[#E5E7EB] bg-white p-2 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] z-50">
+                    <p className="px-3 py-2 text-[10px] font-bold uppercase text-[#64748B]">Global Search Results</p>
+                    {globalSearchResults.map(doc => (
+                      <Link 
+                        key={doc.id} 
+                        href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`}
+                        onClick={() => setSearchQuery("")}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-[#F8FAFC] dark:hover:bg-[#1F2A44]"
+                      >
+                        <FileText size={16} className="text-[#4F46E5]" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold truncate">{doc.title}</p>
+                          <p className="text-[10px] text-[#64748B] uppercase">{doc.subject} • Module {doc.module_id || "N/A"} • {doc.category}</p>
+                        </div>
+                      </Link>
+                    ))}
+                    {globalSearchResults.length === 0 && <p className="p-4 text-xs text-center text-[#64748B]">No matching documents found.</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44]">
+                {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : null}
+              </button>
+              
+              {(isAdmin || isStudent) ? (
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowUploadForm(true)} className="flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white hover:bg-[#6366F1]">
+                    <Plus size={14} /> <span className="hidden sm:inline">{isAdmin ? "Upload" : "Contribute"}</span>
+                  </button>
+                  <button onClick={handleLogout} className="hidden sm:flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm text-[#64748B] hover:bg-red-50 hover:text-red-500 dark:border-[#1F2A44]">
+                    <LogOut size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setShowAuthModal(true)} className="flex h-9 items-center rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white shadow-sm hover:bg-[#6366F1]">
+                  Sign In <span className="hidden sm:inline">&nbsp;/ Sign Up</span>
+                </button>
               )}
             </div>
-
-            <div>
-              {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Student Workspace</p>}
-              
-              <Link href="/continue-studying" title={sidebarCollapsed ? "Continue Studying" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-indigo-500 dark:hover:bg-[#111827]">
-                <Clock size={18} /> {!sidebarCollapsed && "Continue Studying"}
-              </Link>
-
-              <Link href="/bookmarks" title={sidebarCollapsed ? "Bookmarks" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-amber-500 dark:hover:bg-[#111827]">
-                <Bookmark size={18} /> {!sidebarCollapsed && "Bookmarks"}
-              </Link>
-
-              <Link href="/recent-uploads" title={sidebarCollapsed ? "Recent Uploads" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-emerald-500 dark:hover:bg-[#111827]">
-                <Upload size={18} /> {!sidebarCollapsed && "Recent Uploads"}
-              </Link>
-            </div>
-
-            {!sidebarCollapsed && trendingDocs.length > 0 && (
-              <div>
-                <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Discovery</p>
-                <div className="rounded-2xl border border-[#E5E7EB] bg-white p-3 space-y-2.5 dark:border-[#1F2A44] dark:bg-[#111827]">
-                  <div className="flex items-center gap-2 text-[#4F46E5]"><TrendingUp size={13} /><h3 className="text-[10px] font-extrabold uppercase tracking-wider">Trending Now</h3></div>
-                  {trendingDocs.slice(0, 3).map((doc, idx) => (
-                    <Link key={`tr-${doc.id}`} href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="block text-xs group">
-                      <p className="truncate font-bold group-hover:text-[#4F46E5]">{idx + 1}. {doc.title}</p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
+        </header>
 
-          {!sidebarCollapsed && (
-            <div className="mt-auto space-y-0.5 border-t border-[#E5E7EB] px-3 pt-4 text-[10px] font-medium text-[#94A3B8] dark:border-[#1F2A44]">
-              <p>Academic Portal • Version 1.6</p>
-              <p>© {new Date().getFullYear()} All Rights Reserved.</p>
-            </div>
-          )}
-        </aside>
+        <div className="mx-auto flex w-full max-w-[1600px] flex-1">
+          
+          {/* ========================================= */}
+          {/* 2. THE ONLY OMNIPRESENT SIDEBAR (DESKTOP) */}
+          {/* ========================================= */}
+          <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 transition-all duration-200 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-16 px-2' : 'w-[220px] px-4'}`}>
+            <div className="space-y-6 flex-1">
+              
+              <div>
+                {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Navigation</p>}
+                <Link href="/" title={sidebarCollapsed ? "Back to Homepage" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-[#4F46E5] dark:hover:bg-[#111827]">
+                  <Home size={18} /> {!sidebarCollapsed && "Back to Homepage"}
+                </Link>
+                {isAdmin && (
+                  <Link href="/subject/admin/inbox" title={sidebarCollapsed ? "Approval Inbox" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-amber-600 hover:bg-amber-500/10">
+                    <Inbox size={18} /> {!sidebarCollapsed && <span className="flex-1">Approval Inbox</span>}
+                    {!sidebarCollapsed && pendingCount > 0 && <span className="rounded-full bg-amber-500/20 px-2 text-[10px]">{pendingCount}</span>}
+                  </Link>
+                )}
+              </div>
 
-        {/* ========================================= */}
-        {/* 3. INJECTED PAGE CONTENT CONTAINER */}
-        {/* ========================================= */}
-        <main className="flex-1 w-full min-w-0 p-4 md:p-6 lg:p-8 overflow-x-clip pb-24 lg:pb-8">
-          {children}
-        </main>
-      </div>
+              <div>
+                {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Student Workspace</p>}
+                
+                <Link href="/continue-studying" title={sidebarCollapsed ? "Continue Studying" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-indigo-500 dark:hover:bg-[#111827]">
+                  <Clock size={18} /> {!sidebarCollapsed && "Continue Studying"}
+                </Link>
 
-      {/* ========================================= */}
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
-      {/* ========================================= */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-[#E5E7EB] bg-[#FFFFFF]/90 backdrop-blur-xl pb-safe dark:border-[#1F2A44] dark:bg-[#111827]/90 lg:hidden">
-        <Link 
-          href="/" 
-          onClick={() => setShowMobileMenu(false)} 
-          className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/' ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
-        >
-          <Home size={22} />
-          <span className="text-[10px] font-bold">Home</span>
-        </Link>
-        <Link 
-          href="/continue-studying" 
-          onClick={() => setShowMobileMenu(false)} 
-          className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/continue-studying' ? 'text-indigo-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
-        >
-          <Clock size={22} />
-          <span className="text-[10px] font-bold">Continue</span>
-        </Link>
-        <Link 
-          href="/bookmarks" 
-          onClick={() => setShowMobileMenu(false)} 
-          className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/bookmarks' ? 'text-amber-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
-        >
-          <Bookmark size={22} />
-          <span className="text-[10px] font-bold">Bookmarks</span>
-        </Link>
-        <button 
-          onClick={() => setShowMobileMenu(true)} 
-          className={`flex min-w-[64px] flex-col items-center gap-1 ${showMobileMenu ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
-        >
-          <Menu size={22} />
-          <span className="text-[10px] font-bold">More</span>
-        </button>
-      </nav>
+                <Link href="/bookmarks" title={sidebarCollapsed ? "Bookmarks" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-amber-500 dark:hover:bg-[#111827]">
+                  <Bookmark size={18} /> {!sidebarCollapsed && "Bookmarks"}
+                </Link>
 
-      {/* ========================================= */}
-      {/* MOBILE MORE MENU DRAWER */}
-      {/* ========================================= */}
-      {showMobileMenu && (
-        <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setShowMobileMenu(false)}>
-          <div 
-            className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-[#E5E7EB] bg-white p-6 pb-28 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">More Options</h2>
-              <button onClick={() => setShowMobileMenu(false)} className="rounded-full bg-gray-100 p-2 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                <X size={20}/>
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Discovery & Uploads</p>
-                <Link 
-                  href="/recent-uploads" 
-                  onClick={() => setShowMobileMenu(false)} 
-                  className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
-                >
-                  <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-500"><Upload size={18} /></div>
-                  Recent Uploads
+                <Link href="/recent-uploads" title={sidebarCollapsed ? "Recent Uploads" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-white hover:text-emerald-500 dark:hover:bg-[#111827]">
+                  <Upload size={18} /> {!sidebarCollapsed && "Recent Uploads"}
                 </Link>
               </div>
 
-              {trendingDocs.length > 0 && (
-                <div className="space-y-2">
-                  <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Trending Now</p>
-                  <div className="rounded-2xl border border-[#E5E7EB] bg-[#FAFAF9] p-4 space-y-3 dark:border-[#1F2A44] dark:bg-[#0B1020]">
-                    <div className="flex items-center gap-2 text-[#4F46E5]">
-                      <TrendingUp size={16} />
-                      <h3 className="text-xs font-extrabold uppercase tracking-wider">Top Documents</h3>
-                    </div>
-                    {trendingDocs.slice(0, 5).map((doc, idx) => (
-                      <Link 
-                        key={`mob-tr-${doc.id}`} 
-                        href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} 
-                        onClick={() => setShowMobileMenu(false)}
-                        className="block text-sm group"
-                      >
-                        <p className="truncate font-semibold text-[#111827] group-hover:text-[#4F46E5] dark:text-white">{idx + 1}. {doc.title}</p>
-                        <p className="mt-0.5 text-[10px] text-[#64748B]">{doc.subject} • {doc.category}</p>
+              {!sidebarCollapsed && trendingDocs.length > 0 && (
+                <div>
+                  <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Discovery</p>
+                  <div className="rounded-2xl border border-[#E5E7EB] bg-white p-3 space-y-2.5 dark:border-[#1F2A44] dark:bg-[#111827]">
+                    <div className="flex items-center gap-2 text-[#4F46E5]"><TrendingUp size={13} /><h3 className="text-[10px] font-extrabold uppercase tracking-wider">Trending Now</h3></div>
+                    {trendingDocs.slice(0, 3).map((doc, idx) => (
+                      <Link key={`tr-${doc.id}`} href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="block text-xs group">
+                        <p className="truncate font-bold group-hover:text-[#4F46E5]">{idx + 1}. {doc.title}</p>
                       </Link>
                     ))}
                   </div>
                 </div>
               )}
+            </div>
+
+            {!sidebarCollapsed && (
+              <div className="mt-auto space-y-0.5 border-t border-[#E5E7EB] px-3 pt-4 text-[10px] font-medium text-[#94A3B8] dark:border-[#1F2A44]">
+                <p>Academic Portal • Version 1.6</p>
+                <p>© {new Date().getFullYear()} All Rights Reserved.</p>
+              </div>
+            )}
+          </aside>
+
+          {/* ========================================= */}
+          {/* 3. INJECTED PAGE CONTENT CONTAINER */}
+          {/* ========================================= */}
+          <main className="flex-1 w-full min-w-0 p-4 md:p-6 lg:p-8 overflow-x-clip pb-24 lg:pb-8">
+            {children}
+          </main>
+        </div>
+
+        {/* ========================================= */}
+        {/* MOBILE BOTTOM NAVIGATION BAR */}
+        {/* ========================================= */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-[#E5E7EB] bg-[#FFFFFF]/90 backdrop-blur-xl pb-safe dark:border-[#1F2A44] dark:bg-[#111827]/90 lg:hidden">
+          <Link 
+            href="/" 
+            onClick={() => setShowMobileMenu(false)} 
+            className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/' ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          >
+            <Home size={22} />
+            <span className="text-[10px] font-bold">Home</span>
+          </Link>
+          <Link 
+            href="/continue-studying" 
+            onClick={() => setShowMobileMenu(false)} 
+            className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/continue-studying' ? 'text-indigo-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          >
+            <Clock size={22} />
+            <span className="text-[10px] font-bold">Continue</span>
+          </Link>
+          <Link 
+            href="/bookmarks" 
+            onClick={() => setShowMobileMenu(false)} 
+            className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/bookmarks' ? 'text-amber-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          >
+            <Bookmark size={22} />
+            <span className="text-[10px] font-bold">Bookmarks</span>
+          </Link>
+          <button 
+            onClick={() => setShowMobileMenu(true)} 
+            className={`flex min-w-[64px] flex-col items-center gap-1 ${showMobileMenu ? 'text-[#4F46E5]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+          >
+            <Menu size={22} />
+            <span className="text-[10px] font-bold">More</span>
+          </button>
+        </nav>
+
+        {/* ========================================= */}
+        {/* MOBILE MORE MENU DRAWER */}
+        {/* ========================================= */}
+        {showMobileMenu && (
+          <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setShowMobileMenu(false)}>
+            <div 
+              className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-[#E5E7EB] bg-white p-6 pb-28 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">More Options</h2>
+                <button onClick={() => setShowMobileMenu(false)} className="rounded-full bg-gray-100 p-2 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                  <X size={20}/>
+                </button>
+              </div>
               
-              {isAdmin && (
+              <div className="space-y-6">
                 <div className="space-y-2">
-                  <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Admin Controls</p>
+                  <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Discovery & Uploads</p>
                   <Link 
-                    href="/subject/admin/inbox" 
+                    href="/recent-uploads" 
                     onClick={() => setShowMobileMenu(false)} 
                     className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
                   >
-                    <div className="rounded-lg bg-amber-500/10 p-2 text-amber-500"><Inbox size={18} /></div>
-                    Approval Inbox
-                    {pendingCount > 0 && (
-                      <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-600">{pendingCount} pending</span>
-                    )}
+                    <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-500"><Upload size={18} /></div>
+                    Recent Uploads
                   </Link>
                 </div>
-              )}
 
-              {(isAdmin || isStudent) && (
-                <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
-                  <button 
-                    onClick={() => { setShowMobileMenu(false); handleLogout(); }} 
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 p-3 text-sm font-semibold text-red-500 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20"
-                  >
-                    <LogOut size={18} /> Sign Out
-                  </button>
-                </div>
-              )}
+                {trendingDocs.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Trending Now</p>
+                    <div className="rounded-2xl border border-[#E5E7EB] bg-[#FAFAF9] p-4 space-y-3 dark:border-[#1F2A44] dark:bg-[#0B1020]">
+                      <div className="flex items-center gap-2 text-[#4F46E5]">
+                        <TrendingUp size={16} />
+                        <h3 className="text-xs font-extrabold uppercase tracking-wider">Top Documents</h3>
+                      </div>
+                      {trendingDocs.slice(0, 5).map((doc, idx) => (
+                        <Link 
+                          key={`mob-tr-${doc.id}`} 
+                          href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} 
+                          onClick={() => setShowMobileMenu(false)}
+                          className="block text-sm group"
+                        >
+                          <p className="truncate font-semibold text-[#111827] group-hover:text-[#4F46E5] dark:text-white">{idx + 1}. {doc.title}</p>
+                          <p className="mt-0.5 text-[10px] text-[#64748B]">{doc.subject} • {doc.category}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {isAdmin && (
+                  <div className="space-y-2">
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Admin Controls</p>
+                    <Link 
+                      href="/subject/admin/inbox" 
+                      onClick={() => setShowMobileMenu(false)} 
+                      className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
+                    >
+                      <div className="rounded-lg bg-amber-500/10 p-2 text-amber-500"><Inbox size={18} /></div>
+                      Approval Inbox
+                      {pendingCount > 0 && (
+                        <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-600">{pendingCount} pending</span>
+                      )}
+                    </Link>
+                  </div>
+                )}
+
+                {(isAdmin || isStudent) && (
+                  <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
+                    <button 
+                      onClick={() => { setShowMobileMenu(false); handleLogout(); }} 
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 p-3 text-sm font-semibold text-red-500 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20"
+                    >
+                      <LogOut size={18} /> Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* AUTH & UPLOAD MODALS */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-extrabold">{authMode === "signin" ? "Sign In" : "Sign Up"}</h2>
-              <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
+        {/* AUTH & UPLOAD MODALS */}
+        {showAuthModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-extrabold">{authMode === "signin" ? "Sign In" : "Sign Up"}</h2>
+                <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
+              </div>
+              <form onSubmit={handleAuthSubmit} className="space-y-4">
+                <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
+                <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
+                <button type="submit" disabled={authLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">{authLoading ? "Processing..." : authMode === "signin" ? "Login" : "Create Account"}</button>
+                <button type="button" onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">
+                  {authMode === "signin" ? "New student? Create an account" : "Already have an account? Sign In"}
+                </button>
+              </form>
             </div>
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
-              <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
-              <button type="submit" disabled={authLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">{authLoading ? "Processing..." : authMode === "signin" ? "Login" : "Create Account"}</button>
-              <button type="button" onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">
-                {authMode === "signin" ? "New student? Create an account" : "Already have an account? Sign In"}
-              </button>
-            </form>
           </div>
-        </div>
-      )}
+        )}
 
-      {showUploadForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-extrabold">{isAdmin ? "Admin Database Upload" : "Student Contribution"}</h2>
-              <button onClick={() => setShowUploadForm(false)}><X size={20}/></button>
+        {showUploadForm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-extrabold">{isAdmin ? "Admin Database Upload" : "Student Contribution"}</h2>
+                <button onClick={() => setShowUploadForm(false)}><X size={20}/></button>
+              </div>
+              <form onSubmit={handleUpload} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Subject</label>
+                    <select value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
+                      {SUBJECTS_LIST.map(sub => <option key={sub} value={sub} className="bg-white dark:bg-[#0B1020]">{sub}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Module</label>
+                    <select 
+                      value={uploadModule} 
+                      onChange={(e) => setUploadModule(Number(e.target.value))} 
+                      disabled={isModuleDisabled}
+                      className={`h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white ${isModuleDisabled ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500' : ''}`}
+                    >
+                      {[1, 2, 3, 4, 5].map(m => <option key={m} value={m} className="bg-white dark:bg-[#0B1020]">Module {m}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-[#64748B]">Document Title</label>
+                  <input required type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020]" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Category</label>
+                    <select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
+                      <option value="notes" className="bg-white dark:bg-[#0B1020]">Notes</option>
+                      <option value="pyq" className="bg-white dark:bg-[#0B1020]">PYQ</option>
+                      <option value="syllabus" className="bg-white dark:bg-[#0B1020]">Syllabus</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Uploader</label>
+                    <input type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020]" />
+                  </div>
+                </div>
+                <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs" />
+                <button type="submit" disabled={uploading} className="h-11 w-full rounded-xl bg-[#4F46E5] text-sm font-bold text-white hover:bg-[#6366F1]">
+                  {uploading ? "Uploading..." : "Publish Resource"}
+                </button>
+              </form>
             </div>
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-[#64748B]">Subject</label>
-                  <select value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
-                    {SUBJECTS_LIST.map(sub => <option key={sub} value={sub} className="bg-white dark:bg-[#0B1020]">{sub}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-[#64748B]">Module</label>
-                  <select 
-                    value={uploadModule} 
-                    onChange={(e) => setUploadModule(Number(e.target.value))} 
-                    disabled={isModuleDisabled}
-                    className={`h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white ${isModuleDisabled ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500' : ''}`}
-                  >
-                    {[1, 2, 3, 4, 5].map(m => <option key={m} value={m} className="bg-white dark:bg-[#0B1020]">Module {m}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase text-[#64748B]">Document Title</label>
-                <input required type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020]" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-[#64748B]">Category</label>
-                  <select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
-                    <option value="notes" className="bg-white dark:bg-[#0B1020]">Notes</option>
-                    <option value="pyq" className="bg-white dark:bg-[#0B1020]">PYQ</option>
-                    <option value="syllabus" className="bg-white dark:bg-[#0B1020]">Syllabus</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-[#64748B]">Uploader</label>
-                  <input type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020]" />
-                </div>
-              </div>
-              <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs" />
-              <button type="submit" disabled={uploading} className="h-11 w-full rounded-xl bg-[#4F46E5] text-sm font-bold text-white hover:bg-[#6366F1]">
-                {uploading ? "Uploading..." : "Publish Resource"}
-              </button>
-            </form>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </StudyHistoryProvider>
   );
 }
