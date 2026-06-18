@@ -54,9 +54,10 @@ async def upload_document(
     module_id: int = Form(1),
     subject: str = Form("General"),
     uploaded_by: str = Form("Admin"),
+    status: str = Form("pending"), # 🔥 FIX 2: Accept the status from Next.js
     file: UploadFile = File(...),
     user: dict = Depends(verify_token),       
-    admin_user: dict = Depends(verify_admin), 
+    # 🔥 FIX 1: REMOVED Depends(verify_admin) so students can hit this route!
 ):
     """Uploads a PDF to Supabase Storage AND inserts the row directly into the Supabase Database."""
     
@@ -65,9 +66,12 @@ async def upload_document(
 
     try:
         safe_module_id = int(module_id)
+        
+        # Prepend a unique 8-character UUID to the filename
         unique_prefix = uuid.uuid4().hex[:8]
         original_clean_name = file.filename.replace(" ", "_")
         safe_filename = f"{unique_prefix}_{original_clean_name}"
+        
         file_bytes = await file.read()
         
         # --- DYNAMIC METADATA EXTRACTION ---
@@ -78,7 +82,7 @@ async def upload_document(
         safe_thumb_filename = f"thumb_{safe_filename.replace('.pdf', '.jpg')}"
 
         try:
-            # 🔥 CRITICAL FIX: Offload PyMuPDF to a background thread!
+            # Offload PyMuPDF to a background thread!
             page_count, thumbnail_bytes = await asyncio.to_thread(
                 extract_pdf_metadata, file_bytes
             )
@@ -110,10 +114,6 @@ async def upload_document(
             
         public_url = f"{base_url}/storage/v1/object/public/documents/{safe_filename}"
 
-        # =========================================================
-        # CRITICAL FIX: Save directly to Supabase Database
-        # completely bypassing Neon and SQLAlchemy!
-        # =========================================================
         category_val = category.value if hasattr(category, 'value') else category
         
         new_doc_payload = {
@@ -126,7 +126,7 @@ async def upload_document(
             "file_size": file_size_mb,
             "page_count": page_count,
             "thumbnail_url": thumbnail_url,
-            "status": "pending" # Keep as pending for Admin Inbox verification
+            "status": status # 🔥 FIX 2: Dynamic status applied here
         }
         
         db_response = supabase.table("documents").insert(new_doc_payload).execute()
@@ -139,6 +139,7 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Backend Crash: {str(e)}")
 
