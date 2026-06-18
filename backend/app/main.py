@@ -18,10 +18,11 @@ app = FastAPI(
 )
 
 # CORS Configuration: Allow frontend to communicate with backend
+origins=["http://localhost:3000", "https://academic-portal-git-beta-sumitk2408-s-projects.vercel.app", "https://academic-portal-blush.vercel.app"]
+
 app.add_middleware(
     CORSMiddleware,
-    # In the future, change ["*"] to ["https://your-frontend-url.vercel.app"] for strict security
-    allow_origins=["*"], 
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

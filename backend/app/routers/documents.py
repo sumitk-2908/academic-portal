@@ -81,7 +81,9 @@ async def upload_document(
                 extract_pdf_metadata, file_bytes
             )
         except Exception as e:
-            print(f"Warning: Failed to process PDF metadata/thumbnail: {e}")
+            # SECURITY FIX: If PyMuPDF cannot parse it, it's not a real/valid PDF. Abort!
+            print(f"Security/Validation Error: Invalid PDF file uploaded. {e}")
+            raise HTTPException(status_code=400, detail="Invalid, corrupted, or spoofed PDF file.")
 
         base_url = SUPABASE_URL.rstrip("/")
         upload_url = f"{base_url}/storage/v1/object/documents/{safe_filename}"
