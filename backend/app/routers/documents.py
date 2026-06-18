@@ -20,7 +20,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
-# --- ENUMS (Replaces the deleted models.py) ---
+
 class DocCategory(str, Enum):
     notes = "notes"
     pyq = "pyq"
@@ -122,13 +122,28 @@ async def upload_document(
             "status": status
         }
         
-        # Insert document metadata into Database
-        db_response = supabase.table("documents").insert(new_doc_payload).execute()
-        
-        if not db_response.data:
-            raise Exception("Supabase DB Insert returned empty data.")
+        # Insert document metadata into Database with ROLLBACK logic
+        try:
+            db_response = supabase.table("documents").insert(new_doc_payload).execute()
             
-        return db_response.data[0]
+            if not db_response.data:
+                raise Exception("Supabase DB Insert returned empty data.")
+                
+            return db_response.data[0]
+            
+        except Exception as db_err:
+            # ROLLBACK: Delete the orphaned files from storage if DB insert fails
+            print(f"DB Insert failed, rolling back storage uploads: {db_err}")
+            files_to_remove = [safe_filename]
+            if thumbnail_bytes:
+                files_to_remove.append(safe_thumb_filename)
+            
+            try:
+                supabase.storage.from_("documents").remove(files_to_remove)
+            except Exception as cleanup_err:
+                print(f"Warning: Failed to clean up orphaned files: {cleanup_err}")
+                
+            raise HTTPException(status_code=500, detail="Database insert failed. Upload rolled back.")
 
     except HTTPException:
         raise
@@ -164,12 +179,8 @@ async def delete_document(document_id: int):
         if files_to_remove:
             supabase.storage.from_("documents").remove(files_to_remove)
 
-        # 3. Explicitly delete associated tracking records to prevent PostgreSQL ForeignKey crashes
-        supabase.table("student_bookmarks").delete().eq("document_id", document_id).execute()
-        supabase.table("study_history").delete().eq("document_id", document_id).execute()
-        supabase.table("document_analytics").delete().eq("document_id", document_id).execute()
-        
-        # 4. Finally, delete the core document row
+        # 3. Delete the core document row
+        # (Assuming ON DELETE CASCADE is set up on PostgreSQL foreign keys for tracking tables)
         supabase.table("documents").delete().eq("id", document_id).execute()
         
         return {"message": "Document and associated assets deleted successfully", "deleted_id": document_id}

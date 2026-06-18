@@ -3,6 +3,21 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/app/lib/api"; 
 
+export interface StudyDocument {
+  id: number;
+  title: string;
+  category: "notes" | "pyq" | "syllabus" | string; 
+  file_url: string;
+  uploaded_by: string;
+  created_at: string; 
+  module_id: number | null;
+  subject: string;
+  status: "pending" | "approved" | "rejected"; 
+  file_size: number | null;
+  page_count: number | null;
+  thumbnail_url: string | null;
+}
+
 type StudyHistoryContextType = {
   history: any[];
   addDocumentToHistory: (doc: any) => Promise<void>;
@@ -37,17 +52,22 @@ export const StudyHistoryProvider = ({ children }: { children: React.ReactNode }
     // 🔥 CRITICAL FIX: Broadcast event so ClientLayout & Continue Studying pages still update!
     window.dispatchEvent(new Event("sidebar_update"));
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData?.session?.user) {
-      const userId = sessionData.session.user.id;
-      await supabase.from("study_history").upsert(
-        {
-          user_id: userId,
-          document_id: doc.id,
-          accessed_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id, document_id" }
-      );
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user) {
+        const userId = sessionData.session.user.id;
+        const { error } = await supabase.from("study_history").upsert(
+          {
+            user_id: userId,
+            document_id: doc.id,
+            accessed_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id, document_id" }
+        );
+        if (error) console.error("Failed to sync history to DB:", error.message);
+      }
+    } catch (error) {
+      console.error("Network error while syncing study history");
     }
   };
 
