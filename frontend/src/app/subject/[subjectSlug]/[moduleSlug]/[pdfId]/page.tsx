@@ -4,14 +4,14 @@ import { use, useEffect, useState, useRef } from "react";
 import { 
   ArrowLeft, 
   Loader2, 
-  ExternalLink, 
   ChevronLeft, 
   ChevronRight, 
   ZoomIn, 
   ZoomOut,
   Share2,
   Link as LinkIcon,
-  Check
+  Check,
+  Maximize // <-- Imported the Maximize icon for the [ ] look
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase, trackDocumentStat } from "../../../../lib/api"; 
@@ -127,7 +127,7 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
           {documentMeta.title}
         </p>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* SHARE DROPDOWN MENU */}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -160,13 +160,15 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
 
+          {/* FULLSCREEN BUTTON */}
           <a 
             href={documentMeta.file_url} 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-[#4F46E5] transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
           >
-             <span className="hidden sm:inline">Open Native</span> <ExternalLink size={14} />
+             {/* Text shows on desktop, icon shows on both */}
+             <span className="hidden sm:inline">FullScreen</span> <Maximize size={14} />
           </a>
         </div>
       </div>
