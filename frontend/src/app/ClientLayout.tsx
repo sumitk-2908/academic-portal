@@ -46,7 +46,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStudent, setIsStudent] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authMode, setAuthMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -138,7 +138,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     sessionStorage.removeItem("admin_portal_auth");
 
     try {
-      if (authMode === "signup") {
+
+      if (authMode === "forgot") {
+        // --- NEW: FORGOT PASSWORD LOGIC ---
+        const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        
+        alert("Password reset email sent! Please check your inbox.");
+        setAuthMode("signin");
+        setShowAuthModal(false);
+
+      }else if (authMode === "signup") {
         const { data, error } = await supabase.auth.signUp({ 
           email: authEmail, 
           password: authPassword,
@@ -512,18 +524,38 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* AUTH & UPLOAD MODALS */}
         {showAuthModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-extrabold">{authMode === "signin" ? "Sign In" : "Sign Up"}</h2>
-                <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
-              </div>
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
-                <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
+          <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-extrabold">
+                {authMode === "signin" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
+              </h2>
+              <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
+            </div>
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
+              
+              {/* Hide password input if they are just requesting a reset link */}
+              {authMode !== "forgot" && (
                 <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
-                <button type="submit" disabled={authLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">{authLoading ? "Processing..." : authMode === "signin" ? "Login" : "Create Account"}</button>
-                <button type="button" onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">
-                  {authMode === "signin" ? "New student? Create an account" : "Already have an account? Sign In"}
-                </button>
+              )}
+              
+              <button type="submit" disabled={authLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">
+                {authLoading ? "Processing..." : authMode === "signin" ? "Login" : authMode === "signup" ? "Create Account" : "Send Reset Link"}
+              </button>
+
+              {/* Dynamic Navigation Links */}
+              {authMode === "signin" && (
+                  <div className="flex justify-between w-full text-xs font-bold text-[#4F46E5]">
+                    <button type="button" onClick={() => setAuthMode("forgot")} className="hover:underline">Forgot Password?</button>
+                    <button type="button" onClick={() => setAuthMode("signup")} className="hover:underline">New student? Sign Up</button>
+                  </div>
+                )}
+                {authMode === "signup" && (
+                  <button type="button" onClick={() => setAuthMode("signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">Already have an account? Sign In</button>
+                )}
+                {authMode === "forgot" && (
+                  <button type="button" onClick={() => setAuthMode("signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">Back to Sign In</button>
+                )}
               </form>
             </div>
           </div>
