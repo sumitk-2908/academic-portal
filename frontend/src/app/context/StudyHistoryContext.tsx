@@ -3,20 +3,9 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/app/lib/api"; 
 
-export interface StudyDocument {
-  id: number;
-  title: string;
-  category: "notes" | "pyq" | "syllabus" | string; 
-  file_url: string;
-  uploaded_by: string;
-  created_at: string; 
-  module_id: number | null;
-  subject: string;
-  status: "pending" | "approved" | "rejected"; 
-  file_size: number | null;
-  page_count: number | null;
-  thumbnail_url: string | null;
-}
+import { Database } from "@/app/lib/database.types";
+
+export type StudyDocument = Database['public']['Tables']['documents']['Row'];
 
 type StudyHistoryContextType = {
   history: any[];

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
+import { Database } from "./database.types";
 
 // 1. Initialize Supabase Auth
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
