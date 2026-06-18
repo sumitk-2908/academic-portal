@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState, useMemo } from "react";
-import { supabase, trackDocumentStat, deleteDocument, logRecentStudyActivity } from "../../lib/api";
+import { supabase, trackDocumentStat, deleteDocument } from "../../lib/api";
 import { Layers, Bookmark, NotebookPen, FileQuestion, ListChecks, Download, Eye, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 
@@ -173,7 +173,6 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
             return (
               <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827]">
                 
-                {/* --- DYNAMIC THUMBNAIL RENDERER --- */}
                 <div className="relative mb-3 h-32 w-full overflow-hidden rounded-xl bg-gray-100 flex items-center justify-center dark:bg-[#0B1020]">
                   {doc.thumbnail_url ? (
                     <img src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} className="object-cover object-top w-full h-full opacity-90 transition-opacity group-hover:opacity-100" />
@@ -182,7 +181,6 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
                       <Icon size={32} className="opacity-50" />
                     </div>
                   )}
-                  {/* Category Badge overlaying the thumbnail */}
                   <span className="absolute top-2 right-2 rounded-full bg-slate-900/70 backdrop-blur-md px-2 py-0.5 text-[9px] font-extrabold uppercase text-white shadow-sm">
                     {doc.category}
                   </span>
@@ -190,7 +188,6 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
 
                 <h3 className="text-xs font-bold mt-1 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
                 
-                {/* --- DYNAMIC METADATA RENDERER --- */}
                 <p className="mt-1.5 text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">
                   {doc.page_count ? `${doc.page_count} pages` : 'PDF Document'} · {doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'Unknown size'} · uploaded {getTimeAgo(doc.created_at)}
                 </p>
@@ -199,7 +196,8 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
                   <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44]">
                     <Download size={12} /> Download
                   </button>
-                  <Link href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl">
+                  {/* 🔥 FIXED: Only track stats on click, let PDFViewerPage handle the History logic */}
+                  <Link href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => trackDocumentStat(doc.id, 'view')} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl">
                     <Eye size={12} /> View
                   </Link>
                   <button onClick={() => toggleBookmark(doc.id)} className={`p-2 rounded-xl border ${bookmarks.includes(doc.id) ? "bg-amber-500/10 text-amber-500 border-amber-500/30" : ""}`}>

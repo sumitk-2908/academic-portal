@@ -3,19 +3,18 @@
 import { use, useEffect, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase, trackDocumentStat, logRecentStudyActivity } from "../../../../lib/api"; 
+import { supabase, trackDocumentStat } from "../../../../lib/api"; 
+import { useStudyHistory } from "@/app/context/StudyHistoryContext";
 
 export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlug: string, moduleSlug: string, pdfId: string }> }) {
-  // Unwrap Next.js 15 App Router dynamic params
   const { pdfId } = use(params);
   const router = useRouter();
   
   const [document, setDocument] = useState<any | null>(null);
+  const { addDocumentToHistory } = useStudyHistory();
 
   useEffect(() => {
     const fetchPdf = async () => {
-      // Fetch the entire document object instead of just the URL
-      // so we can log it into the "Continue Studying" history
       const { data } = await supabase
         .from('documents')
         .select('*')
@@ -25,13 +24,13 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
       if (data) {
         setDocument(data);
         
-        // Ensure direct visits/refreshes count towards analytics and history
         trackDocumentStat(data.id, 'view');
-        logRecentStudyActivity(data);
+        addDocumentToHistory(data);
       }
     };
     
     fetchPdf();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfId]);
 
   if (!document) {
@@ -46,10 +45,8 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
   }
 
   return (
-    // Fits perfectly inside your ClientLayout <main> container without overflowing
     <div className="flex flex-col h-[calc(100vh-10rem)] w-full overflow-hidden rounded-3xl border border-[#E5E7EB] bg-white shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]">
       
-      {/* Viewer Header */}
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#E5E7EB] bg-[#FAFAF9] px-2 sm:px-4 dark:border-[#1F2A44] dark:bg-[#0B1020]">
         <button 
           onClick={() => router.back()}
@@ -62,11 +59,9 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
           {document.title}
         </p>
         
-        {/* Spacer to keep title perfectly centered */}
         <div className="w-[70px] sm:w-[90px]" /> 
       </div>
 
-      {/* PDF Iframe container */}
       <div className="flex-1 w-full bg-[#FAFAF9] dark:bg-black relative">
         <iframe
           src={`${document.file_url}#view=FitH`}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "@/app/lib/api"; // Adjust import path if needed
+import { supabase } from "@/app/lib/api"; 
 
 type StudyHistoryContextType = {
   history: any[];
@@ -13,7 +13,6 @@ const StudyHistoryContext = createContext<StudyHistoryContextType | undefined>(u
 export const StudyHistoryProvider = ({ children }: { children: React.ReactNode }) => {
   const [history, setHistory] = useState<any[]>([]);
 
-  // Load initial history on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem("portal_study_history");
@@ -26,17 +25,18 @@ export const StudyHistoryProvider = ({ children }: { children: React.ReactNode }
   }, []);
 
   const addDocumentToHistory = async (doc: any) => {
-    // 1. Update React State & Local Storage safely using functional state updates
     setHistory((prevHistory) => {
       let newHistory = prevHistory.filter((d) => d.id !== doc.id);
       newHistory.unshift(doc);
-      newHistory = newHistory.slice(0, 5); // Keep top 5
+      newHistory = newHistory.slice(0, 5); 
       
       localStorage.setItem("portal_study_history", JSON.stringify(newHistory));
       return newHistory;
     });
 
-    // 2. Sync to Supabase in the background
+    // 🔥 CRITICAL FIX: Broadcast event so ClientLayout & Continue Studying pages still update!
+    window.dispatchEvent(new Event("sidebar_update"));
+
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData?.session?.user) {
       const userId = sessionData.session.user.id;
@@ -58,7 +58,6 @@ export const StudyHistoryProvider = ({ children }: { children: React.ReactNode }
   );
 };
 
-// Helper hook
 export const useStudyHistory = () => {
   const context = useContext(StudyHistoryContext);
   if (!context) {
