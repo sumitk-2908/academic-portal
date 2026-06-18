@@ -2,24 +2,17 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from fastapi.responses import RedirectResponse
 import os
 import httpx
-import asyncio
-import uuid
 import fitz  # PyMuPDF for PDF processing
 import traceback
 
 from dotenv import load_dotenv
 
 # We have REMOVED all SQLAlchemy and Neon database dependencies!
-from enum import Enum
+from app.models.academic import DocCategory
 from app.auth import verify_token, verify_admin
 from supabase import create_client, Client
 
 load_dotenv()
-
-class DocCategory(str, Enum):
-    notes = "notes"
-    pyq = "pyq"
-    syllabus = "syllabus"
 
 router = APIRouter()
 
@@ -32,20 +25,6 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def extract_pdf_metadata(file_bytes: bytes):
-    """
-    Synchronous, CPU-bound task isolated here so it can be 
-    run in a background thread without blocking FastAPI.
-    """
-    pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
-    page_count = len(pdf_document)
-    
-    first_page = pdf_document.load_page(0)
-    pix = first_page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
-    thumbnail_bytes = pix.tobytes("jpeg")
-    
-    return page_count, thumbnail_bytes
-
 
 @router.post("/upload/")
 async def upload_document(
@@ -54,10 +33,9 @@ async def upload_document(
     module_id: int = Form(1),
     subject: str = Form("General"),
     uploaded_by: str = Form("Admin"),
-    status: str = Form("pending"), # 🔥 FIX 2: Accept the status from Next.js
     file: UploadFile = File(...),
     user: dict = Depends(verify_token),       
-    # 🔥 FIX 1: REMOVED Depends(verify_admin) so students can hit this route!
+    admin_user: dict = Depends(verify_admin), 
 ):
     """Uploads a PDF to Supabase Storage AND inserts the row directly into the Supabase Database."""
     
@@ -66,12 +44,7 @@ async def upload_document(
 
     try:
         safe_module_id = int(module_id)
-        
-        # Prepend a unique 8-character UUID to the filename
-        unique_prefix = uuid.uuid4().hex[:8]
-        original_clean_name = file.filename.replace(" ", "_")
-        safe_filename = f"{unique_prefix}_{original_clean_name}"
-        
+        safe_filename = file.filename.replace(" ", "_")
         file_bytes = await file.read()
         
         # --- DYNAMIC METADATA EXTRACTION ---
@@ -82,10 +55,12 @@ async def upload_document(
         safe_thumb_filename = f"thumb_{safe_filename.replace('.pdf', '.jpg')}"
 
         try:
-            # Offload PyMuPDF to a background thread!
-            page_count, thumbnail_bytes = await asyncio.to_thread(
-                extract_pdf_metadata, file_bytes
-            )
+            pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
+            page_count = len(pdf_document)
+            
+            first_page = pdf_document.load_page(0)
+            pix = first_page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
+            thumbnail_bytes = pix.tobytes("jpeg")
         except Exception as e:
             print(f"Warning: Failed to process PDF metadata/thumbnail: {e}")
 
@@ -114,6 +89,10 @@ async def upload_document(
             
         public_url = f"{base_url}/storage/v1/object/public/documents/{safe_filename}"
 
+        # =========================================================
+        # CRITICAL FIX: Save directly to Supabase Database
+        # completely bypassing Neon and SQLAlchemy!
+        # =========================================================
         category_val = category.value if hasattr(category, 'value') else category
         
         new_doc_payload = {
@@ -126,7 +105,7 @@ async def upload_document(
             "file_size": file_size_mb,
             "page_count": page_count,
             "thumbnail_url": thumbnail_url,
-            "status": status # 🔥 FIX 2: Dynamic status applied here
+            "status": "pending" # Keep as pending for Admin Inbox verification
         }
         
         db_response = supabase.table("documents").insert(new_doc_payload).execute()
@@ -139,7 +118,6 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Backend Crash: {str(e)}")
 

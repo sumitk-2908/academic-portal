@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
+import { supabase, getStudentBookmarks, trackDocumentStat, logRecentStudyActivity } from "../lib/api";
 import { Bookmark, Download, Eye, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
 
@@ -41,9 +41,9 @@ export default function BookmarksPage() {
 
     const handleUpdate = () => fetchBookmarks(true);
 
-    // Listen for global updates to bypass Next.js Mobile Router caching
+    // FIX: Listen for global updates to bypass Next.js Mobile Router caching
     window.addEventListener("sidebar_update", handleUpdate);
-    // Also ensure the state updates if the user switches browser tabs
+    // FIX: Also ensure the state updates if the user switches browser tabs
     window.addEventListener("focus", handleUpdate);
 
     return () => {
@@ -103,7 +103,7 @@ export default function BookmarksPage() {
                 <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]">
                   <Download size={12} /> Download
                 </button>
-                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => trackDocumentStat(doc.id, 'view')} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-amber-500 text-white py-2 rounded-xl">
+                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => { trackDocumentStat(doc.id, 'view'); logRecentStudyActivity(doc); }} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-amber-500 text-white py-2 rounded-xl">
                   <Eye size={12} /> View
                 </Link>
                 <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border bg-amber-500/10 text-amber-500 border-amber-500/30 shrink-0">

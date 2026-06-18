@@ -3,8 +3,8 @@ fastapi>=0.100.0
 uvicorn[standard]>=0.22.0
 
 # Database & Data Handling
-
-
+sqlalchemy>=2.0.0
+psycopg[binary]>=3.0.0
 python-multipart>=0.0.12
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
@@ -19,3 +19,4 @@ httpx>=0.24.0
 email-validator>=2.0.0
 
 PyMuPDF>=1.23.0
+psycopg2-binary>=2.9.9
