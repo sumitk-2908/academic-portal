@@ -10,11 +10,16 @@ import traceback
 from dotenv import load_dotenv
 
 # We have REMOVED all SQLAlchemy and Neon database dependencies!
-from app.models.academic import DocCategory
+from enum import Enum
 from app.auth import verify_token, verify_admin
 from supabase import create_client, Client
 
 load_dotenv()
+
+class DocCategory(str, Enum):
+    notes = "notes"
+    pyq = "pyq"
+    syllabus = "syllabus"
 
 router = APIRouter()
 
