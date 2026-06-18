@@ -3,8 +3,6 @@ fastapi>=0.100.0
 uvicorn[standard]>=0.22.0
 
 # Database & Data Handling
-
-
 python-multipart>=0.0.12
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
@@ -15,7 +13,11 @@ python-jose[cryptography]>=3.3.0
 python-dotenv>=1.0.0
 httpx>=0.24.0
 
+# Rate Limiting & Security (NEW)
+slowapi>=0.1.9
+
 # Standard utility for system paths
 email-validator>=2.0.0
 
+# PDF Processing
 PyMuPDF>=1.23.0
