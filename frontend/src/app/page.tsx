@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "./lib/api";
 import { 
@@ -18,7 +18,6 @@ import {
   Users 
 } from "lucide-react";
 
-// Expanded colors to include brighter (-400) shades and 20% opacity backgrounds for Dark Mode
 const SUBJECTS = [
   { name: "MATHS 1", slug: "maths-1", icon: Calculator, color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-400/20", hoverBg: "group-hover:bg-blue-500 dark:group-hover:bg-blue-400" },
   { name: "MATHS 2", slug: "maths-2", icon: Calculator, color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-400/20", hoverBg: "group-hover:bg-blue-500 dark:group-hover:bg-blue-400" },
@@ -43,6 +42,10 @@ const SUBJECTS = [
 export default function SubjectDirectory() {
   const [selectedSubject, setSelectedSubject] = useState("All");
   const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({});
+  
+  // --- ACCESSIBILITY STATE: Roving Index ---
+  const [activeIndex, setActiveIndex] = useState(0);
+  const elementsRef = useRef<(HTMLAnchorElement | null)[]>([]);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -64,6 +67,40 @@ export default function SubjectDirectory() {
   const filteredSubjects = selectedSubject === "All" 
     ? SUBJECTS 
     : SUBJECTS.filter(sub => sub.name === selectedSubject);
+
+  // --- ACCESSIBILITY RESET ---
+  // Reset the active index to 0 if the user filters the list
+  useEffect(() => {
+    setActiveIndex(0);
+    elementsRef.current = elementsRef.current.slice(0, filteredSubjects.length);
+  }, [selectedSubject, filteredSubjects.length]);
+
+  // --- ACCESSIBILITY HANDLER: Keyboard Navigation ---
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
+    const totalItems = filteredSubjects.length;
+    if (totalItems === 0) return;
+
+    let newIndex = index;
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      newIndex = (index + 1) % totalItems;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      newIndex = (index - 1 + totalItems) % totalItems;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      newIndex = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      newIndex = totalItems - 1;
+    }
+
+    if (newIndex !== index) {
+      setActiveIndex(newIndex);
+      elementsRef.current[newIndex]?.focus();
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl animate-fade-up">
@@ -91,18 +128,31 @@ export default function SubjectDirectory() {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 sm:px-0">
-        {filteredSubjects.map((sub) => {
+      {/* Added role="grid" to the container */}
+      <div 
+        role="grid" 
+        aria-label="Subjects Grid"
+        className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 sm:px-0"
+      >
+        {filteredSubjects.map((sub, index) => {
           const Icon = sub.icon || BookOpen;
           
           return (
             <Link 
               key={sub.slug} 
               href={`/subject/${sub.slug}`}
-              // Added dark mode specific hover background and border glow here to make the cards stand out more
+              
+              // --- NEW ACCESSIBILITY PROPS ---
+              role="gridcell"
+              ref={(el) => {
+                if (el) elementsRef.current[index] = el;
+              }}
+              tabIndex={activeIndex === index ? 0 : -1}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              // -------------------------------
+
               className="group flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center transition-all hover:-translate-y-1 hover:border-indigo-400 hover:shadow-md dark:border-[#1F2A44] dark:bg-[#111827] dark:hover:border-indigo-400/60 dark:hover:bg-[#161f33]"
             >
-              {/* Removed the hardcoded dark:text-[#6366F1] that was overriding everything! */}
               <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${sub.bg || 'bg-[#4F46E5]/10'} ${sub.color || 'text-[#4F46E5]'} transition-transform group-hover:scale-110 ${sub.hoverBg || 'group-hover:bg-[#4F46E5]'} group-hover:text-white`}>
                 <Icon size={24} />
               </div>
