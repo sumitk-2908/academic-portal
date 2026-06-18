@@ -1,50 +1,35 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
-
-# --- Database Auto-Creation Imports ---
-from app.database import engine
-from app.models.academic import Base
-# --------------------------------------
-from sqlalchemy import text
-
-from app.routers import documents
-
 from dotenv import load_dotenv
 
-# This forces Python to read your .env file immediately
+# Import the optimized documents router
+from app.routers import documents
+
+# Force Python to read your .env file locally (Render will use its own environment variables)
 load_dotenv()
-with engine.connect() as conn:
-    conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_size REAL;"))
-    conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS page_count INTEGER;"))
-    conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR;"))
-    conn.commit()
-
-
-
-
-# 2. Recreate them perfectly with all new columns
-Base.metadata.create_all(bind=engine)
-# ------------------------
 
 app = FastAPI(
-    title=settings.APP_NAME,
+    title="Academic Portal API",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
 )
 
+# CORS Configuration: Allow frontend to communicate with backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    # In the future, change ["*"] to ["https://your-frontend-url.vercel.app"] for strict security
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Mount the router
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    return {"status": "healthy", "version": "1.0.0", "env": settings.APP_ENV}
+    return {"status": "healthy", "version": "1.0.0", "engine": "supabase-direct"}
