@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -43,5 +43,5 @@ app.include_router(documents.router, prefix="/api/v1/documents", tags=["Document
 
 @app.get("/health", tags=["Health"])
 @limiter.limit("20/minute")
-async def health_check():
+async def health_check(request: Request):
     return {"status": "healthy", "version": "1.0.0", "engine": "supabase-direct"}
