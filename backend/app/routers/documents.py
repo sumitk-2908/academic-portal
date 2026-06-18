@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from fastapi.responses import RedirectResponse
 import os
 import httpx
+import asyncio
+import uuid
 import fitz  # PyMuPDF for PDF processing
 import traceback
 
@@ -25,6 +27,20 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def extract_pdf_metadata(file_bytes: bytes):
+    """
+    Synchronous, CPU-bound task isolated here so it can be 
+    run in a background thread without blocking FastAPI.
+    """
+    pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
+    page_count = len(pdf_document)
+    
+    first_page = pdf_document.load_page(0)
+    pix = first_page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
+    thumbnail_bytes = pix.tobytes("jpeg")
+    
+    return page_count, thumbnail_bytes
+
 
 @router.post("/upload/")
 async def upload_document(
@@ -44,7 +60,9 @@ async def upload_document(
 
     try:
         safe_module_id = int(module_id)
-        safe_filename = file.filename.replace(" ", "_")
+        unique_prefix = uuid.uuid4().hex[:8]
+        original_clean_name = file.filename.replace(" ", "_")
+        safe_filename = f"{unique_prefix}_{original_clean_name}"
         file_bytes = await file.read()
         
         # --- DYNAMIC METADATA EXTRACTION ---
@@ -55,12 +73,10 @@ async def upload_document(
         safe_thumb_filename = f"thumb_{safe_filename.replace('.pdf', '.jpg')}"
 
         try:
-            pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
-            page_count = len(pdf_document)
-            
-            first_page = pdf_document.load_page(0)
-            pix = first_page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
-            thumbnail_bytes = pix.tobytes("jpeg")
+            # 🔥 CRITICAL FIX: Offload PyMuPDF to a background thread!
+            page_count, thumbnail_bytes = await asyncio.to_thread(
+                extract_pdf_metadata, file_bytes
+            )
         except Exception as e:
             print(f"Warning: Failed to process PDF metadata/thumbnail: {e}")
 

@@ -218,37 +218,6 @@ export const getRecentStudyActivity = async (userId?: string) => {
   }
 };
 
-export const logRecentStudyActivity = async (doc: any) => {
-  let history: any[] = [];
-  try {
-    const stored = localStorage.getItem("portal_study_history");
-    const parsed = stored ? JSON.parse(stored) : [];
-    if (Array.isArray(parsed)) {
-      history = parsed;
-    }
-  } catch (e) {
-    console.warn("Reset corrupted local storage history");
-  }
-
-  history = history.filter((d: any) => d.id !== doc.id);
-  history.unshift(doc);
-  history = history.slice(0, 5);
-  localStorage.setItem("portal_study_history", JSON.stringify(history));
-
-  window.dispatchEvent(new Event("sidebar_update"));
-
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (sessionData?.session?.user) {
-    const userId = sessionData.session.user.id;
-    await supabase.from('study_history').upsert({
-      user_id: userId,
-      document_id: doc.id,
-      accessed_at: new Date().toISOString()
-    }, { onConflict: 'user_id, document_id' });
-  }
-};
-
-
 // --- ANALYTICS TRACKING ---
 
 export const trackDocumentStat = async (docId: number, type: 'view' | 'download') => {
