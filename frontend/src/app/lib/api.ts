@@ -238,9 +238,7 @@ export const getTrendingDocuments = async () => {
       .from('document_analytics')
       .select(`
         view_count,
-        documents (
-          id, title, category, file_url, uploaded_by, created_at, module_id, subject, status
-        )
+        documents!document_analytics_document_id_fkey(id, title, category, file_url, uploaded_by, created_at, module_id, subject, status)
       `)
       .order('view_count', { ascending: false })
       .limit(5);
@@ -251,8 +249,8 @@ export const getTrendingDocuments = async () => {
       .map((d: any) => d.documents)
       .filter((doc: any) => doc !== null && doc.status === 'approved');
       
-  } catch (error) {
-    console.error("Failed to fetch global trending:", error);
+  } catch (error: any) {
+    console.error("Failed to fetch global trending:", JSON.stringify(error, null, 2));
     return [];
   }
 };

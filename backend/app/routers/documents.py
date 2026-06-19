@@ -3,6 +3,7 @@ import uuid
 import asyncio
 import fitz  
 import httpx
+import re
 from enum import Enum
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request, Depends
 from app.auth import verify_admin, verify_token
@@ -76,13 +77,13 @@ async def upload_document(
     if is_admin:
         # Admins can upload directly as "approved" (or whatever they pass)
         secure_status = status 
-        secure_uploaded_by = "Admin"
+        secure_uploaded_by = user_id
     else:
         # SECURITY FIX: Forcefully override student uploads to "pending" 
         # Even if a hacker modifies the frontend POST request to say status="approved", 
         # the backend ignores it.
         secure_status = "pending"
-        secure_uploaded_by = user_email
+        secure_uploaded_by = user_id
 
     try:
         # Convert string "null" back to Python None to satisfy integer database constraints
@@ -239,6 +240,21 @@ async def update_document_status(
         raise HTTPException(status_code=400, detail="Invalid status value provided.")
 
     try:
+        # --- DATA CORRUPTION FIX ---
+        # If the existing document has an email in the uploaded_by column, 
+        # the database triggers will crash (they expect a UUID). 
+        # We fix it by safely reassigning ownership to the admin's UUID.
+        doc_res = supabase.table("documents").select("uploaded_by").eq("id", document_id).execute()
+        if doc_res.data:
+            ub = doc_res.data[0].get("uploaded_by")
+            # Check if it is a valid UUID
+            is_valid_uuid = isinstance(ub, str) and re.match(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ub)
+            
+            if ub and not is_valid_uuid:
+                # Fix the row before attempting the status update
+                supabase.table("documents").update({"uploaded_by": admin_user.get("id")}).eq("id", document_id).execute()
+        
+        # Now safely update the status
         db_response = supabase.table("documents").update({"status": payload.status}).eq("id", document_id).execute()
         
         if not db_response.data:
@@ -251,4 +267,4 @@ async def update_document_status(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to update document status: {str(e)}")    
+        raise HTTPException(status_code=500, detail=f"Failed to update document status: {str(e)}")
