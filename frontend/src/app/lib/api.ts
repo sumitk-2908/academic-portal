@@ -260,12 +260,14 @@ export const getTrendingDocuments = async () => {
 // --- CROWDSOURCING / APPROVALS ---
 
 export const updateDocumentStatus = async (id: number, status: 'approved' | 'rejected') => {
-  const { error } = await supabase
-    .from('documents')
-    .update({ status })
-    .eq('id', id);
-    
-  if (error) throw error;
+  try {
+    // 🔥 ROUTED TO RENDER BACKEND: Bypasses RLS issues by using the secure backend endpoint
+    const response = await api.patch(`/api/v1/documents/${id}/status`, { status });
+    return response.data;
+  } catch (error: any) {
+    console.error("FastAPI Status Update Error:", error.response?.data || error);
+    throw new Error(error.response?.data?.detail || "Failed to update document status.");
+  }
 };
 
 // ==========================================

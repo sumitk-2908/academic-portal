@@ -9,6 +9,7 @@ from app.auth import verify_admin, verify_token
 from supabase import create_client, Client
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from pydantic import BaseModel
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -220,3 +221,34 @@ async def delete_document(request: Request, document_id: int, admin_user: dict =
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to delete document: {str(e)}")
+    
+class StatusUpdatePayload(BaseModel):
+    status: str
+
+# --- UPDATE STATUS ENDPOINT (APPROVE/REJECT) ---
+@router.patch("/{document_id}/status")
+@limiter.limit("20/minute")
+async def update_document_status(
+    request: Request, 
+    document_id: int, 
+    payload: StatusUpdatePayload, 
+    admin_user: dict = Depends(verify_admin)
+):
+    """Safely updates a document's status after verifying admin privileges."""
+    if payload.status not in ["approved", "rejected", "pending"]:
+        raise HTTPException(status_code=400, detail="Invalid status value provided.")
+
+    try:
+        db_response = supabase.table("documents").update({"status": payload.status}).eq("id", document_id).execute()
+        
+        if not db_response.data:
+            raise HTTPException(status_code=404, detail="Document not found.")
+            
+        return {"message": f"Document successfully marked as {payload.status}", "document": db_response.data[0]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to update document status: {str(e)}")    
