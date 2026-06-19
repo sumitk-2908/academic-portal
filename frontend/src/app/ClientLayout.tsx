@@ -154,11 +154,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   // --- REAL-TIME ACHIEVEMENT LISTENER ---
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let channel: any;
+
+    const setupListener = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       
-      const channel = supabase
-        .channel('schema-db-changes')
+      // FIX 1: Use a unique channel name so React Strict Mode doesn't collide with itself
+      channel = supabase
+        .channel(`achievements-${session.user.id}`)
         .on(
           'postgres_changes',
           {
@@ -170,32 +174,37 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           (payload) => {
             const newBadgeId = payload.new.badge_id;
             
-            // Prevent duplicate toasts if we somehow already tracked it
-            if (earnedBadgeIds.includes(newBadgeId)) return;
-            
-            // Add to tracked state
-            setEarnedBadgeIds(prev => [...prev, newBadgeId]);
-            
-            // Find the badge title/desc (We hardcode the lookup here for the global listener)
-            const badgeLookup: Record<string, {title: string, desc: string}> = {
-              "first_upload": { title: "First Contribution", desc: "You uploaded your first resource." },
-              "streak_3": { title: "On Fire", desc: "3 day study streak!" },
-              "streak_7": { title: "Dedicated Scholar", desc: "7 day study streak!" },
-              "power_user": { title: "Power User", desc: "Downloaded 10 documents." },
-              "top_contributor": { title: "Top Contributor", desc: "Your uploads reached 50 views." }
-            };
+            // FIX 2: Use functional state update so we don't need earnedBadgeIds in the dependency array
+            setEarnedBadgeIds((prev) => {
+              if (prev.includes(newBadgeId)) return prev; // Ignore if we already have it
+              
+              const badgeLookup: Record<string, {title: string, desc: string}> = {
+                "first_upload": { title: "First Contribution", desc: "You uploaded your first resource." },
+                "streak_3": { title: "On Fire", desc: "3 day study streak!" },
+                "streak_7": { title: "Dedicated Scholar", desc: "7 day study streak!" },
+                "power_user": { title: "Power User", desc: "Downloaded 10 documents." },
+                "top_contributor": { title: "Top Contributor", desc: "Your uploads reached 50 views." }
+              };
 
-            const badgeInfo = badgeLookup[newBadgeId] || { title: "New Badge", desc: "You earned a new achievement!" };
-            setActiveToast({ title: badgeInfo.title, description: badgeInfo.desc });
+              const badgeInfo = badgeLookup[newBadgeId] || { title: "New Badge", desc: "You earned a new achievement!" };
+              setActiveToast({ title: badgeInfo.title, description: badgeInfo.desc });
+              
+              return [...prev, newBadgeId]; // Add to tracked state
+            });
           }
         )
         .subscribe();
+    };
 
-      return () => {
+    setupListener();
+
+    // FIX 3: Proper React synchronous cleanup function
+    return () => {
+      if (channel) {
         supabase.removeChannel(channel);
-      };
-    });
-  }, [earnedBadgeIds]);
+      }
+    };
+  }, []); // <--- Empty dependency array! Safely runs only once on mount.
 
   const toggleTheme = () => {
     const html = document.documentElement;

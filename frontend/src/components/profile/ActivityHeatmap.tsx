@@ -28,11 +28,12 @@ export default function ActivityHeatmap({ history }: { history: any[] }) {
     return dates;
   }, [history]);
 
+  // UPDATED: High-contrast Emerald Green Palette
   const getColor = (count: number) => {
-    if (count === 0) return "bg-gray-100 dark:bg-[#1F2A44]";
-    if (count === 1) return "bg-[#EEEDFE] dark:bg-[#26215C]";
-    if (count <= 3) return "bg-[#AFA9EC] dark:bg-[#3C3489]";
-    return "bg-[#4F46E5]"; // High activity
+    if (count === 0) return "bg-gray-100 dark:bg-gray-800/80"; // Empty day
+    if (count === 1) return "bg-emerald-200 dark:bg-emerald-900/60"; // Low activity
+    if (count <= 3) return "bg-emerald-400 dark:bg-emerald-700"; // Medium activity
+    return "bg-emerald-600 dark:bg-emerald-500"; // High activity (4+ views)
   };
 
   return (
@@ -49,12 +50,14 @@ export default function ActivityHeatmap({ history }: { history: any[] }) {
           ))}
         </div>
       </div>
+      
+      {/* UPDATED: Legend to match the new green colors */}
       <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-[#64748B] dark:text-[#94A3B8]">
         <span>Less</span>
-        <div className="h-2 w-2 rounded-sm bg-gray-100 dark:bg-[#1F2A44]" />
-        <div className="h-2 w-2 rounded-sm bg-[#EEEDFE] dark:bg-[#26215C]" />
-        <div className="h-2 w-2 rounded-sm bg-[#AFA9EC] dark:bg-[#3C3489]" />
-        <div className="h-2 w-2 rounded-sm bg-[#4F46E5]" />
+        <div className="h-2 w-2 rounded-sm bg-gray-100 dark:bg-gray-800/80" />
+        <div className="h-2 w-2 rounded-sm bg-emerald-200 dark:bg-emerald-900/60" />
+        <div className="h-2 w-2 rounded-sm bg-emerald-400 dark:bg-emerald-700" />
+        <div className="h-2 w-2 rounded-sm bg-emerald-600 dark:bg-emerald-500" />
         <span>More</span>
       </div>
     </div>
