@@ -363,3 +363,17 @@ export const updateProfilePreferences = async (
     throw error;
   }
 };
+
+export const logStudySession = async (userId: string, documentId: number) => {
+  try {
+    // Inserts a new timestamped row for the Heatmap & Timeline
+    const { error } = await supabase.from('study_history').insert({
+      user_id: userId,
+      document_id: documentId,
+      accessed_at: new Date().toISOString()
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to log study session:", error);
+  }
+};

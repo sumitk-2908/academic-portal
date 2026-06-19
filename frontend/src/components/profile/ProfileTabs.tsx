@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { FileText, Eye, Download, BookOpen, Clock, Activity } from "lucide-react";
 import Link from "next/link";
-import { trackDocumentStat, triggerStreakUpdate } from "@/app/lib/api";
+import { trackDocumentStat, triggerStreakUpdate, logStudySession } from "@/app/lib/api";
 import ActivityHeatmap from "./ActivityHeatmap";
 import SubjectProgress from "./SubjectProgress";
 import AchievementsList from "./AchievementsList";
@@ -21,7 +21,9 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
   const handleViewDocument = (docId: number) => {
     trackDocumentStat(docId, 'view');
-    if (user?.id) triggerStreakUpdate(user.id);
+    if (user?.id) 
+        triggerStreakUpdate(user.id);
+        logStudySession(user.id, docId);
   };
 
   const handleDownload = (e: React.MouseEvent, doc: any) => {
