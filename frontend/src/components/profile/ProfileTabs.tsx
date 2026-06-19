@@ -38,9 +38,9 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
   return (
     <div>
-      <div className="mb-6 flex overflow-x-auto border-b border-[#E5E7EB] dark:border-[#1F2A44] hide-scrollbar">
+      <div className="mb-6 flex overflow-x-auto border-b border-[#E5E7EB] dark:border-[#1F2A44] hide-scrollbar sticky top-16 z-30 bg-[#FAFAF9] dark:bg-[#0B1020] pt-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pt-0 sm:static sm:bg-transparent lg:dark:bg-transparent">
         {tabs.map((tab) => (
-          <button
+            <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold transition-colors ${

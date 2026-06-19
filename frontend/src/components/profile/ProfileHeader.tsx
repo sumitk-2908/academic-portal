@@ -50,18 +50,18 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
   return (
     <>
       <div className="mb-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 dark:border-[#1F2A44] dark:bg-[#131625]">
-        <div className="flex items-start gap-4">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={name} className="h-14 w-14 shrink-0 rounded-full object-cover shadow-sm" />
+            <img src={avatarUrl} alt={name} className="h-20 w-20 sm:h-14 sm:w-14 shrink-0 rounded-full object-cover shadow-sm" />
           ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#4F46E5] text-xl font-bold text-white shadow-sm">
+            <div className="flex h-20 w-20 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-[#4F46E5] text-2xl sm:text-xl font-bold text-white shadow-sm">
               {getInitials(name)}
             </div>
           )}
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-0.5">
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white">{name}</h1>
+          <div className="flex-1 min-w-0 w-full flex flex-col items-center sm:items-start">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mb-1 sm:mb-0.5">
+              <h1 className="text-xl sm:text-lg font-black text-gray-900 dark:text-white">{name}</h1>
               {currentStreak > 0 && (
                 <div className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-600 dark:bg-orange-500/10 dark:text-orange-500">
                   <Flame size={12} fill="currentColor" />
@@ -70,15 +70,15 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
               )}
             </div>
             
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{email}</p>
-            <div className="flex flex-wrap gap-4 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+            <p className="text-sm sm:text-xs text-gray-500 dark:text-gray-400 mb-3">{email}</p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
               <span className="flex items-center gap-1.5"><GraduationCap size={14} /> {branch || "Academic Portal"}</span>
               <span className="flex items-center gap-1.5"><BookOpen size={14} /> Student Account</span>
             </div>
           </div>
           <button 
             onClick={() => setIsEditModalOpen(true)}
-            className="hidden sm:flex shrink-0 items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-xs font-bold text-[#64748B] transition-colors hover:bg-gray-50 dark:border-[#1F2A44] dark:text-[#94A3B8] dark:hover:bg-[#1F2A44]"
+            className="mt-3 flex w-full sm:mt-0 sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2.5 sm:py-2 text-sm sm:text-xs font-bold text-[#64748B] transition-colors hover:bg-gray-50 dark:border-[#1F2A44] dark:text-[#94A3B8] dark:hover:bg-[#1F2A44]"
           >
             <Edit size={14} /> Edit Profile
           </button>

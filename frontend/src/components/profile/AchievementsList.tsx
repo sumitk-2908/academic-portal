@@ -15,35 +15,35 @@ export default function AchievementsList({ achievements }: { achievements: any[]
   const earnedBadgeIds = achievements.map(a => a.badge_type);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {ALL_BADGES.map((badge) => {
-        const isEarned = earnedBadgeIds.includes(badge.id);
-        const Icon = badge.icon;
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+    {ALL_BADGES.map((badge) => {
+    const isEarned = earnedBadgeIds.includes(badge.id);
+    const Icon = badge.icon;
 
-        return (
-          <div 
+    return (
+        <div 
             key={badge.id} 
-            className={`flex items-start gap-4 rounded-2xl border p-4 transition-all ${
-              isEarned 
+            className={`flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 rounded-2xl border p-3 sm:p-4 transition-all ${
+            isEarned 
                 ? "border-[#E5E7EB] bg-white dark:border-[#1F2A44] dark:bg-[#131625]" 
                 : "border-dashed border-gray-200 bg-gray-50/50 opacity-60 grayscale dark:border-[#1F2A44] dark:bg-[#0D0F1A]"
             }`}
-          >
-            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isEarned ? badge.bg : 'bg-gray-200 dark:bg-[#1F2A44]'}`}>
-              <Icon size={24} className={isEarned ? badge.color : 'text-gray-400 dark:text-gray-500'} />
+        >
+            <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl ${isEarned ? badge.bg : 'bg-gray-200 dark:bg-[#1F2A44]'}`}>
+            <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${isEarned ? badge.color : 'text-gray-400 dark:text-gray-500'}`} />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-0.5">{badge.title}</h4>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">{badge.description}</p>
-              {isEarned && (
-                <div className="mt-2 inline-block rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-                  Unlocked
+            <div className="flex-1 min-w-0 w-full">
+            <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white mb-0.5 truncate">{badge.title}</h4>
+            <p className="text-[10px] sm:text-xs text-[#64748B] dark:text-[#94A3B8] line-clamp-2 leading-tight">{badge.description}</p>
+            {isEarned && (
+                <div className="mt-2 inline-block rounded border border-emerald-200 bg-emerald-50 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                Unlocked
                 </div>
-              )}
+            )}
             </div>
-          </div>
+        </div>
         );
-      })}
+    })}
     </div>
   );
 }

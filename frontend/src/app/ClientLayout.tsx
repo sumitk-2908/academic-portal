@@ -9,7 +9,8 @@ import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
   PanelLeftClose, TrendingUp, X, BookOpen, Bookmark, Clock, 
-  Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2, User
+  Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2, 
+  User, Settings, Info, Phone, AlertTriangle, Medal, Activity
 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import Link from 'next/link';
@@ -473,14 +474,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <Home size={22} />
             <span className="text-[10px] font-bold">Home</span>
           </Link>
+          
+          {/* CHANGED: Replaced Continue with Profile */}
           <Link 
-            href="/continue-studying" 
+            href="/profile" 
             onClick={() => setShowMobileMenu(false)} 
-            className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/continue-studying' ? 'text-indigo-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
+            className={`flex min-w-[64px] flex-col items-center gap-1 ${pathname === '/profile' ? 'text-indigo-500' : 'text-[#64748B] dark:text-[#94A3B8]'}`}
           >
-            <Clock size={22} />
-            <span className="text-[10px] font-bold">Continue</span>
+            <User size={22} />
+            <span className="text-[10px] font-bold">Profile</span>
           </Link>
+
           <Link 
             href="/bookmarks" 
             onClick={() => setShowMobileMenu(false)} 
@@ -515,54 +519,44 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </div>
               
               <div className="space-y-6">
-                {(isAdmin || isStudent) && (
-                  <div className="space-y-2">
-                    <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Account</p>
-                    <Link 
-                      href="/profile" 
-                      onClick={() => setShowMobileMenu(false)} 
-                      className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
-                    >
-                      <div className="rounded-lg bg-indigo-500/10 p-2 text-indigo-500"><User size={18} /></div>
-                      My Profile
+                
+                {/* 1. Quick Links Grid */}
+                <div className="space-y-3">
+                  <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Quick Links</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link href="/recent-uploads" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
+                      <Upload size={18} className="text-emerald-500" /> Uploads
+                    </Link>
+                    <Link href="/continue-studying" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
+                      <Clock size={18} className="text-[#4F46E5]" /> Continue
+                    </Link>
+                    <Link href="/profile" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
+                      <Medal size={18} className="text-amber-500" /> Badges
+                    </Link>
+                    <Link href="/profile" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
+                      <Activity size={18} className="text-blue-500" /> Activity
                     </Link>
                   </div>
-                )}
-                <div className="space-y-2">
-                  <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Discovery & Uploads</p>
-                  <Link 
-                    href="/recent-uploads" 
-                    onClick={() => setShowMobileMenu(false)} 
-                    className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
-                  >
-                    <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-500"><Upload size={18} /></div>
-                    Recent Uploads
-                  </Link>
                 </div>
 
-                {trendingDocs.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Trending Now</p>
-                    <div className="rounded-2xl border border-[#E5E7EB] bg-[#FAFAF9] p-4 space-y-3 dark:border-[#1F2A44] dark:bg-[#0B1020]">
-                      <div className="flex items-center gap-2 text-[#4F46E5]">
-                        <TrendingUp size={16} />
-                        <h3 className="text-xs font-extrabold uppercase tracking-wider">Top Documents</h3>
-                      </div>
-                      {trendingDocs.slice(0, 5).map((doc, idx) => (
-                        <Link 
-                          key={`mob-tr-${doc.id}`} 
-                          href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} 
-                          onClick={() => setShowMobileMenu(false)}
-                          className="block text-sm group"
-                        >
-                          <p className="truncate font-semibold text-[#111827] group-hover:text-[#4F46E5] dark:text-white">{idx + 1}. {doc.title}</p>
-                          <p className="mt-0.5 text-[10px] text-[#64748B]">{doc.subject} • {doc.category}</p>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* 2. App & Support */}
+                <div className="space-y-2">
+                  <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B]">App & Support</p>
+                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
+                    <Settings size={18} className="text-[#64748B]" /> Settings
+                  </button>
+                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
+                    <Info size={18} className="text-[#64748B]" /> About Portal
+                  </button>
+                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
+                    <Phone size={18} className="text-[#64748B]" /> Contact Us
+                  </button>
+                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
+                    <AlertTriangle size={18} className="text-[#64748B]" /> Report Issue
+                  </button>
+                </div>
                 
+                {/* 3. Admin Controls (Kept intact) */}
                 {isAdmin && (
                   <div className="space-y-2">
                     <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Admin Controls</p>
@@ -580,6 +574,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   </div>
                 )}
 
+                {/* 4. Sign Out (Kept intact) */}
                 {(isAdmin || isStudent) && (
                   <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
                     <button 
