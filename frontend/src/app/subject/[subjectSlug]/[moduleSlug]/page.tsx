@@ -132,7 +132,15 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
               </p>
 
               <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
-                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border bg-[#F8FAFC] py-2 text-[11px] font-bold dark:bg-[#1F2A44]">
+                <button 
+                  onClick={async (e) => { 
+                    // 1. Wait for the database to record the download
+                    await trackDocumentStat(doc.id, 'download'); 
+                    // 2. Trigger the existing download logic
+                    handleDownload(e, doc); 
+                  }} 
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border bg-[#F8FAFC] py-2 text-[11px] font-bold dark:bg-[#1F2A44] hover:bg-gray-100 transition-colors"
+                >
                   <Download size={12} /> Download
                 </button>
                 {/* 🔥 FIXED: Only track stats on click, let PDFViewerPage handle the History logic */}

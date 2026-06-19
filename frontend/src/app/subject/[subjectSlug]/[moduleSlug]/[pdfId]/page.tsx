@@ -14,7 +14,7 @@ import {
   Maximize // <-- Imported the Maximize icon for the [ ] look
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase, trackDocumentStat } from "../../../../lib/api"; 
+import { supabase, trackDocumentStat, logStudySession, triggerStreakUpdate } from "../../../../lib/api"; 
 import { useStudyHistory } from "@/app/context/StudyHistoryContext";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
@@ -55,6 +55,12 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
         setDocumentMeta(data);
         trackDocumentStat(data.id, 'view');
         addDocumentToHistory(data);
+
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess?.session?.user?.id) {
+          logStudySession(sess.session.user.id, data.id);
+          triggerStreakUpdate(sess.session.user.id);
+        }
       }
     };
     

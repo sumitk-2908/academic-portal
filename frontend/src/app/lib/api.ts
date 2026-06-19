@@ -293,15 +293,17 @@ export const getTrendingDocuments = async () => {
 
     if (error) throw error;
 
-    return data
-      .filter((d: any) => d.documents !== null && d.documents.status === 'approved')
-      .map((d: any) => ({
-        ...d.documents,
-        view_count: d.view_count
-      }));
+    // FIX: Safely unwrap the array if Supabase returns one, and inject the view_count
+    return (data || [])
+      .map((d: any) => {
+        const doc = Array.isArray(d.documents) ? d.documents[0] : d.documents;
+        if (!doc) return null;
+        return { ...doc, view_count: d.view_count };
+      })
+      .filter((doc: any) => doc !== null && doc.status === 'approved');
       
-  } catch (error: any) {
-    console.error("Failed to fetch global trending:", JSON.stringify(error, null, 2));
+  } catch (error) {
+    console.error("Failed to fetch global trending:", error);
     return [];
   }
 };
