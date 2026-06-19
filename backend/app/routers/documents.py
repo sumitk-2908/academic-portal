@@ -5,7 +5,7 @@ import fitz
 import httpx
 from enum import Enum
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request, Depends
-from app.auth import verify_admin, verify_token, ALLOWED_ADMINS
+from app.auth import verify_admin, verify_token
 from supabase import create_client, Client
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -61,8 +61,16 @@ async def upload_document(
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
     
+    user_id = user.get("id")
     user_email = user.get("email")
-    is_admin = user_email in ALLOWED_ADMINS
+
+    is_admin = False
+    try:
+        # Check if the user_id exists in the admins table
+        admin_check = supabase.table("admins").select("id").eq("user_id", user_id).execute()
+        is_admin = bool(admin_check.data)
+    except Exception as e:
+        print(f"Role verification warning: {e}")
     
     if is_admin:
         # Admins can upload directly as "approved" (or whatever they pass)
