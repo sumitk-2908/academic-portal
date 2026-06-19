@@ -6,7 +6,7 @@ import { supabase, getTrendingDocuments, uploadDocument, getStudentBookmarks, ge
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
   PanelLeftClose, TrendingUp, X, BookOpen, Bookmark, Clock, 
-  Upload, Inbox, Plus, FileText, Home, Menu
+  Upload, Inbox, Plus, FileText, Home, Menu, Mail
 } from "lucide-react";
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -45,6 +45,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // Auth States
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStudent, setIsStudent] = useState(false);
+  const [emailConfirmed, setEmailConfirmed] = useState(true); 
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [authEmail, setAuthEmail] = useState("");
@@ -76,6 +78,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const syncUserFromSession = useCallback(async (session: Session | null) => {
     if (session?.user) {
+      setEmailConfirmed(!!session.user.email_confirmed_at);
+      setCurrentUserEmail(session.user.email || "");
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
       
       const isDbAdmin = roleData?.role === 'admin';
@@ -244,10 +248,33 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const recentUploads = allDocs.filter(d => d.status === 'approved').slice(0, 5);
 
   const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
+  const sendVerificationEmail = async () => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: currentUserEmail,
+        options: { emailRedirectTo: window.location.origin }
+      });
+      if (error) throw error;
+      alert("Verification email sent! Please check your inbox.");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   return (
     <StudyHistoryProvider>
       <div className="flex min-h-[100dvh] flex-col transition-colors duration-300">
+
+        {isStudent && !emailConfirmed && (
+          <div className="z-50 flex items-center justify-center gap-2 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-700 dark:text-amber-500">
+            <Mail size={14} />
+            <span>Please verify your email address to unlock upload privileges and study notifications.</span>
+            <button onClick={sendVerificationEmail} className="ml-2 font-bold underline hover:text-amber-800 dark:hover:text-amber-400">
+              Send Link
+            </button>
+          </div>
+        )}
         
         {/* ========================================= */}
         {/* 1. THE ONLY GLOBAL HEADER */}
