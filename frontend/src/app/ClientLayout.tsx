@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, getTrendingDocuments, uploadDocument, getStudentBookmarks, getRecentStudyActivity } from "./lib/api";
+import ProfileDropdown from "@/components/profile/ProfileDropdown";
+import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
+
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
   PanelLeftClose, TrendingUp, X, BookOpen, Bookmark, Clock, 
-  Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2
+  Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2, User
 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import Link from 'next/link';
@@ -361,13 +364,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </button>
               
               {(isAdmin || isStudent) ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <button onClick={() => setShowUploadForm(true)} className="flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white hover:bg-[#6366F1]">
                     <Plus size={14} /> <span className="hidden sm:inline">{isAdmin ? "Upload" : "Contribute"}</span>
                   </button>
-                  <button onClick={handleLogout} className="hidden sm:flex h-9 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-sm text-[#64748B] hover:bg-red-50 hover:text-red-500 dark:border-[#1F2A44]">
-                    <LogOut size={16} />
-                  </button>
+                  <div className="hidden sm:block">
+                    <ProfileDropdown 
+                      userName={uploadedBy || (isAdmin ? "Admin" : "Student")} 
+                      userEmail={currentUserEmail} 
+                      onLogout={handleLogout} 
+                    />
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => setShowAuthModal(true)} className="flex h-9 items-center rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white shadow-sm hover:bg-[#6366F1]">
@@ -431,9 +438,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
 
             {!sidebarCollapsed && (
-              <div className="mt-auto space-y-0.5 border-t border-[#E5E7EB] px-3 pt-4 text-[10px] font-medium text-[#94A3B8] dark:border-[#1F2A44]">
-                <p>Academic Portal • Version 1.6</p>
-                <p>© {new Date().getFullYear()} All Rights Reserved.</p>
+              <div className="mt-auto flex flex-col pt-4">
+                {(isAdmin || isStudent) && (
+                  <ProfileSidebarCard 
+                    userName={uploadedBy || (isAdmin ? "Admin" : "Student")} 
+                    role={isAdmin ? "Administrator" : "1st year · CSE"} 
+                  />
+                )}
+                <div className="space-y-0.5 border-t border-[#E5E7EB] mt-3 px-3 pt-4 text-[10px] font-medium text-[#94A3B8] dark:border-[#1F2A44]">
+                  <p>Academic Portal • Version 1.6</p>
+                  <p>© {new Date().getFullYear()} All Rights Reserved.</p>
+                </div>
               </div>
             )}
           </aside>
@@ -500,6 +515,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </div>
               
               <div className="space-y-6">
+                {(isAdmin || isStudent) && (
+                  <div className="space-y-2">
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Account</p>
+                    <Link 
+                      href="/profile" 
+                      onClick={() => setShowMobileMenu(false)} 
+                      className="flex items-center gap-3 rounded-xl border border-transparent p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:border-[#1F2A44] dark:text-white dark:hover:bg-gray-800"
+                    >
+                      <div className="rounded-lg bg-indigo-500/10 p-2 text-indigo-500"><User size={18} /></div>
+                      My Profile
+                    </Link>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <p className="px-2 pb-1 text-[10px] font-bold uppercase text-[#64748B]">Discovery & Uploads</p>
                   <Link 
