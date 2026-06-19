@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, getStudentBookmarks, getRecentStudyActivity, getSubjects } from "@/app/lib/api";
+import { 
+  supabase, 
+  getStudentBookmarks, 
+  getRecentStudyActivity, 
+  getSubjects,
+  getStudyStreak,
+  getAchievements,
+  getEnhancedContributions
+} from "@/app/lib/api";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileStats from "@/components/profile/ProfileStats";
 import ProfileTabs from "@/components/profile/ProfileTabs";
@@ -15,6 +23,10 @@ export default function ProfilePage() {
   const [history, setHistory] = useState<any[]>([]);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [uploads, setUploads] = useState<any[]>([]);
+  
+  // New Phase 3 States
+  const [streak, setStreak] = useState<any>(null);
+  const [achievements, setAchievements] = useState<any[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -28,34 +40,40 @@ export default function ProfilePage() {
         setUser(currentUser || null);
       }
 
-      // 2. Fetch Aggregated Data
-      const [userBookmarks, userHistory, allSubjects] = await Promise.all([
-        getStudentBookmarks(currentUser?.id),
-        getRecentStudyActivity(currentUser?.id),
-        getSubjects()
-      ]);
-
-      // 3. Check for existing upload contributions
-      let userUploads: any[] = [];
-      if (currentUser?.id) {
-        const { data } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('uploaded_by', currentUser.id)
-          .order('created_at', { ascending: false });
-          
-        if (data) userUploads = data;
+      if (!currentUser) {
+        setLoading(false);
+        return;
       }
 
-      // 4. Update states only if the component is still mounted
+      // 2. Fetch All Data Concurrently (Performance Optimized)
+      const [
+        userBookmarks, 
+        userHistory, 
+        allSubjects, 
+        userUploads, 
+        userStreak, 
+        userAchievements
+      ] = await Promise.all([
+        getStudentBookmarks(currentUser.id),
+        getRecentStudyActivity(currentUser.id),
+        getSubjects(),
+        getEnhancedContributions(currentUser.id),
+        getStudyStreak(currentUser.id),
+        getAchievements(currentUser.id)
+      ]);
+
+      // 3. Update states only if the component is still mounted
       if (isMounted) {
         setBookmarks(userBookmarks || []);
         setHistory(userHistory || []);
-        setUploads(userUploads);
+        setUploads(userUploads || []);
+        setStreak(userStreak);
+        setAchievements(userAchievements || []);
+        
         setStats({
           subjects: allSubjects?.length || 0,
           bookmarks: userBookmarks?.length || 0,
-          uploads: userUploads.length || 0
+          uploads: userUploads?.length || 0
         });
         setLoading(false);
       }
@@ -64,12 +82,9 @@ export default function ProfilePage() {
     // Initial fetch
     fetchDashboardData();
 
-    // 5. Listeners to keep profile in sync without refreshing the page!
-    // (e.g., if user bookmarks an item in a different tab or sidebar)
     window.addEventListener("sidebar_update", fetchDashboardData);
     window.addEventListener("focus", fetchDashboardData);
 
-    // 6. Cleanup function
     return () => {
       isMounted = false;
       window.removeEventListener("sidebar_update", fetchDashboardData);
@@ -86,14 +101,24 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl w-full">
+    <div className="mx-auto max-w-4xl w-full pb-12">
       <h1 className="mb-6 hidden text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:block">
         Student Profile
       </h1>
       
-      <ProfileHeader user={user} />
+      {/* Passing the new streak state to the Header */}
+      <ProfileHeader user={user} streak={streak} />
+      
       <ProfileStats stats={stats} />
-      <ProfileTabs history={history} bookmarks={bookmarks} uploads={uploads} />
+      
+      {/* Passing new states to Tabs so they can render the Heatmap, Timeline, and Achievements */}
+      <ProfileTabs 
+        user={user}
+        history={history} 
+        bookmarks={bookmarks} 
+        uploads={uploads} 
+        achievements={achievements} 
+      />
     </div>
   );
 }

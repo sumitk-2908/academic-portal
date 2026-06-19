@@ -267,3 +267,63 @@ export const updateDocumentStatus = async (id: number, status: 'approved' | 'rej
     
   if (error) throw error;
 };
+
+// ==========================================
+// --- PHASE 3: STUDENT IDENTITY & STREAKS ---
+// ==========================================
+
+export const getStudyStreak = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('study_streaks')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  // PGRST116 means no row found (user hasn't studied yet), which is fine.
+  if (error && error.code !== 'PGRST116') {
+    console.error("Fetch Streak Error:", error);
+    return null;
+  }
+  return data;
+};
+
+export const getAchievements = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_achievements')
+    .select('*')
+    .eq('user_id', userId)
+    .order('earned_at', { ascending: false });
+
+  if (error) {
+    console.error("Fetch Achievements Error:", error);
+    return [];
+  }
+  return data || [];
+};
+
+export const getEnhancedContributions = async (userId: string) => {
+  // Fetch uploads AND join with analytics to get view/download counts
+  const { data, error } = await supabase
+    .from('documents')
+    .select(`
+      *,
+      document_analytics ( view_count, download_count )
+    `)
+    .eq('uploaded_by', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Fetch Contributions Error:", error);
+    return [];
+  }
+  return data || [];
+};
+
+export const triggerStreakUpdate = async (userId: string) => {
+  try {
+    const { error } = await supabase.rpc('update_study_streak', { p_user_id: userId });
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update streak:", error);
+  }
+};

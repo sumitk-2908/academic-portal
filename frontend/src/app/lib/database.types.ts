@@ -304,6 +304,66 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          id: string
+          favorite_subjects: string[] | null
+          preferred_branch: string | null
+        }
+        Insert: {
+          id: string
+          favorite_subjects?: string[] | null
+          preferred_branch?: string | null
+        }
+        Update: {
+          id?: string
+          favorite_subjects?: string[] | null
+          preferred_branch?: string | null
+        }
+        Relationships: []
+      }
+      study_streaks: {
+        Row: {
+          user_id: string
+          current_streak: number | null
+          longest_streak: number | null
+          last_active_date: string | null
+        }
+        Insert: {
+          user_id: string
+          current_streak?: number | null
+          longest_streak?: number | null
+          last_active_date?: string | null
+        }
+        Update: {
+          user_id?: string
+          current_streak?: number | null
+          longest_streak?: number | null
+          last_active_date?: string | null
+        }
+        Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          id: string
+          user_id: string | null
+          badge_type: string
+          earned_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          badge_type: string
+          earned_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          badge_type?: string
+          earned_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -311,6 +371,10 @@ export type Database = {
     Functions: {
       increment_doc_stat: {
         Args: { doc_id: number; stat_type: string }
+        Returns: undefined
+      }
+      update_study_streak: {
+        Args: { p_user_id: string }
         Returns: undefined
       }
     }
