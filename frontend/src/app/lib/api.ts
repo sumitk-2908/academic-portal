@@ -218,6 +218,54 @@ export const getRecentStudyActivity = async (userId?: string) => {
   }
 };
 
+export const getFullStudyHistory = async (userId?: string) => {
+  let cloudHistory: any[] = [];
+
+  // Calculate the date 90 days ago
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  if (userId) {
+    const { data, error } = await supabase
+      .from('study_history')
+      .select('accessed_at, documents(*)')
+      .eq('user_id', userId)
+      .gte('accessed_at', ninetyDaysAgo.toISOString()) // Only last 90 days
+      .order('accessed_at', { ascending: false });
+
+    if (!error && data) {
+      // Inject the actual interaction timestamp into the document object
+      // so the ActivityHeatmap maps it to the correct day
+      cloudHistory = data.map((h: any) => {
+        if (!h.documents) return null;
+        return {
+          ...h.documents,
+          accessed_at: h.accessed_at 
+        };
+      }).filter((d: any) => d !== null);
+    }
+  }
+  
+  try {
+    const stored = localStorage.getItem("portal_study_history");
+    const parsed = stored ? JSON.parse(stored) : [];
+    const localHistory = Array.isArray(parsed) ? parsed : [];
+    
+    if (cloudHistory.length === 0) return localHistory;
+
+    const combined = [...cloudHistory];
+    for (const lh of localHistory) {
+       if (!combined.find(h => h.id === lh.id)) {
+         combined.push(lh);
+       }
+    }
+    return combined; // Return all 90 days without slicing
+  } catch (error) {
+    console.warn("Resetting corrupted history local storage");
+    return cloudHistory;
+  }
+};
+
 // --- ANALYTICS TRACKING ---
 
 export const trackDocumentStat = async (docId: number, type: 'view' | 'download') => {
@@ -246,8 +294,11 @@ export const getTrendingDocuments = async () => {
     if (error) throw error;
 
     return data
-      .map((d: any) => d.documents)
-      .filter((doc: any) => doc !== null && doc.status === 'approved');
+      .filter((d: any) => d.documents !== null && d.documents.status === 'approved')
+      .map((d: any) => ({
+        ...d.documents,
+        view_count: d.view_count
+      }));
       
   } catch (error: any) {
     console.error("Failed to fetch global trending:", JSON.stringify(error, null, 2));
@@ -277,10 +328,9 @@ export const getStudyStreak = async (userId: string) => {
     .from('study_streaks')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle(); // <--- CHANGED FROM .single() TO .maybeSingle()
 
-  // PGRST116 means no row found (user hasn't studied yet), which is fine.
-  if (error && error.code !== 'PGRST116') {
+  if (error) {
     console.error("Fetch Streak Error:", error);
     return null;
   }
@@ -307,7 +357,7 @@ export const getEnhancedContributions = async (userId: string) => {
     .from('documents')
     .select(`
       *,
-      document_analytics ( view_count, download_count )
+      document_analytics!document_analytics_document_id_fkey ( view_count, download_count )
     `)
     .eq('uploaded_by', userId)
     .order('created_at', { ascending: false });
@@ -316,7 +366,12 @@ export const getEnhancedContributions = async (userId: string) => {
     console.error("Fetch Contributions Error:", error);
     return [];
   }
-  return data || [];
+  return (data || []).map(doc => ({
+    ...doc,
+    document_analytics: Array.isArray(doc.document_analytics) 
+      ? doc.document_analytics[0] 
+      : doc.document_analytics
+  }));
 };
 
 export const triggerStreakUpdate = async (userId: string) => {
@@ -337,10 +392,9 @@ export const getProfilePreferences = async (userId: string) => {
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
-  // PGRST116 means row not found (user hasn't set preferences yet), which is fine.
-  if (error && error.code !== 'PGRST116') {
+  if (error) {
     console.error("Fetch Profile Error:", error);
     return null;
   }

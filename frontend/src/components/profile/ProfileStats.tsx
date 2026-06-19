@@ -1,9 +1,10 @@
-export default function ProfileStats({ stats }: { stats: { subjects: number; bookmarks: number; uploads: number } }) {
+export default function ProfileStats({ stats }: { stats: { subjects: number; bookmarks: number; uploads: number; downloads?: number } }) {
   const displayStats = [
     { label: "Subjects", value: stats.subjects.toString() },
     { label: "Bookmarks", value: stats.bookmarks.toString() },
     { label: "Contributions", value: stats.uploads.toString() },
-    { label: "Downloads", value: "—" }, // Temporary state as requested
+    // FIX: Replaced the hardcoded "—" with the live download value
+    { label: "Downloads", value: stats.downloads !== undefined ? stats.downloads.toString() : "0" }, 
   ];
 
   return (

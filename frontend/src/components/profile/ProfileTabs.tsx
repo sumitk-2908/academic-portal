@@ -19,16 +19,24 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
     { id: "activity", label: "Activity" }
   ];
 
-  const handleViewDocument = (docId: number) => {
-    trackDocumentStat(docId, 'view');
-    if (user?.id) 
-        triggerStreakUpdate(user.id);
-        logStudySession(user.id, docId);
+const handleViewDocument = async (docId: number) => {
+    // 1. Track global view count
+    await trackDocumentStat(docId, 'view');
+    
+    // 2. Wrap user-specific stats securely in curly braces
+    if (user?.id) {
+      await triggerStreakUpdate(user.id);
+      await logStudySession(user.id, docId);
+    }
   };
 
-  const handleDownload = (e: React.MouseEvent, doc: any) => {
+  const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
-    trackDocumentStat(doc.id, 'download');
+    
+    // 1. Fire and await the backend tracker first
+    await trackDocumentStat(doc.id, 'download');
+    
+    // 2. Execute the actual browser download
     const link = document.createElement("a");
     link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
     document.body.appendChild(link);

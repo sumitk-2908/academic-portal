@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase, getTrendingDocuments, uploadDocument, getStudentBookmarks, getRecentStudyActivity } from "./lib/api";
+import AchievementToast from "@/components/ui/AchievementToast";
+import { supabase, getTrendingDocuments, uploadDocument, getAchievements } from "./lib/api";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 
@@ -44,8 +45,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [searchQuery, setSearchQuery] = useState("");
   const [allDocs, setAllDocs] = useState<any[]>([]);
   const [trendingDocs, setTrendingDocs] = useState<any[]>([]);
-  const [recentStudy, setRecentStudy] = useState<any[]>([]);
-  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  
+
+  // --- ACHIEVEMENT TOAST STATE ---
+  const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
+  const [activeToast, setActiveToast] = useState<{title: string, description: string} | null>(null);
 
   // Auth States
   const [isAdmin, setIsAdmin] = useState(false);
@@ -91,12 +95,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (docs) setAllDocs(docs);
 
     getTrendingDocuments().then(setTrendingDocs);
-
-    const history = await getRecentStudyActivity(currentUserId);
-    setRecentStudy(history);
-
-    const userBookmarks = await getStudentBookmarks(currentUserId);
-    setBookmarks(userBookmarks);
   }, []);
 
   const syncUserFromSession = useCallback(async (session: Session | null) => {
@@ -114,9 +112,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         setIsAdmin(false); setIsStudent(true);
         setUploadedBy(session.user.email?.split('@')[0] || "Student");
       }
+      const initialBadges = await getAchievements(session.user.id);
+      setEarnedBadgeIds(initialBadges.map((b: any) => b.badge_id));
+
       refreshSidebarData(session.user.id);
     } else {
       setIsAdmin(false); setIsStudent(false);
+      setEarnedBadgeIds([]);
       refreshSidebarData();
     }
   }, [refreshSidebarData]);
@@ -149,6 +151,51 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     return () => subscription.unsubscribe();
   }, [syncUserFromSession]);
+
+  // --- REAL-TIME ACHIEVEMENT LISTENER ---
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return;
+      
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'user_achievements',
+            filter: `user_id=eq.${session.user.id}`
+          },
+          (payload) => {
+            const newBadgeId = payload.new.badge_id;
+            
+            // Prevent duplicate toasts if we somehow already tracked it
+            if (earnedBadgeIds.includes(newBadgeId)) return;
+            
+            // Add to tracked state
+            setEarnedBadgeIds(prev => [...prev, newBadgeId]);
+            
+            // Find the badge title/desc (We hardcode the lookup here for the global listener)
+            const badgeLookup: Record<string, {title: string, desc: string}> = {
+              "first_upload": { title: "First Contribution", desc: "You uploaded your first resource." },
+              "streak_3": { title: "On Fire", desc: "3 day study streak!" },
+              "streak_7": { title: "Dedicated Scholar", desc: "7 day study streak!" },
+              "power_user": { title: "Power User", desc: "Downloaded 10 documents." },
+              "top_contributor": { title: "Top Contributor", desc: "Your uploads reached 50 views." }
+            };
+
+            const badgeInfo = badgeLookup[newBadgeId] || { title: "New Badge", desc: "You earned a new achievement!" };
+            setActiveToast({ title: badgeInfo.title, description: badgeInfo.desc });
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    });
+  }, [earnedBadgeIds]);
 
   const toggleTheme = () => {
     const html = document.documentElement;
@@ -268,7 +315,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, [searchQuery, allDocs]);
 
   const pendingCount = allDocs.filter(d => d.status === 'pending').length;
-  const recentUploads = allDocs.filter(d => d.status === 'approved').slice(0, 5);
 
   const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
   const sendVerificationEmail = async () => {
@@ -704,6 +750,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </form>
             </div>
           </div>
+        )}
+        {/* ========================================= */}
+        {/* GLOBAL ACHIEVEMENT TOAST */}
+        {/* ========================================= */}
+        {activeToast && (
+          <AchievementToast 
+            title={activeToast.title}
+            description={activeToast.description}
+            onClose={() => setActiveToast(null)}
+          />
         )}
       </div>
     </StudyHistoryProvider>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { 
   supabase, 
   getStudentBookmarks, 
-  getRecentStudyActivity, 
+  getFullStudyHistory, 
   getSubjects,
   getStudyStreak,
   getAchievements,
@@ -19,7 +19,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  const [stats, setStats] = useState({ subjects: 0, bookmarks: 0, uploads: 0 });
+  const [stats, setStats] = useState({ subjects: 0, bookmarks: 0, uploads: 0, downloads: 0});
   const [history, setHistory] = useState<any[]>([]);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [uploads, setUploads] = useState<any[]>([]);
@@ -55,7 +55,7 @@ export default function ProfilePage() {
         userAchievements
       ] = await Promise.all([
         getStudentBookmarks(currentUser.id),
-        getRecentStudyActivity(currentUser.id),
+        getFullStudyHistory(currentUser.id),
         getSubjects(),
         getEnhancedContributions(currentUser.id),
         getStudyStreak(currentUser.id),
@@ -69,11 +69,16 @@ export default function ProfilePage() {
         setUploads(userUploads || []);
         setStreak(userStreak);
         setAchievements(userAchievements || []);
+
+        const totalImpact = (userUploads || []).reduce((acc: number, u: any) => {
+          return acc + (u.document_analytics?.download_count || 0);
+        }, 0);
         
         setStats({
           subjects: allSubjects?.length || 0,
           bookmarks: userBookmarks?.length || 0,
-          uploads: userUploads?.length || 0
+          uploads: userUploads?.length || 0,
+          downloads: totalImpact
         });
         setLoading(false);
       }
