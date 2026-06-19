@@ -47,24 +47,27 @@ async def verify_admin(user: dict = Depends(verify_token)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Authorization check failed: {str(e)}")
 
-    # 2. Strict AAL2 (MFA) Verification
-    # This ensures a user cannot delete files simply by logging in on the homepage.
+    # 2. STRICT AAL2 (MFA) VERIFICATION
     token = user.get("raw_jwt")
-    if token:
-        try:
-            # Decode the payload securely (Signature is already verified by Supabase)
-            payload_b64 = token.split(".")[1]
-            payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
-            payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
-            
-            if payload.get("aal") != "aal2":
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Action requires Authenticator MFA (AAL2). Please verify at /portal-admin."
-                )
-        except HTTPException:
-            raise
-        except Exception:
-            raise HTTPException(status_code=401, detail="Invalid token format")
+    if not token:
+        # SECURE: Fail immediately if the token is missing. No bypass allowed.
+        raise HTTPException(status_code=401, detail="Authentication token required for MFA validation.")
+        
+    try:
+        # Decode the payload securely
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
+        payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
+        
+        # SECURE: Strictly enforce AAL2
+        if payload.get("aal") != "aal2":
+            raise HTTPException(
+                status_code=403, 
+                detail="Destructive action requires Authenticator MFA (AAL2). Please verify at /portal-admin."
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token format")
 
     return user

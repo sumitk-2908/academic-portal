@@ -52,7 +52,8 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
       if (sess?.session?.user) {
         setUserId(sess.session.user.id);
         const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', sess.session.user.id).single();
-        if (roleData?.role === 'admin' && localStorage.getItem("admin_portal_access") === "true") setIsAdmin(true);
+        // SECURE MFA CHECK
+        if (roleData?.role === 'admin' && sessionStorage.getItem("admin_portal_auth") === "true") setIsAdmin(true);
       }
       
       const userBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
