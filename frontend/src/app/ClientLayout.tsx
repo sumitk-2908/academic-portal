@@ -6,8 +6,9 @@ import { supabase, getTrendingDocuments, uploadDocument, getStudentBookmarks, ge
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
   PanelLeftClose, TrendingUp, X, BookOpen, Bookmark, Clock, 
-  Upload, Inbox, Plus, FileText, Home, Menu, Mail
+  Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2
 } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { StudyHistoryProvider } from "@/app/context/StudyHistoryContext";
@@ -52,6 +53,24 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert(`Google Sign-In failed: ${err.message}`);
+      setGoogleLoading(false);
+    }
+  };
 
   // Upload States
   const [showUploadForm, setShowUploadForm] = useState(false);
@@ -548,40 +567,62 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </div>
         )}
 
+        
         {/* AUTH & UPLOAD MODALS */}
         {showAuthModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-extrabold">
-                {authMode === "signin" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
-              </h2>
-              <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
-            </div>
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
-              
-              {/* Hide password input if they are just requesting a reset link */}
-              {authMode !== "forgot" && (
-                <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border bg-transparent px-4 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44]" />
-              )}
-              
-              <button type="submit" disabled={authLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">
-                {authLoading ? "Processing..." : authMode === "signin" ? "Login" : authMode === "signup" ? "Create Account" : "Send Reset Link"}
-              </button>
+            <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-extrabold">
+                  {authMode === "signin" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
+                </h2>
+                <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
+              </div>
 
-              {/* Dynamic Navigation Links */}
-              {authMode === "signin" && (
-                  <div className="flex justify-between w-full text-xs font-bold text-[#4F46E5]">
+              {/* NEW: Google Auth Button & Divider (Hidden on Forgot Password screen) */}
+              {authMode !== "forgot" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={googleLoading || authLoading}
+                    className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#E5E7EB] bg-white font-bold text-[#0F172A] transition-all hover:bg-gray-50 hover:shadow-sm dark:border-[#1F2A44] dark:bg-[#111827] dark:text-white dark:hover:bg-[#1A2332]"
+                  >
+                    {googleLoading ? <Loader2 className="animate-spin text-[#64748B]" size={20} /> : <><FcGoogle size={24} /> Continue with Google</>}
+                  </button>
+
+                  <div className="my-6 flex items-center">
+                    <div className="flex-grow border-t border-[#E5E7EB] dark:border-[#1F2A44]"></div>
+                    <span className="mx-4 text-[10px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">Or use email</span>
+                    <div className="flex-grow border-t border-[#E5E7EB] dark:border-[#1F2A44]"></div>
+                  </div>
+                </>
+              )}
+
+              <form onSubmit={handleAuthSubmit} className="space-y-4">
+                <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:text-white" />
+                
+                {/* Hide password input if they are just requesting a reset link */}
+                {authMode !== "forgot" && (
+                  <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:text-white" />
+                )}
+                
+                <button type="submit" disabled={authLoading || googleLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">
+                  {authLoading ? <Loader2 className="mx-auto animate-spin" size={18} /> : authMode === "signin" ? "Login" : authMode === "signup" ? "Create Account" : "Send Reset Link"}
+                </button>
+
+                {/* Dynamic Navigation Links */}
+                {authMode === "signin" && (
+                  <div className="flex justify-between w-full mt-2 text-[11px] font-bold text-[#4F46E5]">
                     <button type="button" onClick={() => setAuthMode("forgot")} className="hover:underline">Forgot Password?</button>
                     <button type="button" onClick={() => setAuthMode("signup")} className="hover:underline">New student? Sign Up</button>
                   </div>
                 )}
                 {authMode === "signup" && (
-                  <button type="button" onClick={() => setAuthMode("signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">Already have an account? Sign In</button>
+                  <button type="button" onClick={() => setAuthMode("signin")} className="w-full mt-2 text-[11px] font-bold text-[#4F46E5] hover:underline">Already have an account? Sign In</button>
                 )}
                 {authMode === "forgot" && (
-                  <button type="button" onClick={() => setAuthMode("signin")} className="w-full text-xs font-bold text-[#4F46E5] hover:underline">Back to Sign In</button>
+                  <button type="button" onClick={() => setAuthMode("signin")} className="w-full mt-2 text-[11px] font-bold text-[#4F46E5] hover:underline">Back to Sign In</button>
                 )}
               </form>
             </div>
