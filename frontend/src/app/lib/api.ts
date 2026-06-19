@@ -327,3 +327,39 @@ export const triggerStreakUpdate = async (userId: string) => {
     console.error("Failed to update streak:", error);
   }
 };
+
+// ==========================================
+// --- PHASE 3.5: PERSONALIZATION ---
+// ==========================================
+
+export const getProfilePreferences = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  // PGRST116 means row not found (user hasn't set preferences yet), which is fine.
+  if (error && error.code !== 'PGRST116') {
+    console.error("Fetch Profile Error:", error);
+    return null;
+  }
+  return data;
+};
+
+export const updateProfilePreferences = async (
+  userId: string, 
+  preferences: { favorite_subjects: string[], preferred_branch: string }
+) => {
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      ...preferences
+    });
+
+  if (error) {
+    console.error("Update Profile Error:", error);
+    throw error;
+  }
+};
