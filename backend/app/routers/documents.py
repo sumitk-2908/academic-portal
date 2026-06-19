@@ -4,7 +4,8 @@ import asyncio
 import fitz  
 import httpx
 from enum import Enum
-from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request
+from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request, Depends
+from app.auth import verify_admin, verify_token, ALLOWED_ADMINS
 from supabase import create_client, Client
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -51,14 +52,28 @@ async def upload_document(
     category: DocCategory = Form(...),
     module_id: str = Form("null"), # Accepts "null" string from frontend for non-module subjects
     subject: str = Form("General"),
-    uploaded_by: str = Form("Admin"),
     status: str = Form("pending"), # Dynamic status (approved for admin, pending for student)
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    user: dict = Depends(verify_token)
 ):
     """Uploads a PDF to Supabase Storage AND inserts the row directly into the Supabase Database."""
     
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+    
+    user_email = user.get("email")
+    is_admin = user_email in ALLOWED_ADMINS
+    
+    if is_admin:
+        # Admins can upload directly as "approved" (or whatever they pass)
+        secure_status = status 
+        secure_uploaded_by = "Admin"
+    else:
+        # SECURITY FIX: Forcefully override student uploads to "pending" 
+        # Even if a hacker modifies the frontend POST request to say status="approved", 
+        # the backend ignores it.
+        secure_status = "pending"
+        secure_uploaded_by = user_email
 
     try:
         # Convert string "null" back to Python None to satisfy integer database constraints
@@ -119,12 +134,12 @@ async def upload_document(
             "category": category_val,
             "module_id": safe_module_id,
             "subject": subject,
-            "uploaded_by": uploaded_by,
+            "uploaded_by": secure_uploaded_by,
             "file_url": public_url,
             "file_size": file_size_mb,
             "page_count": page_count,
             "thumbnail_url": thumbnail_url,
-            "status": status
+            "status": secure_status
         }
         
         # Insert document metadata into Database with ROLLBACK logic
@@ -161,7 +176,7 @@ async def upload_document(
 # --- DELETE ENDPOINT ---
 @router.delete("/{document_id}")
 @limiter.limit("15/minute")
-async def delete_document(request: Request, document_id: int):
+async def delete_document(request: Request, document_id: int, admin_user: dict = Depends(verify_admin)):
     """Safely deletes document from Tracking Tables, Database, and Cloud Storage."""
     try:
         # 1. Fetch document to get file URLs so we can delete from Cloud Storage
