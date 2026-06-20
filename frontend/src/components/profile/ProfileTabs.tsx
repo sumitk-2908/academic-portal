@@ -108,7 +108,23 @@ const handleViewDocument = async (docId: number) => {
                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.title}</p>
                  <p className="text-xs text-[#64748B] truncate capitalize">{item.subject}</p>
                </div>
-               <button onClick={(e) => handleDownload(e, item)} className="shrink-0 flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-1.5 text-[10px] font-bold uppercase text-gray-600 border dark:border-[#1F2A44] dark:bg-[#0D0F1A] dark:text-gray-300 hover:bg-gray-100"><Download size={12} /></button>
+               
+               {/* NEW: Flex container holding both View and Download buttons */}
+               <div className="shrink-0 flex items-center gap-2">
+                 <Link 
+                   href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
+                   onClick={() => handleViewDocument(item.id)}
+                   className="flex items-center gap-1.5 rounded-lg bg-[#4F46E5] px-3 py-1.5 text-[10px] font-bold uppercase text-white hover:bg-[#6366F1]"
+                 >
+                   <Eye size={12} /> View
+                 </Link>
+                 <button 
+                   onClick={(e) => handleDownload(e, item)} 
+                   className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-1.5 text-[10px] font-bold uppercase text-gray-600 border dark:border-[#1F2A44] dark:bg-[#0D0F1A] dark:text-gray-300 hover:bg-gray-100"
+                 >
+                   <Download size={12} />
+                 </button>
+               </div>
              </div>
            )) : <p className="text-sm text-gray-500">No bookmarks yet.</p>}
         </div>
