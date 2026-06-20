@@ -8,7 +8,6 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], display: "swap" });
 
-// 1. Add the Viewport config (Required for PWAs)
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FAFAF9" },
@@ -16,15 +15,14 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, // Prevents auto-zooming on mobile inputs
-  userScalable: false,
+  
 };
 
-// 2. Add the manifest reference to Metadata
+
 export const metadata: Metadata = {
   title: "Academic Portal",
   description: "Student Resource and PDF Study Hub",
-  manifest: "/manifest.json", // <-- Link to your newly created manifest
+  manifest: "/manifest.json", 
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -54,7 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body suppressHydrationWarning className="min-h-screen flex flex-col font-sans antialiased">
         
-        {/* THIS IS YOUR SINGLE APP SHELL */}
+        
         <ClientLayout>
           {children}
         </ClientLayout>

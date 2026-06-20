@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Edit, GraduationCap, BookOpen, X, Flame, Loader2 } from "lucide-react";
 import { getProfilePreferences, updateProfilePreferences } from "@/app/lib/api";
 
@@ -13,7 +13,11 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
   
   // Preference States
   const [branch, setBranch] = useState("");
-  const [subjectsStr, setSubjectsStr] = useState(""); // Comma separated for easy editing
+  const [subjectsStr, setSubjectsStr] = useState("");
+
+  // Refs for Focus Management
+  const modalRef = useRef<HTMLDivElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
 
   const getInitials = (fullName: string) => fullName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
   const currentStreak = streak?.current_streak || 0;
@@ -29,6 +33,55 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
       });
     }
   }, [isEditModalOpen, user?.id]);
+
+  // Focus Trap and Accessibility Keyboard Listeners
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      // Restore focus to the trigger button when modal closes
+      editButtonRef.current?.focus();
+      return;
+    }
+
+    const modalElement = modalRef.current;
+    if (!modalElement) return;
+
+    // Select all focusable elements inside the modal
+    const focusableElements = modalElement.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    // Focus the first element (Close button) when modal opens
+    firstElement?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Escape key to close
+      if (e.key === 'Escape') {
+        setIsEditModalOpen(false);
+        return;
+      }
+
+      // 2. Focus trapping on Tab
+      if (e.key === 'Tab') {
+        if (e.shiftKey) { // Shift + Tab
+          if (document.activeElement === firstElement) {
+            lastElement?.focus();
+            e.preventDefault();
+          }
+        } else { // Tab
+          if (document.activeElement === lastElement) {
+            firstElement?.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isEditModalOpen]);
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -64,7 +117,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
               <h1 className="text-xl sm:text-lg font-black text-gray-900 dark:text-white">{name}</h1>
               {currentStreak > 0 && (
                 <div className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-600 dark:bg-orange-500/10 dark:text-orange-500">
-                  <Flame size={12} fill="currentColor" />
+                  <Flame size={12} fill="currentColor" aria-hidden="true"/>
                   {currentStreak} Day{currentStreak !== 1 ? 's' : ''}
                 </div>
               )}
@@ -72,33 +125,45 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
             
             <p className="text-sm sm:text-xs text-gray-500 dark:text-gray-400 mb-3">{email}</p>
             <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
-              <span className="flex items-center gap-1.5"><GraduationCap size={14} /> {branch || "Academic Portal"}</span>
-              <span className="flex items-center gap-1.5"><BookOpen size={14} /> Student Account</span>
+              <span className="flex items-center gap-1.5"><GraduationCap size={14} aria-hidden="true"/> {branch || "Academic Portal"}</span>
+              <span className="flex items-center gap-1.5"><BookOpen size={14} aria-hidden="true"/> Student Account</span>
             </div>
           </div>
           <button 
+            ref={editButtonRef}
             onClick={() => setIsEditModalOpen(true)}
             className="mt-3 flex w-full sm:mt-0 sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2.5 sm:py-2 text-sm sm:text-xs font-bold text-[#64748B] transition-colors hover:bg-gray-50 dark:border-[#1F2A44] dark:text-[#94A3B8] dark:hover:bg-[#1F2A44]"
           >
-            <Edit size={14} /> Edit Profile
+            <Edit size={14} aria-hidden="true"/> Edit Profile
           </button>
         </div>
       </div>
 
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-[#131625] dark:border dark:border-[#1F2A44]">
+          <div 
+            ref={modalRef}
+            role="dialog" 
+            aria-modal="true" 
+            aria-labelledby="edit-profile-title"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-[#131625] dark:border dark:border-[#1F2A44]"
+          >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Personalize Profile</h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
-                <X size={20} />
+              <h2 id="edit-profile-title" className="text-lg font-bold text-gray-900 dark:text-white">Personalize Profile</h2>
+              <button 
+                aria-label="Close modal"
+                onClick={() => setIsEditModalOpen(false)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-white"
+              >
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
             
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-2">Preferred Branch / Course</label>
+                <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-2">Preferred Branch / Course</label>
                 <input 
+                  id="branchInput"
                   type="text" 
                   placeholder="e.g. B.Tech Computer Science"
                   value={branch}
@@ -107,15 +172,16 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-2">Favorite Subjects</label>
+                <label htmlFor="subjectsInput" className="block text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-2">Favorite Subjects</label>
                 <input 
+                  id="subjectsInput"
                   type="text" 
                   placeholder="Maths, Physics, BEE (Comma separated)"
                   value={subjectsStr}
                   onChange={(e) => setSubjectsStr(e.target.value)}
                   className="w-full rounded-xl border border-[#E5E7EB] bg-gray-50 p-3 text-sm text-gray-900 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#0D0F1A] dark:text-white"
                 />
-                <p className="mt-1.5 text-[10px] text-gray-500">We will use this to recommend resources in the future.</p>
+                <p className="mt-1.5 text-xs text-gray-500">We will use this to recommend resources in the future.</p>
               </div>
             </div>
 
@@ -126,7 +192,15 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                 disabled={isSaving}
                 className="flex items-center gap-2 rounded-xl bg-[#4F46E5] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#6366F1] disabled:opacity-70"
               >
-                {isSaving ? <><Loader2 size={16} className="animate-spin" /> Saving...</> : "Save Preferences"}
+                {isSaving ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" aria-hidden="true" /> 
+                    {/* Screen readers will announce this when the state changes */}
+                    <span aria-live="polite">Saving preferences...</span>
+                  </>
+                ) : (
+                  "Save Preferences"
+                )}
               </button>
             </div>
           </div>

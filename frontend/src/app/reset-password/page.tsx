@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-8 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
         <div className="mb-6 flex flex-col items-center text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10 text-[#4F46E5] dark:bg-[#4F46E5] dark:text-white">
-            <KeyRound size={28} />
+            <KeyRound size={28} aria-hidden="true"/>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Secure Reset</h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -71,10 +71,11 @@ export default function ResetPasswordPage() {
 
         <form onSubmit={handlePasswordUpdate} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">
+            <label htmlFor="newPassword" className="mb-1.5 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">
               New Password
             </label>
             <input
+              id="newPassword"
               required
               type="password"
               value={newPassword}
@@ -85,7 +86,7 @@ export default function ResetPasswordPage() {
           </div>
 
           {error && (
-            <p className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-500 dark:bg-red-500/10">
+            <p aria-live="polite" role="alert" className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-500 dark:bg-red-500/10">
               {error}
             </p>
           )}
@@ -95,8 +96,18 @@ export default function ResetPasswordPage() {
             disabled={loading}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#4F46E5] text-sm font-bold text-white transition-colors hover:bg-[#6366F1]"
           >
-            {loading ? <Loader2 className="animate-spin" size={18} /> : "Update Password"} 
-            {!loading && <ArrowRight size={18} />}
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} aria-hidden="true" />
+                {/* Screen-reader friendly loading text */}
+                <span aria-live="polite" className="sr-only">Updating password...</span>
+                <span aria-hidden="true">Updating...</span>
+              </>
+            ) : (
+              <>
+                Update Password <ArrowRight size={18} aria-hidden="true" />
+              </>
+            )}
           </button>
         </form>
       </div>

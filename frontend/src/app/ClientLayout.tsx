@@ -474,7 +474,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           {/* ========================================= */}
           {/* 2. THE ONLY OMNIPRESENT SIDEBAR (DESKTOP) */}
           {/* ========================================= */}
-          <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 transition-all duration-200 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-16 px-2' : 'w-[220px] px-4'}`}>
+          <aside 
+            aria-label="Main Desktop Navigation"
+            className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-[#E5E7EB] bg-[#FAFAF9]/50 py-6 transition-all duration-200 dark:border-[#1F2A44] dark:bg-[#0B1020]/50 lg:flex ${sidebarCollapsed ? 'w-16 px-2' : 'w-[220px] px-4'}`}>
             <div className="space-y-6 flex-1">
               
               <div>
@@ -548,7 +550,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* ========================================= */}
         {/* MOBILE BOTTOM NAVIGATION BAR */}
         {/* ========================================= */}
-        <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-[#E5E7EB] bg-[#FFFFFF]/90 backdrop-blur-xl pb-safe dark:border-[#1F2A44] dark:bg-[#111827]/90 lg:hidden">
+        <nav 
+          aria-label="Mobile Navigation"
+          className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-[#E5E7EB] bg-[#FFFFFF]/90 backdrop-blur-xl pb-safe dark:border-[#1F2A44] dark:bg-[#111827]/90 lg:hidden">
           <Link 
             href="/" 
             onClick={() => setShowMobileMenu(false)} 
@@ -591,13 +595,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {showMobileMenu && (
           <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setShowMobileMenu(false)}>
             <div 
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mobile-menu-title"
               className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-[#E5E7EB] bg-white p-6 pb-28 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]" 
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">More Options</h2>
-                <button onClick={() => setShowMobileMenu(false)} className="rounded-full bg-gray-100 p-2 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                  <X size={20}/>
+                <h2 id="mobile-menu-title" className="text-xl font-extrabold text-[#111827] dark:text-white">More Options</h2>
+                <button aria-label="Close menu" onClick={() => setShowMobileMenu(false)} className="rounded-full bg-gray-100 p-2 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                  <X size={20} aria-hidden="true" />
                 </button>
               </div>
               
@@ -677,12 +684,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* AUTH & UPLOAD MODALS */}
         {showAuthModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+            <div 
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="auth-modal-title"
+              className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]"
+            >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-extrabold">
+                <h2 id="auth-modal-title" className="text-xl font-extrabold">
                   {authMode === "signin" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
                 </h2>
-                <button onClick={() => setShowAuthModal(false)}><X size={20}/></button>
+                <button aria-label="Close authentication window" onClick={() => setShowAuthModal(false)}>
+                  <X size={20} aria-hidden="true" />
+                </button>
               </div>
 
               {/* NEW: Google Auth Button & Divider (Hidden on Forgot Password screen) */}
@@ -737,10 +751,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         {showUploadForm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]">
+            <div 
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="upload-modal-title"
+              className="w-full max-w-lg rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]"
+            >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-extrabold">{isAdmin ? "Admin Database Upload" : "Student Contribution"}</h2>
-                <button onClick={() => setShowUploadForm(false)}><X size={20}/></button>
+                <h2 id="upload-modal-title" className="text-lg font-extrabold">
+                  {isAdmin ? "Admin Database Upload" : "Student Contribution"}
+                </h2>
+                <button aria-label="Close upload window" onClick={() => setShowUploadForm(false)}>
+                  <X size={20} aria-hidden="true" />
+                </button>
               </div>
               <form onSubmit={handleUpload} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
