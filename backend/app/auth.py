@@ -27,12 +27,22 @@ async def verify_token(request: Request):
         raise HTTPException(status_code=401, detail="Could not validate credentials")
     
     user_data = response.json()
-    # Save the raw JWT so downstream admin functions can check the AAL MFA claim
+    
+    
+    if user_data.get("email") and not user_data.get("email_confirmed_at"):
+        raise HTTPException(
+            status_code=403, 
+            detail="Account restricted: Email verification required. Please check your inbox."
+        )
+    
+    
     user_data["raw_jwt"] = token 
     
     return user_data
 
+
 async def verify_admin(user: dict = Depends(verify_token)):
+    
     user_id = user.get("id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid user token structure")
