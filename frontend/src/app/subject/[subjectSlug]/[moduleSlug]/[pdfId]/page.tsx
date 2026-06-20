@@ -30,24 +30,31 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
   
   const [copied, setCopied] = useState(false);
 
+  const hasTrackedView = useRef(false);
+  const isDownloading = useRef(false);
+
   useEffect(() => {
     const fetchPdf = async () => {
       const { data } = await supabase.from('documents').select('*').eq('id', pdfId).single();
         
       if (data) {
-        setDocumentMeta(data);
-        await trackDocumentStat(data.id, 'view'); // Added await to ensure execution
+        setDocumentMeta(data); 
         addDocumentToHistory(data);
 
-        const { data: sess } = await supabase.auth.getSession();
-        if (sess?.session?.user?.id) {
-          await logStudySession(sess.session.user.id, data.id);
-          await triggerStreakUpdate(sess.session.user.id);
+        if (!hasTrackedView.current) {
+          hasTrackedView.current = true; 
+          await trackDocumentStat(data.id, 'view');
+
+          const { data: sess } = await supabase.auth.getSession();
+          if (sess?.session?.user?.id) {
+            await logStudySession(sess.session.user.id, data.id);
+            await triggerStreakUpdate(sess.session.user.id);
+          }
         }
       }
     };
     fetchPdf();
-  }, [pdfId]);
+  },[pdfId]);
 
   useEffect(() => {
     const updateWidth = () => {
@@ -81,34 +88,33 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
 
   // ROBUST DOWNLOAD HANDLER: Forces asynchronous tracking completion
   const handleDownloadClick = async (e: React.MouseEvent) => {
-  e.preventDefault(); // Stop the tab from opening immediately
-  console.log("🚨 1. Button clicked! Document ID:", documentMeta?.id);
-  
-  if (!documentMeta) return;
-  
-  try {
-    console.log("🚨 2. Attempting to track download stat...");
-    await trackDocumentStat(documentMeta.id, 'download');
-    console.log("🚨 3. trackDocumentStat finished executing.");
+    e.preventDefault(); 
     
-    const { data: sess } = await supabase.auth.getSession();
-    console.log("🚨 4. Auth Check - User ID is:", sess?.session?.user?.id);
+    // If it's already downloading (user double-clicked), ignore the click
+    if (isDownloading.current || !documentMeta) return; 
     
-    if (sess?.session?.user?.id) {
-      console.log("🚨 5. User is authenticated. Logging study session...");
-      await logStudySession(sess.session.user.id, documentMeta.id);
-      console.log("🚨 6. logStudySession finished.");
-      await triggerStreakUpdate(sess.session.user.id);
-    } else {
-      console.error("🛑 AUTHENTICATION FAILED: User ID is missing. Skipping study_history insert.");
+    isDownloading.current = true; // Lock the button
+
+    try {
+      await trackDocumentStat(documentMeta.id, 'download');
+      
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess?.session?.user?.id) {
+        await logStudySession(sess.session.user.id, documentMeta.id);
+        await triggerStreakUpdate(sess.session.user.id);
+      }
+    } catch (error) {
+      console.error("Tracking failed:", error);
+    } finally {
+      // Open the PDF
+      window.open(documentMeta.file_url, '_blank');
+      
+      // Unlock the button after 2 seconds in case they want to download it again later
+      setTimeout(() => {
+        isDownloading.current = false;
+      }, 2000);
     }
-  } catch (error) {
-    console.error("🛑 FATAL ERROR in click handler:", error);
-  } finally {
-    console.log("🚨 7. Opening PDF...");
-    window.open(documentMeta.file_url, '_blank');
-  }
-};
+  };
 
   if (!documentMeta) {
     return (
