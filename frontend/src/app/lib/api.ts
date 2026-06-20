@@ -67,16 +67,12 @@ export const searchDocuments = async (query: string) => {
 
 export const uploadDocument = async (formData: FormData) => {
   try {
-    // Grab the auth token directly to ensure the backend accepts it
     const { data: { session } } = await supabase.auth.getSession();
     
-    // Use native fetch to bypass the Axios JSON header completely
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session?.access_token}`
-        // CRITICAL: Do NOT set Content-Type here. Fetch automatically sets 
-        // the multipart/form-data boundary when it sees FormData.
       },
       body: formData
     });
@@ -96,7 +92,6 @@ export const uploadDocument = async (formData: FormData) => {
 
 export const deleteDocument = async (documentId: number) => {
   try {
-    // 🔥 ROUTED TO RENDER BACKEND: Ensures both the PDF AND the thumbnail are deleted from Cloud Storage
     const response = await api.delete(`/api/v1/documents/${documentId}`);
     return response.data;
   } catch (error: any) {
@@ -107,6 +102,7 @@ export const deleteDocument = async (documentId: number) => {
 
 // --- SUBJECTS & MODULES ---
 
+// RESTORED: These interfaces were accidentally stripped in the previous response
 export interface Subject {
   id: number;
   name: string;
@@ -132,7 +128,6 @@ export const getModulesBySubject = async (subjectId: number) => {
   if (error) throw error;
   return data as Module[];
 };
-
 
 // ==========================================
 // --- CLOUD SYNC: HYBRID BOOKMARKS ---
@@ -221,7 +216,6 @@ export const getRecentStudyActivity = async (userId?: string) => {
 export const getFullStudyHistory = async (userId?: string) => {
   let cloudHistory: any[] = [];
 
-  // Calculate the date 90 days ago
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -230,12 +224,10 @@ export const getFullStudyHistory = async (userId?: string) => {
       .from('study_history')
       .select('accessed_at, documents(*)')
       .eq('user_id', userId)
-      .gte('accessed_at', ninetyDaysAgo.toISOString()) // Only last 90 days
+      .gte('accessed_at', ninetyDaysAgo.toISOString()) 
       .order('accessed_at', { ascending: false });
 
     if (!error && data) {
-      // Inject the actual interaction timestamp into the document object
-      // so the ActivityHeatmap maps it to the correct day
       cloudHistory = data.map((h: any) => {
         if (!h.documents) return null;
         return {
@@ -259,7 +251,7 @@ export const getFullStudyHistory = async (userId?: string) => {
          combined.push(lh);
        }
     }
-    return combined; // Return all 90 days without slicing
+    return combined;
   } catch (error) {
     console.warn("Resetting corrupted history local storage");
     return cloudHistory;
@@ -270,11 +262,27 @@ export const getFullStudyHistory = async (userId?: string) => {
 
 export const trackDocumentStat = async (docId: number, type: 'view' | 'download') => {
   try {
-    const { error } = await supabase.rpc('increment_doc_stat', {
-      doc_id: docId,
-      stat_type: type
-    });
-    if (error) throw error;
+    // 1. Attempt standard RPC increment
+    await supabase.rpc('increment_doc_stat', { doc_id: docId, stat_type: type });
+
+    // 2. FAILSAFE: Protect against PostgreSQL's `null + 1 = null` math error
+    const { data } = await supabase.from('document_analytics').select('*').eq('document_id', docId).maybeSingle();
+    
+    if (!data) {
+      // Row doesn't exist, initialize cleanly to avoid null bugs later
+      await supabase.from('document_analytics').insert({
+        document_id: docId,
+        view_count: type === 'view' ? 1 : 0,
+        download_count: type === 'download' ? 1 : 0,
+        last_accessed: new Date().toISOString()
+      });
+    } else if (data.view_count === null || data.download_count === null) {
+      // Row exists but was corrupted with nulls
+      await supabase.from('document_analytics').update({
+        view_count: data.view_count === null ? (type === 'view' ? 1 : 0) : data.view_count,
+        download_count: data.download_count === null ? (type === 'download' ? 1 : 0) : data.download_count
+      }).eq('document_id', docId);
+    }
   } catch (error) {
     console.error("Failed to track analytics:", error);
   }
@@ -282,38 +290,44 @@ export const trackDocumentStat = async (docId: number, type: 'view' | 'download'
 
 export const getTrendingDocuments = async () => {
   try {
-    const { data, error } = await supabase
+    // BUG 3 FIX: Two-Step fetch. Bypasses Supabase foreign-key relation ambiguity bugs.
+    const { data: analytics, error } = await supabase
       .from('document_analytics')
-      .select(`
-        view_count,
-        documents:documents!document_analytics_document_id_fkey(id, title, category, file_url, uploaded_by, created_at, module_id, subject, status)
-      `)
-      // Ensure null view counts don't overtake the trending top 5
-      .not('view_count', 'is', null) 
+      .select('*')
+      .not('view_count', 'is', null)
       .order('view_count', { ascending: false })
-      .limit(5);
+      .limit(10); 
 
-    if (error) throw error;
+    if (error || !analytics || analytics.length === 0) return [];
 
-    return (data || [])
-      .map((d: any) => {
-        const doc = Array.isArray(d.documents) ? d.documents[0] : d.documents;
+    const docIds = analytics.map(a => a.document_id);
+    const { data: docs } = await supabase
+      .from('documents')
+      .select('*')
+      .in('id', docIds)
+      .eq('status', 'approved');
+
+    if (!docs) return [];
+
+    // Manually zip the arrays together
+    return analytics
+      .map(stat => {
+        const doc = docs.find(d => d.id === stat.document_id);
         if (!doc) return null;
-        return { ...doc, view_count: d.view_count };
+        return { ...doc, view_count: stat.view_count || 0 };
       })
-      .filter((doc: any) => doc !== null && doc.status === 'approved');
-      
+      .filter(d => d !== null)
+      .slice(0, 5); 
   } catch (error) {
-    console.error('Error fetching trending documents:', error);
+    console.error("Failed to fetch global trending:", error);
     return [];
-  }  
+  }
 };
 
 // --- CROWDSOURCING / APPROVALS ---
 
 export const updateDocumentStatus = async (id: number, status: 'approved' | 'rejected') => {
   try {
-    // 🔥 ROUTED TO RENDER BACKEND: Bypasses RLS issues by using the secure backend endpoint
     const response = await api.patch(`/api/v1/documents/${id}/status`, { status });
     return response.data;
   } catch (error: any) {
@@ -331,7 +345,7 @@ export const getStudyStreak = async (userId: string) => {
     .from('study_streaks')
     .select('*')
     .eq('user_id', userId)
-    .maybeSingle(); // <--- CHANGED FROM .single() TO .maybeSingle()
+    .maybeSingle(); 
 
   if (error) {
     console.error("Fetch Streak Error:", error);
@@ -355,25 +369,34 @@ export const getAchievements = async (userId: string) => {
 };
 
 export const getEnhancedContributions = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('documents')
-    .select(`
-      *,
-      document_analytics:document_analytics!document_analytics_document_id_fkey ( view_count, download_count )
-    `)
-    .eq('uploaded_by', userId)
-    .order('created_at', { ascending: false });
+  // BUG 2 FIX: Two-step fetch bypassing Supabase Join failures
+  try {
+    const { data: docs, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('uploaded_by', userId)
+      .order('created_at', { ascending: false });
 
-  if (error) {
+    if (error) throw error;
+    if (!docs || docs.length === 0) return [];
+
+    const docIds = docs.map(d => d.id);
+    const { data: analytics } = await supabase
+      .from('document_analytics')
+      .select('*')
+      .in('document_id', docIds);
+
+    return docs.map(doc => {
+      const stat = analytics?.find(a => a.document_id === doc.id);
+      return {
+        ...doc,
+        document_analytics: stat || { view_count: 0, download_count: 0 }
+      };
+    });
+  } catch (error) {
     console.error("Fetch Contributions Error:", error);
     return [];
   }
-  return (data || []).map(doc => ({
-    ...doc,
-    document_analytics: Array.isArray(doc.document_analytics) 
-      ? doc.document_analytics[0] 
-      : doc.document_analytics
-  }));
 };
 
 export const triggerStreakUpdate = async (userId: string) => {
@@ -422,7 +445,6 @@ export const updateProfilePreferences = async (
 
 export const logStudySession = async (userId: string, documentId: number) => {
   try {
-    // Inserts a new timestamped row for the Heatmap & Timeline
     const { error } = await supabase.from('study_history').insert({
       user_id: userId,
       document_id: documentId,
