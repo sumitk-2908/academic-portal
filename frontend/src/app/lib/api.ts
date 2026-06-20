@@ -81,6 +81,7 @@ export const searchDocuments = async (options: SearchOptions = {}) => {
     title, 
     category, 
     subject, 
+    module_id,
     thumbnail_url, 
     file_url,
     file_size, 

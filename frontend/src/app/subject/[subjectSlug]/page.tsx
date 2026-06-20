@@ -39,6 +39,7 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
   const [userId, setUserId] = useState("");
   const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "syllabus" | "bookmarks">("dashboard");
   const [bookmarks, setBookmarks] = useState<number[]>([]);
+  const [moduleCounts, setModuleCounts] = useState<Record<number, number>>({});
 
   const isNonModuleSubject = ["WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS"].includes(subjectName) || subjectName.endsWith("LAB");
 
@@ -123,7 +124,30 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
-  
+  // Fetches a lightweight array of just module IDs to accurately count them
+  useEffect(() => {
+    const fetchModuleCounts = async () => {
+      const { data } = await supabase
+        .from('documents')
+        .select('module_id')
+        .ilike('subject', subjectName)
+        .eq('status', 'approved');
+
+      if (data) {
+        const counts: Record<number, number> = {};
+        data.forEach(doc => {
+          if (doc.module_id) {
+            counts[doc.module_id] = (counts[doc.module_id] || 0) + 1;
+          }
+        });
+        setModuleCounts(counts);
+      }
+    };
+    
+    if (!isNonModuleSubject) {
+      fetchModuleCounts();
+    }
+  }, [subjectName, isNonModuleSubject]);
   
 
   return (
@@ -154,7 +178,7 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
           <h2 className="text-xs font-extrabold uppercase text-[#64748B] tracking-wider">Course Modules</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {[1, 2, 3, 4, 5].map(num => {
-              const count = documents.filter(d => d.module_id === num).length;
+              const count = moduleCounts[num] || 0;
               return (
                 <Link key={num} href={`/subject/${subjectSlug}/module-${num}`} className="group rounded-2xl border border-[#E5E7EB] bg-[#FAFAF9] p-5 text-center transition-all hover:-translate-y-1 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#0B1020]">
                   <Layers size={18} className="mx-auto text-[#64748B] group-hover:text-[#4F46E5] mb-2" />
