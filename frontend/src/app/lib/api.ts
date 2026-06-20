@@ -48,24 +48,90 @@ export const getDocumentsByModule = async (moduleId: number) => {
   return data || [];
 };
 
-export const searchDocuments = async (query: string) => {
-  let dbQuery = supabase
-  .from('documents')
-  .select('*')
-  .eq('status', 'approved')
-  .order('created_at', { ascending: false });
+// --- ENHANCED SEARCH (Server-Side Pagination & FTS) ---
 
+export interface SearchOptions {
+  query?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  category?: string; // Keeps existing category filters intact
+  subject?: string;  // Keeps existing subject filters intact
+}
+
+export const searchDocuments = async (options: SearchOptions = {}) => {
+  const {
+    query = "",
+    page = 1,
+    limit = 20,
+    sortBy = "created_at",
+    sortOrder = "desc",
+    category,
+    subject
+  } = options;
+
+  // 1. Server-side Pagination math
+  const fromIndex = (page - 1) * limit;
+  const toIndex = fromIndex + limit - 1;
+
+  // 2. Return only required fields (Prevents massive payload downloads)
+  const selectedFields = `
+    id, 
+    title, 
+    category, 
+    subject, 
+    thumbnail_url, 
+    file_url,
+    file_size, 
+    page_count, 
+    created_at, 
+    uploaded_by, 
+    uploader_name
+  `;
+
+  // Initialize query with exact count for pagination UI
+  let dbQuery = supabase
+    .from('documents')
+    .select(selectedFields, { count: 'exact' })
+    .eq('status', 'approved');
+
+  // 3. Postgres Full Text Search (Option A)
   if (query && query.trim() !== "") {
-    dbQuery = dbQuery.ilike('title', `%${query}%`);
+    // Uses the 'fts' column created in SQL. 
+    // 'websearch' enables natural language, quotes for exact phrases, and +/- operators.
+    dbQuery = dbQuery.textSearch('fts', query.trim(), {
+      type: 'websearch',
+      config: 'english'
+    });
   }
 
-  const { data, error } = await dbQuery;
+  // 4. Preserve Existing Filters (Does not break subject/category pages)
+  if (category) {
+    dbQuery = dbQuery.eq('category', category);
+  }
+  if (subject) {
+    dbQuery = dbQuery.eq('subject', subject);
+  }
+
+  // 5. Sorting Support
+  dbQuery = dbQuery.order(sortBy, { ascending: sortOrder === 'asc' });
+
+  // 6. Apply Pagination range
+  dbQuery = dbQuery.range(fromIndex, toIndex);
+
+  const { data, count, error } = await dbQuery;
 
   if (error) {
     console.error("Search Error:", error);
-    return [];
+    return { data: [], totalPages: 0, totalItems: 0 };
   }
-  return data || [];
+
+  return { 
+    data: data || [], 
+    totalPages: count ? Math.ceil(count / limit) : 0,
+    totalItems: count || 0
+  };
 };
 
 // --- UPLOAD & DELETE (Routed through FastAPI) ---

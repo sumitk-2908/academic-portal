@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useState, useMemo } from "react";
-import { supabase, trackDocumentStat, deleteDocument } from "../../lib/api";
+import { use, useEffect, useState } from "react";
+import { supabase, trackDocumentStat, deleteDocument, searchDocuments } from "../../lib/api";
 import { Layers, Bookmark, NotebookPen, FileQuestion, ListChecks, Download, Eye, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 
@@ -40,10 +40,36 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
   const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "syllabus" | "bookmarks">("dashboard");
   const [bookmarks, setBookmarks] = useState<number[]>([]);
 
-  const isNonModuleSubject = useMemo(() => {
-    const explicit = ["WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS"];
-    return explicit.includes(subjectName) || subjectName.endsWith("LAB");
-  }, [subjectName]);
+  const isNonModuleSubject = ["WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS"].includes(subjectName) || subjectName.endsWith("LAB");
+
+  useEffect(() => {
+  const fetchTabData = async () => {
+    setLoading(true);
+    
+    if (activeTab === "bookmarks") {
+      // Fetch specifically by bookmarked IDs
+      if (bookmarks.length > 0) {
+        const { data } = await supabase.from('documents').select('*').in('id', bookmarks);
+        setDocuments(data || []);
+      } else {
+        setDocuments([]);
+      }
+    } else {
+      // Normal server-side fetch for notes, pyqs, syllabus, dashboard
+      const response = await searchDocuments({
+         subject: subjectName,
+         category: activeTab !== 'dashboard' ? activeTab : undefined,
+         limit: 50 
+      });
+      setDocuments(response.data);
+    }
+    
+    setLoading(false);
+  }
+  
+  fetchTabData();
+}, [subjectName, activeTab, bookmarks]);
+  
 
   useEffect(() => {
     const loadWorkspaceContext = async () => {
@@ -97,22 +123,8 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
-  const filteredDocs = useMemo(() => {
-    return documents.filter(doc => {
-      if (activeTab === "bookmarks") return bookmarks.includes(doc.id);
-      if (activeTab === "dashboard") return true;
-      return doc.category === activeTab;
-    });
-  }, [documents, activeTab, bookmarks]);
-
-  const tabCounts = useMemo(() => {
-    return {
-      dashboard: -1, 
-      notes: documents.filter(d => d.category === "notes").length,
-      pyq: documents.filter(d => d.category === "pyq").length,
-      syllabus: documents.filter(d => d.category === "syllabus").length,
-    };
-  }, [documents]);
+  
+  
 
   return (
     <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
@@ -122,27 +134,19 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-[#E5E7EB] pb-1 dark:border-[#1F2A44]">
-        {["dashboard", "notes", "pyq", "syllabus"].map(tab => {
-          const count = tabCounts[tab as keyof typeof tabCounts];
-          const isZero = count === 0;
-
-          return (
-            <button
-              key={tab}
-              onClick={() => !isZero && setActiveTab(tab as any)}
-              disabled={isZero}
-              className={`px-4 py-2 text-xs font-bold border-b-2 capitalize transition-colors ${
-                activeTab === tab 
-                  ? "border-[#4F46E5] text-[#4F46E5]" 
-                  : isZero 
-                    ? "border-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed" 
-                    : "border-transparent text-[#64748B] hover:text-[#0F172A] dark:hover:text-gray-300"
-              }`}
-            >
-              {tab} {count >= 0 && `(${count})`}
-            </button>
-          );
-        })}
+        {["dashboard", "notes", "pyq", "syllabus"].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            className={`px-4 py-2 text-xs font-bold border-b-2 capitalize transition-colors ${
+              activeTab === tab 
+                ? "border-[#4F46E5] text-[#4F46E5]" 
+                : "border-transparent text-[#64748B] hover:text-[#0F172A] dark:hover:text-gray-300"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {activeTab === "dashboard" && !isNonModuleSubject ? (
@@ -169,7 +173,7 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
                 <div key={i} className="h-64 w-full animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-800/50" />
               ))}
             </>
-          ) : filteredDocs.map(doc => {
+          ) : documents.map(doc => {
             const Icon = CATEGORY_ICONS[doc.category] || FileText;
             return (
               <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827]">
@@ -215,7 +219,7 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
               </article>
             );
           })}
-          {filteredDocs.length === 0 && !loading && (
+          {documents.length === 0 && !loading && (
             <p className="col-span-full text-center py-12 text-xs text-[#64748B]">No documents mapped to this category.</p>
           )}
         </div>

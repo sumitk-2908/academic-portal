@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import type { Session } from "@supabase/supabase-js";
 import AchievementToast from "@/components/ui/AchievementToast";
-import { supabase, getTrendingDocuments, uploadDocument, getAchievements } from "./lib/api";
+import { supabase, getTrendingDocuments, uploadDocument, getAchievements, searchDocuments } from "./lib/api";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 
@@ -43,8 +43,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   // Global Data States
   const [searchQuery, setSearchQuery] = useState("");
-  const [allDocs, setAllDocs] = useState<any[]>([]);
+  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [trendingDocs, setTrendingDocs] = useState<any[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   
 
   // --- ACHIEVEMENT TOAST STATE ---
@@ -91,17 +93,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [uploadModule, setUploadModule] = useState(1);
 
   const refreshSidebarData = useCallback(async (currentUserId?: string) => {
-  // OPTIMIZATION: Fetch only approved docs and strictly the fields needed for the UI dropdown.
-  const { data: docs } = await supabase
-    .from('documents')
-    .select('id, title, subject, category, module_id') 
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false });
-    
-  if (docs) setAllDocs(docs);
+    // 1. Fetch trending documents
+    getTrendingDocuments().then(setTrendingDocs);
 
-  getTrendingDocuments().then(setTrendingDocs);
-}, []);
+    // 2. Fetch the exact count of pending documents directly (much faster)
+    const { count } = await supabase
+      .from('documents')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+      
+    if (count !== null) {
+      setPendingCount(count);
+    }
+  }, []);
 
   const syncUserFromSession = useCallback(async (session: Session | null) => {
     if (session?.user) {
@@ -317,26 +321,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   };
 
-  const globalSearchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    
-    const queryTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
-
-    return allDocs.filter(doc => {
-
-      const searchableText = [
-        doc.title,
-        doc.subject,
-        doc.category,
-        doc.module_id ? `module ${doc.module_id}` : ''
-      ].join(' ').toLowerCase();
-
-      return queryTerms.every(term => searchableText.includes(term));
-    }).slice(0, 8);
-  }, [searchQuery, allDocs]);
-
-  const pendingCount = allDocs.filter(d => d.status === 'pending').length;
-
   const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
   const sendVerificationEmail = async () => {
     try {
@@ -351,6 +335,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       alert(err.message);
     }
   };
+  
+  useEffect(() => {
+  const fetchSearchResults = async () => {
+    if (!searchQuery.trim()) {
+      setGlobalSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    // Call the newly created server-side FTS API
+    const response = await searchDocuments({ 
+      query: searchQuery, 
+      limit: 8 
+    });
+    
+    setGlobalSearchResults(response.data);
+    setIsSearching(false);
+  };
+
+  const debounceTimer = setTimeout(fetchSearchResults, 300); // 300ms delay
+  return () => clearTimeout(debounceTimer);
+}, [searchQuery]);
+
 
   return (
     <StudyHistoryProvider>
@@ -406,21 +413,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {searchQuery && (
                   <div className="absolute top-12 left-0 w-full rounded-2xl border border-[#E5E7EB] bg-white p-2 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] z-50">
                     <p className="px-3 py-2 text-[10px] font-bold uppercase text-[#64748B]">Global Search Results</p>
-                    {globalSearchResults.map(doc => (
-                      <Link 
-                        key={doc.id} 
-                        href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`}
-                        onClick={() => setSearchQuery("")}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-[#F8FAFC] dark:hover:bg-[#1F2A44]"
-                      >
-                        <FileText size={16} className="text-[#4F46E5]" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold truncate">{doc.title}</p>
-                          <p className="text-[10px] text-[#64748B] uppercase">{doc.subject} • Module {doc.module_id || "N/A"} • {doc.category}</p>
-                        </div>
-                      </Link>
-                    ))}
-                    {globalSearchResults.length === 0 && <p className="p-4 text-xs text-center text-[#64748B]">No matching documents found.</p>}
+
+                    {isSearching ? (
+                      <p className="p-4 text-xs text-center text-[#64748B]">Searching...</p>
+                    ) : (
+                      <>
+                        {globalSearchResults.map(doc => (
+                          <Link 
+                            key={doc.id} 
+                            href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`}
+                            onClick={() => setSearchQuery("")}
+                            className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-[#F8FAFC] dark:hover:bg-[#1F2A44]"
+                          >
+                            <FileText size={16} className="text-[#4F46E5]" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold truncate">{doc.title}</p>
+                              <p className="text-[10px] text-[#64748B] uppercase">{doc.subject} • Module {doc.module_id || "N/A"} • {doc.category}</p>
+                            </div>
+                          </Link>
+                        ))}
+                        {globalSearchResults.length === 0 && (
+                          <p className="p-4 text-xs text-center text-[#64748B]">No matching documents found.</p>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>

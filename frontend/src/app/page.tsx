@@ -49,13 +49,15 @@ export default function SubjectDirectory() {
 
   useEffect(() => {
     const fetchCounts = async () => {
-      const { data } = await supabase.from('documents').select('subject').eq('status', 'approved');
-      if (data) {
+      // Calls the new highly efficient Postgres RPC
+      const { data, error } = await supabase.rpc('get_subject_counts');
+      
+      if (data && !error) {
         const counts: Record<string, number> = {};
-        data.forEach(doc => {
-          const subj = doc.subject?.toUpperCase();
-          if (subj) {
-            counts[subj] = (counts[subj] || 0) + 1;
+        // Data comes back pre-counted: [{ subject: 'MATHS 1', count: 120 }, ...]
+        data.forEach((row: any) => {
+          if (row.subject) {
+            counts[row.subject.toUpperCase()] = Number(row.count);
           }
         });
         setSubjectCounts(counts);

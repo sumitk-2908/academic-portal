@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, trackDocumentStat } from "../lib/api";
+import { supabase, trackDocumentStat, searchDocuments } from "../lib/api";
 import { Upload, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
 
@@ -12,14 +12,15 @@ export default function RecentUploadsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRecent = async () => {
-      setLoading(true);
-      const { data } = await supabase.from('documents').select('*').eq('status', 'approved').order('created_at', { ascending: false }).limit(24);
-      if (data) setDocuments(data);
-      setLoading(false);
-    };
-    fetchRecent();
-  }, []);
+  const fetchRecent = async () => {
+    setLoading(true);
+    // Uses the new API without a search query just to get the latest sorted items
+    const response = await searchDocuments({ limit: 24, sortBy: 'created_at', sortOrder: 'desc' });
+    setDocuments(response.data);
+    setLoading(false);
+  };
+  fetchRecent();
+}, []);
 
   const handleDownload = (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
