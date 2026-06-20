@@ -490,7 +490,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <p className="px-3 pb-2 text-[10px] font-bold uppercase text-[#64748B]">Discovery</p>
                   <div className="rounded-2xl border border-[#E5E7EB] bg-white p-3 space-y-2.5 dark:border-[#1F2A44] dark:bg-[#111827]">
                     <div className="flex items-center gap-2 text-[#4F46E5]"><TrendingUp size={13} /><h3 className="text-[10px] font-extrabold uppercase tracking-wider">Trending Now</h3></div>
-                    {trendingDocs.slice(0, 3).map((doc, idx) => (
+                    {trendingDocs.slice(0, 5).map((doc, idx) => (
                       <Link key={`tr-${doc.id}`} href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="block text-xs group">
                         <p className="truncate font-bold group-hover:text-[#4F46E5]">{idx + 1}. {doc.title}</p>
                       </Link>

@@ -39,7 +39,10 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
         
       if (data) {
         setDocumentMeta(data); 
-        addDocumentToHistory(data);
+        addDocumentToHistory({
+          ...data,
+          accessed_at: new Date().toISOString()
+        });
 
         if (!hasTrackedView.current) {
           hasTrackedView.current = true; 

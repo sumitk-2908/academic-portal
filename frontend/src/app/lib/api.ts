@@ -139,11 +139,20 @@ export const getStudentBookmarks = async (userId?: string) => {
   if (userId) {
     const { data, error } = await supabase
       .from('student_bookmarks')
-      .select('documents(*)')
-      .eq('user_id', userId);
+      // 1. Fetch the bookmark creation timestamp along with the document
+      .select('created_at, documents(*)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
       
     if (!error && data) {
-      cloudBookmarks = data.map((b: any) => b.documents).filter(d => d !== null);
+      cloudBookmarks = data.map((b: any) => {
+        if (!b.documents) return null;
+        return {
+          ...b.documents,
+          // 2. Inject the join table timestamp into the document object
+          bookmarked_at: b.created_at 
+        };
+      }).filter((d: any) => d !== null);
     }
   }
   
@@ -159,7 +168,12 @@ export const getStudentBookmarks = async (userId?: string) => {
     const allBookmarks = [...cloudBookmarks];
     for (const lb of localBookmarks) {
       if (!allBookmarks.find(b => b.id === lb.id)) {
-        allBookmarks.push(lb);
+        // 3. For guest users using local storage, assign today's date 
+        // so new bookmarks float to the top of the timeline
+        allBookmarks.push({
+          ...lb, 
+          bookmarked_at: new Date().toISOString()
+        });
       }
     }
     
@@ -170,7 +184,6 @@ export const getStudentBookmarks = async (userId?: string) => {
     return cloudBookmarks;
   }
 };
-
 // ==========================================
 // --- CLOUD SYNC: HYBRID STUDY HISTORY ---
 // ==========================================
