@@ -137,9 +137,15 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
           <ArrowLeft size={16} /> <span className="hidden sm:inline">Go Back</span><span className="sm:hidden">Back</span>
         </button>
         
-        <p className="text-xs font-extrabold truncate px-4 flex-1 text-center text-[#111827] dark:text-white">
-          {documentMeta.title}
-        </p>
+        <div className="flex-1 flex flex-col items-center justify-center truncate px-4">
+          <p className="text-xs font-extrabold truncate w-full text-center text-[#111827] dark:text-white">
+            {documentMeta.title}
+          </p>
+          {/* NEW UPLOADER DISPLAY */}
+          <p className="text-[10px] font-semibold text-indigo-500 truncate w-full text-center">
+            Uploaded by {documentMeta.uploader_name || 'Anonymous'}
+          </p>
+        </div>
         
         <div className="flex items-center gap-1 sm:gap-2">
           <DropdownMenu.Root>

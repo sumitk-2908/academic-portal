@@ -55,6 +55,7 @@ async def upload_document(
     module_id: str = Form("null"), # Accepts "null" string from frontend for non-module subjects
     subject: str = Form("General"),
     status: str = Form("pending"), # Dynamic status (approved for admin, pending for student)
+    uploader_name: str =Form(None),
     file: UploadFile = File(...),
     user: dict = Depends(verify_token)
 ):
@@ -63,6 +64,14 @@ async def upload_document(
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
     
+    # SAFETY: Strip out the old hack if a cached frontend still sends it
+    if " |By| " in title:
+        parts = title.split(" |By| ")
+        title = parts[0].strip()
+        # Fallback to the extracted name if the frontend didn't pass the new field
+        if not uploader_name and len(parts) > 1:
+            uploader_name = parts[1].strip()
+
     user_id = user.get("id")
     user_email = user.get("email")
 
@@ -145,6 +154,7 @@ async def upload_document(
             "module_id": safe_module_id,
             "subject": subject,
             "uploaded_by": secure_uploaded_by,
+            "uploader_name": uploader_name.strip() if uploader_name else "Anonymous",
             "file_url": public_url,
             "file_size": file_size_mb,
             "page_count": page_count,
