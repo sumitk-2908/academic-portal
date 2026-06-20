@@ -170,7 +170,10 @@ export const getStudentBookmarks = async (userId?: string) => {
   
   try {
     const stored = localStorage.getItem("portal_bookmarks");
-    const localIds = stored ? JSON.parse(stored) : [];
+    const parsed = stored ? JSON.parse(stored) : [];
+    
+    // Extract IDs for Supabase, handling both legacy numbers and new objects
+    const localIds = parsed.map((b: any) => typeof b === 'object' ? b.id : b);
     
     if (!Array.isArray(localIds) || localIds.length === 0) return cloudBookmarks;
     
@@ -180,11 +183,16 @@ export const getStudentBookmarks = async (userId?: string) => {
     const allBookmarks = [...cloudBookmarks];
     for (const lb of localBookmarks) {
       if (!allBookmarks.find(b => b.id === lb.id)) {
-        // Fix: Use the document's creation date instead of a dynamic "NOW" timestamp 
-        // to prevent local bookmarks from permanently pinning to the top of the timeline.
+        
+        // Find the exact storage item to get its real timestamp
+        const localItem = parsed.find((p: any) => (typeof p === 'object' ? p.id : p) === lb.id);
+        const actualDate = (localItem && typeof localItem === 'object' && localItem.bookmarked_at) 
+                            ? localItem.bookmarked_at 
+                            : lb.created_at; // Fallback for old legacy items only
+                            
         allBookmarks.push({
           ...lb, 
-          bookmarked_at: lb.created_at
+          bookmarked_at: actualDate
         });
       }
     }

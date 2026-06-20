@@ -49,7 +49,9 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
         if (roleData?.role === 'admin' && sessionStorage.getItem("admin_portal_auth") === "true") setIsAdmin(true);
       }
 
-      const userBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
+      const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
+      // Extract just the IDs so the UI state remains simple and doesn't break
+      const userBookmarks = rawBookmarks.map((b: any) => typeof b === 'object' ? b.id : b);
       setBookmarks(userBookmarks);
 
       const { data } = await supabase.from('documents')
@@ -66,9 +68,24 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
 
   const toggleBookmark = async (id: number) => {
     const isBookmarked = bookmarks.includes(id);
+    
+    // 1. Update the UI state
     const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
     setBookmarks(nextB);
-    localStorage.setItem("portal_bookmarks", JSON.stringify(nextB));
+    
+    // 2. Update Local Storage to store the exact timestamp
+    const currentStorage = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
+    let newStorage;
+    
+    if (isBookmarked) {
+      // Remove it
+      newStorage = currentStorage.filter((b: any) => (typeof b === 'object' ? b.id : b) !== id);
+    } else {
+      // Add it as an object with the real-time timestamp
+      newStorage = [...currentStorage, { id, bookmarked_at: new Date().toISOString() }];
+    }
+    
+    localStorage.setItem("portal_bookmarks", JSON.stringify(newStorage));
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
