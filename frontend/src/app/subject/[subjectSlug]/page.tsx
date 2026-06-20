@@ -197,8 +197,10 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
                   <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44]">
                     <Download size={12} /> Download
                   </button>
-                  {/* 🔥 FIXED: Only track stats on click, let PDFViewerPage handle the History logic */}
-                  <Link href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => trackDocumentStat(doc.id, 'view')} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl">
+                  <Link 
+                    href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} 
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl"
+                  >
                     <Eye size={12} /> View
                   </Link>
                   <button onClick={() => toggleBookmark(doc.id)} className={`p-2 rounded-xl border ${bookmarks.includes(doc.id) ? "bg-amber-500/10 text-amber-500 border-amber-500/30" : ""}`}>
