@@ -262,27 +262,7 @@ export const getFullStudyHistory = async (userId?: string) => {
 
 export const trackDocumentStat = async (docId: number, type: 'view' | 'download') => {
   try {
-    // 1. Attempt standard RPC increment
     await supabase.rpc('increment_doc_stat', { doc_id: docId, stat_type: type });
-
-    // 2. FAILSAFE: Protect against PostgreSQL's `null + 1 = null` math error
-    const { data } = await supabase.from('document_analytics').select('*').eq('document_id', docId).maybeSingle();
-    
-    if (!data) {
-      // Row doesn't exist, initialize cleanly to avoid null bugs later
-      await supabase.from('document_analytics').insert({
-        document_id: docId,
-        view_count: type === 'view' ? 1 : 0,
-        download_count: type === 'download' ? 1 : 0,
-        last_accessed: new Date().toISOString()
-      });
-    } else if (data.view_count === null || data.download_count === null) {
-      // Row exists but was corrupted with nulls
-      await supabase.from('document_analytics').update({
-        view_count: data.view_count === null ? (type === 'view' ? 1 : 0) : data.view_count,
-        download_count: data.download_count === null ? (type === 'download' ? 1 : 0) : data.download_count
-      }).eq('document_id', docId);
-    }
   } catch (error) {
     console.error("Failed to track analytics:", error);
   }
@@ -445,10 +425,12 @@ export const updateProfilePreferences = async (
 
 export const logStudySession = async (userId: string, documentId: number) => {
   try {
-    const { error } = await supabase.from('study_history').insert({
+    const { error } = await supabase.from('study_history').upsert({
       user_id: userId,
       document_id: documentId,
       accessed_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id, document_id' // CRITICAL: Tells Supabase how to handle the duplicate
     });
     if (error) throw error;
   } catch (error) {
