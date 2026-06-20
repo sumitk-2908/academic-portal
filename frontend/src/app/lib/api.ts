@@ -137,22 +137,34 @@ export const getStudentBookmarks = async (userId?: string) => {
   let cloudBookmarks: any[] = [];
 
   if (userId) {
-    const { data, error } = await supabase
+    // Step 1: Fetch relationship and timestamps (Bypass join failure)
+    const { data: bookmarkData, error: bookmarkError } = await supabase
       .from('student_bookmarks')
-      // 1. Fetch the bookmark creation timestamp along with the document
-      .select('created_at, documents(*)')
+      .select('document_id, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
       
-    if (!error && data) {
-      cloudBookmarks = data.map((b: any) => {
-        if (!b.documents) return null;
-        return {
-          ...b.documents,
-          // 2. Inject the join table timestamp into the document object
-          bookmarked_at: b.created_at 
-        };
-      }).filter((d: any) => d !== null);
+    // Step 2: Manually fetch documents and inject timestamps
+    if (!bookmarkError && bookmarkData && bookmarkData.length > 0) {
+      const docIds = bookmarkData.map(b => b.document_id);
+
+      const { data: docs } = await supabase
+        .from('documents')
+        .select('*')
+        .in('id', docIds)
+        .eq('status', 'approved');
+
+      if (docs) {
+        cloudBookmarks = bookmarkData.map((b: any) => {
+          const doc = docs.find(d => d.id === b.document_id);
+          if (!doc) return null;
+          
+          return {
+            ...doc,
+            bookmarked_at: b.created_at 
+          };
+        }).filter((d: any) => d !== null);
+      }
     }
   }
   
@@ -184,6 +196,7 @@ export const getStudentBookmarks = async (userId?: string) => {
     return cloudBookmarks;
   }
 };
+
 // ==========================================
 // --- CLOUD SYNC: HYBRID STUDY HISTORY ---
 // ==========================================
@@ -192,23 +205,34 @@ export const getRecentStudyActivity = async (userId?: string) => {
   let cloudHistory: any[] = [];
 
   if (userId) {
-    const { data, error } = await supabase
+    // Step 1: Fetch relationship and timestamps (Bypass join failure)
+    const { data: historyData, error: historyError } = await supabase
       .from('study_history')
-      // 1. FIX: Explicitly fetch the interaction timestamp (accessed_at)
-      .select('accessed_at, documents(*)')
+      .select('document_id, accessed_at')
       .eq('user_id', userId)
       .order('accessed_at', { ascending: false })
       .limit(5);
 
-    if (!error && data) {
-      cloudHistory = data.map((h: any) => {
-        if (!h.documents) return null;
-        return {
-          ...h.documents,
-          // 2. FIX: Inject the timestamp into the document object so the Timeline can sort it
-          accessed_at: h.accessed_at 
-        };
-      }).filter((d: any) => d !== null);
+    // Step 2: Manually fetch documents and inject timestamps
+    if (!historyError && historyData && historyData.length > 0) {
+      const docIds = historyData.map(h => h.document_id);
+      
+      const { data: docs } = await supabase
+        .from('documents')
+        .select('*')
+        .in('id', docIds);
+
+      if (docs) {
+        cloudHistory = historyData.map((h: any) => {
+          const doc = docs.find(d => d.id === h.document_id);
+          if (!doc) return null;
+          
+          return {
+            ...doc,
+            accessed_at: h.accessed_at 
+          };
+        }).filter((d: any) => d !== null);
+      }
     }
   }
   
@@ -245,21 +269,34 @@ export const getFullStudyHistory = async (userId?: string) => {
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   if (userId) {
-    const { data, error } = await supabase
+    // BUG 4 FIX: Two-Step fetch. Bypasses Supabase foreign-key relation ambiguity bugs.
+    const { data: historyData, error: historyError } = await supabase
       .from('study_history')
-      .select('accessed_at, documents(*)')
+      .select('document_id, accessed_at')
       .eq('user_id', userId)
       .gte('accessed_at', ninetyDaysAgo.toISOString()) 
       .order('accessed_at', { ascending: false });
 
-    if (!error && data) {
-      cloudHistory = data.map((h: any) => {
-        if (!h.documents) return null;
-        return {
-          ...h.documents,
-          accessed_at: h.accessed_at 
-        };
-      }).filter((d: any) => d !== null);
+    // Step 2: Manually join the documents
+    if (!historyError && historyData && historyData.length > 0) {
+      const docIds = historyData.map(h => h.document_id);
+      
+      const { data: docs } = await supabase
+        .from('documents')
+        .select('*')
+        .in('id', docIds);
+
+      if (docs) {
+        cloudHistory = historyData.map((h: any) => {
+          const doc = docs.find(d => d.id === h.document_id);
+          if (!doc) return null;
+          
+          return {
+            ...doc,
+            accessed_at: h.accessed_at // Inject the correct timestamp
+          };
+        }).filter((d: any) => d !== null);
+      }
     }
   }
   
