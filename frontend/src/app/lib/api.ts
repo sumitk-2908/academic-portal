@@ -194,13 +194,21 @@ export const getRecentStudyActivity = async (userId?: string) => {
   if (userId) {
     const { data, error } = await supabase
       .from('study_history')
-      .select('documents(*)')
+      // 1. FIX: Explicitly fetch the interaction timestamp (accessed_at)
+      .select('accessed_at, documents(*)')
       .eq('user_id', userId)
       .order('accessed_at', { ascending: false })
       .limit(5);
 
     if (!error && data) {
-      cloudHistory = data.map((h: any) => h.documents).filter(d => d !== null);
+      cloudHistory = data.map((h: any) => {
+        if (!h.documents) return null;
+        return {
+          ...h.documents,
+          // 2. FIX: Inject the timestamp into the document object so the Timeline can sort it
+          accessed_at: h.accessed_at 
+        };
+      }).filter((d: any) => d !== null);
     }
   }
   
@@ -214,7 +222,11 @@ export const getRecentStudyActivity = async (userId?: string) => {
     const combined = [...cloudHistory];
     for (const lh of localHistory) {
        if (!combined.find(h => h.id === lh.id)) {
-         combined.push(lh);
+         // 3. FIX: Ensure legacy local storage items don't break the chronological sort
+         combined.push({
+           ...lh,
+           accessed_at: lh.accessed_at || new Date().toISOString()
+         });
        }
     }
     
@@ -261,7 +273,10 @@ export const getFullStudyHistory = async (userId?: string) => {
     const combined = [...cloudHistory];
     for (const lh of localHistory) {
        if (!combined.find(h => h.id === lh.id)) {
-         combined.push(lh);
+         combined.push({
+           ...lh,
+           accessed_at: lh.accessed_at || new Date().toISOString()
+         });
        }
     }
     return combined;
