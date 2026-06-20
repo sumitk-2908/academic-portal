@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { supabase, trackDocumentStat, deleteDocument, searchDocuments } from "../../lib/api";
+import { supabase, trackDocumentStat, deleteDocument, searchDocuments, getModulesBySubject, Subject, Module } from "../../lib/api";
 import { Layers, Bookmark, NotebookPen, FileQuestion, ListChecks, Download, Eye, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 
@@ -31,8 +31,12 @@ const getTimeAgo = (dateStr: string) => {
 
 export default function SubjectPage({ params }: { params: Promise<{ subjectSlug: string }> }) {
   const { subjectSlug } = use(params);
-  const subjectName = subjectSlug.replace(/-/g, ' ').toUpperCase();
 
+  // --- NEW STATE DEFINITIONS ---
+  const [subjectDetails, setSubjectDetails] = useState<Subject | null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
+
+  // --- EXISTING STATE ---
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -41,58 +45,86 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [moduleCounts, setModuleCounts] = useState<Record<number, number>>({});
 
-  const isNonModuleSubject = ["WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS"].includes(subjectName) || subjectName.endsWith("LAB");
-
+  // 1. Initial Load: Fetch User Context & Database Subject Details
   useEffect(() => {
-  const fetchTabData = async () => {
-    setLoading(true);
-    
-    if (activeTab === "bookmarks") {
-      // Fetch specifically by bookmarked IDs
-      if (bookmarks.length > 0) {
-        const { data } = await supabase.from('documents').select('*').in('id', bookmarks);
-        setDocuments(data || []);
-      } else {
-        setDocuments([]);
-      }
-    } else {
-      // Normal server-side fetch for notes, pyqs, syllabus, dashboard
-      const response = await searchDocuments({
-         subject: subjectName,
-         category: activeTab !== 'dashboard' ? activeTab : undefined,
-         limit: 50 
-      });
-      setDocuments(response.data);
-    }
-    
-    setLoading(false);
-  }
-  
-  fetchTabData();
-}, [subjectName, activeTab, bookmarks]);
-  
-
-  useEffect(() => {
-    const loadWorkspaceContext = async () => {
+    const initPageContext = async () => {
       setLoading(true);
+      
+      // Load Auth & Bookmarks
       const { data: sess } = await supabase.auth.getSession();
       if (sess?.session?.user) {
         setUserId(sess.session.user.id);
         const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', sess.session.user.id).single();
-        // SECURE MFA CHECK
         if (roleData?.role === 'admin' && sessionStorage.getItem("admin_portal_auth") === "true") setIsAdmin(true);
       }
       
       const userBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
       setBookmarks(userBookmarks);
 
-      const { data: docs } = await supabase.from('documents').select('*').ilike('subject', subjectName).eq('status', 'approved');
-      if (docs) setDocuments(docs);
+      // Fetch Exact Subject via DB Slug (Replaces String Parsing)
+      const { data: dbSubject, error } = await supabase
+        .from('subjects')
+        .select('*')
+        .eq('slug', subjectSlug)
+        .single();
+
+      if (dbSubject) {
+        setSubjectDetails(dbSubject);
+        
+        // Fetch DB Modules + Counts if applicable
+        if (!dbSubject.is_non_module) {
+          const dbModules = await getModulesBySubject(dbSubject.id);
+          setModules(dbModules);
+
+          const { data: countData } = await supabase
+            .from('documents')
+            .select('module_id')
+            .eq('subject', dbSubject.name)
+            .eq('status', 'approved');
+
+          if (countData) {
+            const counts: Record<number, number> = {};
+            countData.forEach(doc => {
+              if (doc.module_id) counts[doc.module_id] = (counts[doc.module_id] || 0) + 1;
+            });
+            setModuleCounts(counts);
+          }
+        }
+      }
       setLoading(false);
     };
 
-    loadWorkspaceContext();
-  }, [subjectName]);
+    initPageContext();
+  }, [subjectSlug]);
+
+  // 2. Secondary Load: Fetch Tab Data once Subject Details are known
+  useEffect(() => {
+    const fetchTabData = async () => {
+      if (!subjectDetails) return; // Wait until subject is resolved
+      
+      setLoading(true);
+      
+      if (activeTab === "bookmarks") {
+        if (bookmarks.length > 0) {
+          const { data } = await supabase.from('documents').select('*').in('id', bookmarks).eq('status', 'approved');
+          setDocuments(data || []);
+        } else {
+          setDocuments([]);
+        }
+      } else {
+        const response = await searchDocuments({
+           subject: subjectDetails.name, // Safe DB name reference
+           category: activeTab !== 'dashboard' ? activeTab : undefined,
+           limit: 50 
+        });
+        setDocuments(response.data);
+      }
+      
+      setLoading(false);
+    }
+    
+    fetchTabData();
+  }, [subjectDetails, activeTab, bookmarks]);
 
   const toggleBookmark = async (id: number) => {
     const isBookmarked = bookmarks.includes(id);
@@ -124,36 +156,13 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
-  // Fetches a lightweight array of just module IDs to accurately count them
-  useEffect(() => {
-    const fetchModuleCounts = async () => {
-      const { data } = await supabase
-        .from('documents')
-        .select('module_id')
-        .ilike('subject', subjectName)
-        .eq('status', 'approved');
-
-      if (data) {
-        const counts: Record<number, number> = {};
-        data.forEach(doc => {
-          if (doc.module_id) {
-            counts[doc.module_id] = (counts[doc.module_id] || 0) + 1;
-          }
-        });
-        setModuleCounts(counts);
-      }
-    };
-    
-    if (!isNonModuleSubject) {
-      fetchModuleCounts();
-    }
-  }, [subjectName, isNonModuleSubject]);
-  
+  // Fallback string for UI to prevent flicker before DB loads
+  const displayTitle = subjectDetails?.name || subjectSlug.replace(/-/g, ' ').toUpperCase();
 
   return (
     <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
       <div className="rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]">
-        <h1 className="text-xl font-extrabold sm:text-3xl">{subjectName}</h1>
+        <h1 className="text-xl font-extrabold sm:text-3xl">{displayTitle}</h1>
         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">Core Subject Curricular Interface</p>
       </div>
 
@@ -173,16 +182,17 @@ export default function SubjectPage({ params }: { params: Promise<{ subjectSlug:
         ))}
       </div>
 
-      {activeTab === "dashboard" && !isNonModuleSubject ? (
+      {activeTab === "dashboard" && !subjectDetails?.is_non_module ? (
         <div className="space-y-4">
           <h2 className="text-xs font-extrabold uppercase text-[#64748B] tracking-wider">Course Modules</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {[1, 2, 3, 4, 5].map(num => {
-              const count = moduleCounts[num] || 0;
+            {/* Fully mapped dynamic DB Modules replacing the hardcoded array */}
+            {modules.map(mod => {
+              const count = moduleCounts[mod.module_number] || 0;
               return (
-                <Link key={num} href={`/subject/${subjectSlug}/module-${num}`} className="group rounded-2xl border border-[#E5E7EB] bg-[#FAFAF9] p-5 text-center transition-all hover:-translate-y-1 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#0B1020]">
+                <Link key={mod.id} href={`/subject/${subjectSlug}/module-${mod.module_number}`} className="group rounded-2xl border border-[#E5E7EB] bg-[#FAFAF9] p-5 text-center transition-all hover:-translate-y-1 hover:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#0B1020]">
                   <Layers size={18} className="mx-auto text-[#64748B] group-hover:text-[#4F46E5] mb-2" />
-                  <p className="text-xs font-bold">Module {num}</p>
+                  <p className="text-xs font-bold">{mod.name || `Module ${mod.module_number}`}</p>
                   <p className="text-[10px] text-[#64748B] mt-1">{count} items indexed</p>
                 </Link>
               );

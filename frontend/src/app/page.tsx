@@ -2,59 +2,29 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { supabase } from "./lib/api";
-import { 
-  Calculator, 
-  Atom, 
-  Terminal, 
-  Leaf, 
-  Wrench, 
-  Beaker, 
-  Zap, 
-  PenTool, 
-  BookOpen, 
-  MessageSquare, 
-  Globe, 
-  Users 
-} from "lucide-react";
-
-const SUBJECTS = [
-  { name: "MATHS 1", slug: "maths-1", icon: Calculator, color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-400/20", hoverBg: "group-hover:bg-blue-500 dark:group-hover:bg-blue-400" },
-  { name: "MATHS 2", slug: "maths-2", icon: Calculator, color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-400/20", hoverBg: "group-hover:bg-blue-500 dark:group-hover:bg-blue-400" },
-  { name: "PHYSICS", slug: "physics", icon: Atom, color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-400/20", hoverBg: "group-hover:bg-amber-500 dark:group-hover:bg-amber-400" },
-  { name: "BEE", slug: "bee", icon: Zap, color: "text-yellow-500 dark:text-yellow-400", bg: "bg-yellow-500/10 dark:bg-yellow-400/20", hoverBg: "group-hover:bg-yellow-500 dark:group-hover:bg-yellow-400" },
-  { name: "PPS", slug: "pps", icon: Terminal, color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-500/10 dark:bg-indigo-400/20", hoverBg: "group-hover:bg-indigo-500 dark:group-hover:bg-indigo-400" },
-  { name: "BIOLOGY", slug: "biology", icon: Leaf, color: "text-green-500 dark:text-green-400", bg: "bg-green-500/10 dark:bg-green-400/20", hoverBg: "group-hover:bg-green-500 dark:group-hover:bg-green-400" },
-  { name: "WORKSHOP", slug: "workshop", icon: Wrench, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-500/10 dark:bg-orange-400/20", hoverBg: "group-hover:bg-orange-500 dark:group-hover:bg-orange-400" },
-  { name: "PHYSICS LAB", slug: "physics-lab", icon: Beaker, color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-400/20", hoverBg: "group-hover:bg-amber-500 dark:group-hover:bg-amber-400" },
-  { name: "CHEMISTRY", slug: "chemistry", icon: Beaker, color: "text-teal-500 dark:text-teal-400", bg: "bg-teal-500/10 dark:bg-teal-400/20", hoverBg: "group-hover:bg-teal-500 dark:group-hover:bg-teal-400" },
-  { name: "ENGINEERING GRAPHICS", slug: "engineering-graphics", icon: PenTool, color: "text-purple-500 dark:text-purple-400", bg: "bg-purple-500/10 dark:bg-purple-400/20", hoverBg: "group-hover:bg-purple-500 dark:group-hover:bg-purple-400" },
-  { name: "BE", slug: "be", icon: BookOpen, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-400/20", hoverBg: "group-hover:bg-rose-500 dark:group-hover:bg-rose-400" },
-  { name: "BME", slug: "bme", icon: Wrench, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-500/10 dark:bg-orange-400/20", hoverBg: "group-hover:bg-orange-500 dark:group-hover:bg-orange-400" },
-  { name: "COMMUNICATION SKILLS", slug: "communication-skills", icon: MessageSquare, color: "text-pink-500 dark:text-pink-400", bg: "bg-pink-500/10 dark:bg-pink-400/20", hoverBg: "group-hover:bg-pink-500 dark:group-hover:bg-pink-400" },
-  { name: "ENVIRONMENTAL SCIENCE", slug: "environmental-science", icon: Globe, color: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-400/20", hoverBg: "group-hover:bg-emerald-500 dark:group-hover:bg-emerald-400" },
-  { name: "NSS", slug: "nss", icon: Users, color: "text-red-500 dark:text-red-400", bg: "bg-red-500/10 dark:bg-red-400/20", hoverBg: "group-hover:bg-red-500 dark:group-hover:bg-red-400" },
-  { name: "BEE LAB", slug: "bee-lab", icon: Zap, color: "text-yellow-500 dark:text-yellow-400", bg: "bg-yellow-500/10 dark:bg-yellow-400/20", hoverBg: "group-hover:bg-yellow-500 dark:group-hover:bg-yellow-400" },
-  { name: "CHEMISTRY LAB", slug: "chemistry-lab", icon: Beaker, color: "text-teal-500 dark:text-teal-400", bg: "bg-teal-500/10 dark:bg-teal-400/20", hoverBg: "group-hover:bg-teal-500 dark:group-hover:bg-teal-400" },
-  { name: "BE LAB", slug: "be-lab", icon: BookOpen, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-400/20", hoverBg: "group-hover:bg-rose-500 dark:group-hover:bg-rose-400" }
-];
+import { supabase, getSubjects, Subject } from "./lib/api";
+import { SUBJECT_UI_MAP } from "./lib/subject-config";
 
 export default function SubjectDirectory() {
   const [selectedSubject, setSelectedSubject] = useState("All");
   const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({});
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   
-  // --- ACCESSIBILITY STATE: Roving Index ---
   const [activeIndex, setActiveIndex] = useState(0);
   const elementsRef = useRef<(HTMLAnchorElement | null)[]>([]);
 
   useEffect(() => {
-    const fetchCounts = async () => {
-      // Calls the new highly efficient Postgres RPC
-      const { data, error } = await supabase.rpc('get_subject_counts');
+    const loadData = async () => {
+      try {
+        const dbSubjects = await getSubjects();
+        setSubjects(dbSubjects);
+      } catch (e) {
+        console.error("Failed to load subjects", e);
+      }
       
+      const { data, error } = await supabase.rpc('get_subject_counts');
       if (data && !error) {
         const counts: Record<string, number> = {};
-        // Data comes back pre-counted: [{ subject: 'MATHS 1', count: 120 }, ...]
         data.forEach((row: any) => {
           if (row.subject) {
             counts[row.subject.toUpperCase()] = Number(row.count);
@@ -63,45 +33,27 @@ export default function SubjectDirectory() {
         setSubjectCounts(counts);
       }
     };
-    fetchCounts();
+    loadData();
   }, []);
 
   const filteredSubjects = selectedSubject === "All" 
-    ? SUBJECTS 
-    : SUBJECTS.filter(sub => sub.name === selectedSubject);
+    ? subjects 
+    : subjects.filter(sub => sub.name === selectedSubject);
 
-  // --- ACCESSIBILITY RESET ---
-  // Reset the active index to 0 if the user filters the list
   useEffect(() => {
     setActiveIndex(0);
     elementsRef.current = elementsRef.current.slice(0, filteredSubjects.length);
   }, [selectedSubject, filteredSubjects.length]);
 
-  // --- ACCESSIBILITY HANDLER: Keyboard Navigation ---
   const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
     const totalItems = filteredSubjects.length;
     if (totalItems === 0) return;
-
     let newIndex = index;
-
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      newIndex = (index + 1) % totalItems;
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      newIndex = (index - 1 + totalItems) % totalItems;
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      newIndex = 0;
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      newIndex = totalItems - 1;
-    }
-
-    if (newIndex !== index) {
-      setActiveIndex(newIndex);
-      elementsRef.current[newIndex]?.focus();
-    }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); newIndex = (index + 1) % totalItems; }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); newIndex = (index - 1 + totalItems) % totalItems; }
+    else if (e.key === 'Home') { e.preventDefault(); newIndex = 0; }
+    else if (e.key === 'End') { e.preventDefault(); newIndex = totalItems - 1; }
+    if (newIndex !== index) { setActiveIndex(newIndex); elementsRef.current[newIndex]?.focus(); }
   };
 
   return (
@@ -121,7 +73,7 @@ export default function SubjectDirectory() {
             className="w-full max-w-xs cursor-pointer rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#111827] shadow-sm outline-none transition-colors focus:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827] dark:text-white sm:max-w-sm"
           >
             <option value="All">All Subjects</option>
-            {SUBJECTS.map((sub) => (
+            {subjects.map((sub) => (
               <option key={`filter-${sub.slug}`} value={sub.name}>
                 {sub.name}
               </option>
@@ -130,32 +82,23 @@ export default function SubjectDirectory() {
         </div>
       </section>
 
-      {/* Added role="grid" to the container */}
-      <div 
-        role="grid" 
-        aria-label="Subjects Grid"
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 sm:px-0"
-      >
+      <div role="grid" aria-label="Subjects Grid" className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 sm:px-0">
         {filteredSubjects.map((sub, index) => {
-          const Icon = sub.icon || BookOpen;
+          // Look up the visual styling from our config file based on the slug from the database
+          const ui = SUBJECT_UI_MAP[sub.slug] || SUBJECT_UI_MAP["default"];
+          const Icon = ui.icon;
           
           return (
             <Link 
               key={sub.slug} 
               href={`/subject/${sub.slug}`}
-              
-              // --- NEW ACCESSIBILITY PROPS ---
               role="gridcell"
-              ref={(el) => {
-                if (el) elementsRef.current[index] = el;
-              }}
+              ref={(el) => { if (el) elementsRef.current[index] = el; }}
               tabIndex={activeIndex === index ? 0 : -1}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              // -------------------------------
-
               className="group flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center transition-all hover:-translate-y-1 hover:border-indigo-400 hover:shadow-md dark:border-[#1F2A44] dark:bg-[#111827] dark:hover:border-indigo-400/60 dark:hover:bg-[#161f33]"
             >
-              <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${sub.bg || 'bg-[#4F46E5]/10'} ${sub.color || 'text-[#4F46E5]'} transition-transform group-hover:scale-110 ${sub.hoverBg || 'group-hover:bg-[#4F46E5]'} group-hover:text-white`}>
+              <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${ui.bg} ${ui.color} transition-transform group-hover:scale-110 ${ui.hoverBg} group-hover:text-white`}>
                 <Icon size={24} />
               </div>
               <h2 className="text-xs font-bold tracking-tight text-[#111827] dark:text-white">{sub.name}</h2>
@@ -165,6 +108,9 @@ export default function SubjectDirectory() {
             </Link>
           );
         })}
+        {subjects.length === 0 && (
+           <p className="col-span-full text-center py-12 text-sm text-[#64748B]">Loading subjects...</p>
+        )}
       </div>
     </div>
   );
