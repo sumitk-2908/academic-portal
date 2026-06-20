@@ -81,17 +81,34 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
 
   // ROBUST DOWNLOAD HANDLER: Forces asynchronous tracking completion
   const handleDownloadClick = async (e: React.MouseEvent) => {
-    if (!documentMeta) return;
-    
-    // Await tracking to ensure browser doesn't kill the request while opening a new tab
+  e.preventDefault(); // Stop the tab from opening immediately
+  console.log("🚨 1. Button clicked! Document ID:", documentMeta?.id);
+  
+  if (!documentMeta) return;
+  
+  try {
+    console.log("🚨 2. Attempting to track download stat...");
     await trackDocumentStat(documentMeta.id, 'download');
+    console.log("🚨 3. trackDocumentStat finished executing.");
     
     const { data: sess } = await supabase.auth.getSession();
+    console.log("🚨 4. Auth Check - User ID is:", sess?.session?.user?.id);
+    
     if (sess?.session?.user?.id) {
+      console.log("🚨 5. User is authenticated. Logging study session...");
       await logStudySession(sess.session.user.id, documentMeta.id);
+      console.log("🚨 6. logStudySession finished.");
       await triggerStreakUpdate(sess.session.user.id);
+    } else {
+      console.error("🛑 AUTHENTICATION FAILED: User ID is missing. Skipping study_history insert.");
     }
-  };
+  } catch (error) {
+    console.error("🛑 FATAL ERROR in click handler:", error);
+  } finally {
+    console.log("🚨 7. Opening PDF...");
+    window.open(documentMeta.file_url, '_blank');
+  }
+};
 
   if (!documentMeta) {
     return (
