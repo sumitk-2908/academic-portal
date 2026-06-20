@@ -138,8 +138,10 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
                 >
                   <Download size={12} /> Download
                 </button>
-                {/* 🔥 FIXED: Only track stats on click, let PDFViewerPage handle the History logic */}
-                <Link href={`/subject/${subjectSlug}/${moduleSlug}/${doc.id}`} onClick={() => trackDocumentStat(doc.id, 'view')} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4F46E5] py-2 text-[11px] font-bold text-white">
+                <Link 
+                  href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} 
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl"
+                >
                   <Eye size={12} /> View
                 </Link>
                 <button 
