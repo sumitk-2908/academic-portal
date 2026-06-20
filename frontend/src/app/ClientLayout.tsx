@@ -91,11 +91,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [uploadModule, setUploadModule] = useState(1);
 
   const refreshSidebarData = useCallback(async (currentUserId?: string) => {
-    const { data: docs } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
-    if (docs) setAllDocs(docs);
+  // OPTIMIZATION: Fetch only approved docs and strictly the fields needed for the UI dropdown.
+  const { data: docs } = await supabase
+    .from('documents')
+    .select('id, title, subject, category, module_id') 
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false });
+    
+  if (docs) setAllDocs(docs);
 
-    getTrendingDocuments().then(setTrendingDocs);
-  }, []);
+  getTrendingDocuments().then(setTrendingDocs);
+}, []);
 
   const syncUserFromSession = useCallback(async (session: Session | null) => {
     if (session?.user) {
@@ -317,7 +323,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const queryTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
 
     return allDocs.filter(doc => {
-      if (doc.status !== 'approved') return false;
 
       const searchableText = [
         doc.title,

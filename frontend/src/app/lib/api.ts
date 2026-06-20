@@ -38,6 +38,7 @@ export const getDocumentsByModule = async (moduleId: number) => {
     .from('documents')
     .select('*')
     .eq('module_id', moduleId)
+    .eq('status', 'approved')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -48,7 +49,11 @@ export const getDocumentsByModule = async (moduleId: number) => {
 };
 
 export const searchDocuments = async (query: string) => {
-  let dbQuery = supabase.from('documents').select('*').order('created_at', { ascending: false });
+  let dbQuery = supabase
+  .from('documents')
+  .select('*')
+  .eq('status', 'approved')
+  .order('created_at', { ascending: false });
 
   if (query && query.trim() !== "") {
     dbQuery = dbQuery.ilike('title', `%${query}%`);
