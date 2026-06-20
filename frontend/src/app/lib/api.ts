@@ -286,14 +286,15 @@ export const getTrendingDocuments = async () => {
       .from('document_analytics')
       .select(`
         view_count,
-        documents!document_analytics_document_id_fkey(id, title, category, file_url, uploaded_by, created_at, module_id, subject, status)
+        documents:documents!document_analytics_document_id_fkey(id, title, category, file_url, uploaded_by, created_at, module_id, subject, status)
       `)
+      // Ensure null view counts don't overtake the trending top 5
+      .not('view_count', 'is', null) 
       .order('view_count', { ascending: false })
       .limit(5);
 
     if (error) throw error;
 
-    // FIX: Safely unwrap the array if Supabase returns one, and inject the view_count
     return (data || [])
       .map((d: any) => {
         const doc = Array.isArray(d.documents) ? d.documents[0] : d.documents;
@@ -303,9 +304,9 @@ export const getTrendingDocuments = async () => {
       .filter((doc: any) => doc !== null && doc.status === 'approved');
       
   } catch (error) {
-    console.error("Failed to fetch global trending:", error);
+    console.error('Error fetching trending documents:', error);
     return [];
-  }
+  }  
 };
 
 // --- CROWDSOURCING / APPROVALS ---
@@ -354,12 +355,11 @@ export const getAchievements = async (userId: string) => {
 };
 
 export const getEnhancedContributions = async (userId: string) => {
-  // Fetch uploads AND join with analytics to get view/download counts
   const { data, error } = await supabase
     .from('documents')
     .select(`
       *,
-      document_analytics!document_analytics_document_id_fkey ( view_count, download_count )
+      document_analytics:document_analytics!document_analytics_document_id_fkey ( view_count, download_count )
     `)
     .eq('uploaded_by', userId)
     .order('created_at', { ascending: false });

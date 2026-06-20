@@ -11,7 +11,7 @@ import {
   Share2,
   Link as LinkIcon,
   Check,
-  Maximize // <-- Imported the Maximize icon for the [ ] look
+  Maximize 
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase, trackDocumentStat, logStudySession, triggerStreakUpdate } from "../../../../lib/api"; 
@@ -106,6 +106,19 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
     window.open(`https://api.whatsapp.com/send?text=${text}${url}`, "_blank");
   };
 
+  // --- NEW: DOWNLOAD TRACKING HANDLER ---
+  const handleDownloadClick = async () => {
+    if (!documentMeta) return;
+    
+    trackDocumentStat(documentMeta.id, 'download');
+    
+    const { data: sess } = await supabase.auth.getSession();
+    if (sess?.session?.user?.id) {
+      await logStudySession(sess.session.user.id, documentMeta.id);
+      triggerStreakUpdate(sess.session.user.id);
+    }
+  };
+
   if (!documentMeta) {
     return (
       <div className="flex h-[60vh] w-full items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]">
@@ -166,14 +179,14 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
 
-          {/* FULLSCREEN BUTTON */}
+          {/* FULLSCREEN BUTTON WITH DOWNLOAD TRACKING */}
           <a 
             href={documentMeta.file_url} 
             target="_blank" 
             rel="noopener noreferrer"
+            onClick={handleDownloadClick}
             className="flex items-center gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-[#4F46E5] transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
           >
-             {/* Text shows on desktop, icon shows on both */}
              <span className="hidden sm:inline">FullScreen</span> <Maximize size={14} />
           </a>
         </div>
