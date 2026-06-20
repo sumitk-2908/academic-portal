@@ -265,19 +265,19 @@ export const getRecentStudyActivity = async (userId?: string) => {
 export const getFullStudyHistory = async (userId?: string) => {
   let cloudHistory: any[] = [];
 
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  
+  const currentYear = new Date().getFullYear();
+  const fetchStartDate = new Date(currentYear, 0, 1);
 
   if (userId) {
-    // BUG 4 FIX: Two-Step fetch. Bypasses Supabase foreign-key relation ambiguity bugs.
     const { data: historyData, error: historyError } = await supabase
       .from('study_history')
       .select('document_id, accessed_at')
       .eq('user_id', userId)
-      .gte('accessed_at', ninetyDaysAgo.toISOString()) 
+      .gte('accessed_at', fetchStartDate.toISOString()) 
       .order('accessed_at', { ascending: false });
 
-    // Step 2: Manually join the documents
+    
     if (!historyError && historyData && historyData.length > 0) {
       const docIds = historyData.map(h => h.document_id);
       
@@ -293,7 +293,7 @@ export const getFullStudyHistory = async (userId?: string) => {
           
           return {
             ...doc,
-            accessed_at: h.accessed_at // Inject the correct timestamp
+            accessed_at: h.accessed_at 
           };
         }).filter((d: any) => d !== null);
       }
