@@ -180,11 +180,11 @@ export const getStudentBookmarks = async (userId?: string) => {
     const allBookmarks = [...cloudBookmarks];
     for (const lb of localBookmarks) {
       if (!allBookmarks.find(b => b.id === lb.id)) {
-        // 3. For guest users using local storage, assign today's date 
-        // so new bookmarks float to the top of the timeline
+        // Fix: Use the document's creation date instead of a dynamic "NOW" timestamp 
+        // to prevent local bookmarks from permanently pinning to the top of the timeline.
         allBookmarks.push({
           ...lb, 
-          bookmarked_at: new Date().toISOString()
+          bookmarked_at: lb.created_at
         });
       }
     }
@@ -249,7 +249,7 @@ export const getRecentStudyActivity = async (userId?: string) => {
          // 3. FIX: Ensure legacy local storage items don't break the chronological sort
          combined.push({
            ...lh,
-           accessed_at: lh.accessed_at || new Date().toISOString()
+           accessed_at: lh.accessed_at || lh.created_at
          });
        }
     }
@@ -312,7 +312,7 @@ export const getFullStudyHistory = async (userId?: string) => {
        if (!combined.find(h => h.id === lh.id)) {
          combined.push({
            ...lh,
-           accessed_at: lh.accessed_at || new Date().toISOString()
+           accessed_at: lh.accessed_at || lh.created_at
          });
        }
     }
