@@ -3,7 +3,8 @@
 import { use, useEffect, useState, useRef } from "react";
 import { 
   ArrowLeft, Loader2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
-  Share2, Link as LinkIcon, Check, Maximize 
+  Share2, Link as LinkIcon, Check, Maximize,
+  ThumbsUp, ThumbsDown, Flag, X 
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase, trackDocumentStat, logStudySession, triggerStreakUpdate } from "../../../../lib/api"; 
@@ -32,6 +33,75 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
 
   const hasTrackedView = useRef(false);
   const isDownloading = useRef(false);
+
+  // --- NEW: Quality System State ---
+  const [userRating, setUserRating] = useState<boolean | null>(null);
+  const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState('incorrect');
+  const [flagDescription, setFlagDescription] = useState('');
+  const [isSubmittingQuality, setIsSubmittingQuality] = useState(false);
+
+  // --- NEW: Quality System Handlers ---
+  const handleRateDocument = async (isUseful: boolean) => {
+    // Optimistic UI update
+    setUserRating(isUseful);
+    
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess?.session?.user?.id) return alert("Please log in to rate.");
+
+      // Upsert the rating (Supabase will handle the ON CONFLICT if you set it up, 
+      // otherwise we just use standard insert/update logic)
+      const { error } = await supabase
+        .from('document_ratings')
+        .upsert(
+          { document_id: Number(pdfId), user_id: sess.session.user.id, is_useful: isUseful },
+          { onConflict: 'document_id,user_id' } 
+        );
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Failed to rate document:", error);
+      setUserRating(null); // Revert on failure
+    }
+  };
+
+  const handleSubmitFlag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingQuality(true);
+    
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess?.session?.user?.id) {
+        alert("Please log in to flag content.");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('document_flags')
+        .insert({
+          document_id: Number(pdfId),
+          user_id: sess.session.user.id,
+          reason: flagReason,
+          description: flagDescription
+        });
+
+      if (error && error.code === '23505') {
+        alert("You have already flagged this document for this reason.");
+      } else if (error) {
+        throw error;
+      } else {
+        alert("Thank you! Your report has been submitted to the admins.");
+        setIsFlagModalOpen(false);
+        setFlagDescription('');
+      }
+    } catch (error) {
+      console.error("Failed to flag document:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmittingQuality(false);
+    }
+  };
 
   useEffect(() => {
     const fetchPdf = async () => {
@@ -148,6 +218,33 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
         </div>
         
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* --- NEW: Rating Controls --- */}
+          <div className="hidden sm:flex items-center gap-1 mr-2 border-r border-gray-200 dark:border-gray-700 pr-3">
+            <button 
+              onClick={() => handleRateDocument(true)}
+              className={`p-1.5 rounded-lg transition-colors ${userRating === true ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+              title="This is useful"
+            >
+              <ThumbsUp size={16} className={userRating === true ? 'fill-current' : ''} />
+            </button>
+            <button 
+              onClick={() => handleRateDocument(false)}
+              className={`p-1.5 rounded-lg transition-colors ${userRating === false ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+              title="This is not useful"
+            >
+              <ThumbsDown size={16} className={userRating === false ? 'fill-current' : ''} />
+            </button>
+          </div>
+
+          {/* --- NEW: Flag Button --- */}
+          <button 
+            onClick={() => setIsFlagModalOpen(true)}
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 mr-1"
+            title="Report an issue"
+          >
+            <Flag size={16} />
+          </button> 
+
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button className="flex items-center gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-gray-600 transition-colors hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800">
@@ -204,6 +301,65 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
           )}
         </Document>
       </div>
+      {/* --- NEW: Flag Modal Overlay --- */}
+      {isFlagModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Flag size={16} className="text-red-500" /> Report Issue
+              </h3>
+              <button onClick={() => setIsFlagModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitFlag} className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Issue Type</label>
+                <select 
+                  value={flagReason}
+                  onChange={(e) => setFlagReason(e.target.value)}
+                  className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1F2A44] px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#4F46E5] outline-none"
+                >
+                  <option value="incorrect">Incorrect/Outdated Content</option>
+                  <option value="duplicate">Duplicate Document</option>
+                  <option value="low_quality">Poor Quality / Unreadable</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Additional Details (Optional)</label>
+                <textarea 
+                  value={flagDescription}
+                  onChange={(e) => setFlagDescription(e.target.value)}
+                  placeholder="E.g., Page 3 is missing, or this is a duplicate of week 2 notes..."
+                  className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1F2A44] px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#4F46E5] outline-none min-h-[80px] resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setIsFlagModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmittingQuality}
+                  className="px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 rounded-xl transition-colors flex items-center gap-2"
+                >
+                  {isSubmittingQuality ? <Loader2 size={14} className="animate-spin" /> : null}
+                  Submit Report
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

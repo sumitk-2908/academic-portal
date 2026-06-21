@@ -676,7 +676,6 @@ export const getPersonalizedRecommendations = async (userId?: string, limit = 5)
   return combined;
 };
 
-// Add this near the bottom of your API file
 export const getSuggestedNextSteps = async (lastDoc: any, excludeIds: number[] = [], limit = 3) => {
   if (!lastDoc || !lastDoc.subject) return [];
   
@@ -702,4 +701,63 @@ export const getSuggestedNextSteps = async (lastDoc: any, excludeIds: number[] =
     return [];
   }
   return data || [];
+};
+
+// ==========================================
+// --- CONTENT QUALITY / MODERATION ---
+// ==========================================
+
+export const getFlaggedDocuments = async () => {
+  try {
+    // 1. Fetch pending flags
+    const { data: flags, error: flagError } = await supabase
+      .from('document_flags')
+      .select('*')
+      .eq('status', 'pending');
+
+    if (flagError || !flags || flags.length === 0) return [];
+
+    // 2. Group flags by document_id
+    const flagMap = new Map();
+    flags.forEach(flag => {
+      if (!flagMap.has(flag.document_id)) {
+        flagMap.set(flag.document_id, []);
+      }
+      flagMap.get(flag.document_id).push(flag);
+    });
+
+    // 3. Fetch corresponding *approved* documents
+    const docIds = Array.from(flagMap.keys());
+    const { data: docs, error: docError } = await supabase
+      .from('documents')
+      .select('*')
+      .in('id', docIds)
+      .eq('status', 'approved'); // Only show flags for live documents
+
+    if (docError || !docs) return [];
+
+    // 4. Combine document data with its flags
+    return docs.map(doc => ({
+      ...doc,
+      flags: flagMap.get(doc.id)
+    })).sort((a, b) => b.flags.length - a.flags.length); // Sort by highest number of flags
+  } catch (error) {
+    console.error("Failed to fetch flagged documents:", error);
+    return [];
+  }
+};
+
+export const dismissDocumentFlags = async (documentId: number) => {
+  try {
+    const { error } = await supabase
+      .from('document_flags')
+      .update({ status: 'dismissed' })
+      .eq('document_id', documentId)
+      .eq('status', 'pending');
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to dismiss flags:", error);
+    throw error;
+  }
 };
