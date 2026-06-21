@@ -1,11 +1,24 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { supabase, getRecentStudyActivity, trackDocumentStat, getSuggestedNextSteps, getTrendingDocuments } from "../lib/api";
+import { 
+  supabase, 
+  getRecentStudyActivity, 
+  trackDocumentStat, 
+  getSuggestedNextSteps, 
+  getTrendingDocuments,
+  getProfilePreferences 
+} from "../lib/api";
 import { Clock, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+// Added tutorial_sheet to match the doccategory ENUM in database.types.ts
+const CATEGORY_ICONS: Record<string, any> = { 
+  notes: NotebookPen, 
+  pyq: FileQuestion, 
+  syllabus: ListChecks,
+  tutorial_sheet: FileText 
+};
 
 export default function ContinueStudyingPage() {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -19,23 +32,102 @@ export default function ContinueStudyingPage() {
       const { data: sess } = await supabase.auth.getSession();
       const currentUserId = sess?.session?.user?.id;
       
+      // 1. Fetch User History
       const history = await getRecentStudyActivity(currentUserId);
       const safeHistory = Array.isArray(history) ? history : [];
       setDocuments(safeHistory);
+      const historyIds = new Set(safeHistory.map((d: any) => d.id));
 
-      // --- PERSONALIZATION LOGIC ---
-      if (safeHistory.length > 0 && safeHistory.length < 5) {
-        // User has some history, but not a lot. Suggest related items based on their LAST viewed doc.
-        const lastDoc = safeHistory[0];
-        const excludeIds = safeHistory.map(d => d.id);
-        const related = await getSuggestedNextSteps(lastDoc, excludeIds, 3);
-        setSuggestions(related);
-      } else if (safeHistory.length === 0) {
-        // No history at all? Fallback to global trending to avoid an empty screen
-        const trending = await getTrendingDocuments();
-        setSuggestions(trending.slice(0, 3));
+      // 2. Fetch User Profile Preferences (Favorites & Branch)
+      let userFavs: string[] = [];
+      let userBranch: string | null = null;
+      
+      if (currentUserId) {
+        try {
+          const profile = await getProfilePreferences(currentUserId);
+          if (profile?.favorite_subjects) userFavs = profile.favorite_subjects;
+          if (profile?.preferred_branch) userBranch = profile.preferred_branch; // Fixed schema property
+        } catch (e) {
+          console.error("Failed to fetch profile preferences", e);
+        }
       }
 
+      // 3. Build Recommendation Candidate Pools
+      let candidates: any[] = [];
+
+      try {
+        // Pool A: Popular/Trending (Acts as base and fallback)
+        const trending = await getTrendingDocuments();
+        candidates = [...candidates, ...trending.map((d: any) => ({ ...d, recSource: 'trending' }))];
+
+        // Pool B: History-based (Related to last document)
+        if (safeHistory.length > 0) {
+          const lastDoc = safeHistory[0];
+          const related = await getSuggestedNextSteps(lastDoc, Array.from(historyIds), 5);
+          candidates = [...candidates, ...related.map((d: any) => ({ ...d, recSource: 'related' }))];
+        }
+
+        // Pool C: Profile-based (Favorites)
+        if (userFavs.length > 0) {
+          const { data: profileDocs } = await supabase
+            .from('documents')
+            .select('*')
+            .in('subject', userFavs)
+            .eq('status', 'approved')
+            .order('created_at', { ascending: false })
+            .limit(10);
+            
+          if (profileDocs) {
+            candidates = [...candidates, ...profileDocs.map((d: any) => ({ ...d, recSource: 'profile' }))];
+          }
+        }
+      } catch (e) {
+        console.error("Error generating recommendation pools", e);
+      }
+
+      // 4. Intelligent Scoring & Ranking Algorithm
+      const scoredDocs = new Map<number, any>();
+
+      candidates.forEach(doc => {
+        // Exclude items the user has already studied
+        if (historyIds.has(doc.id)) return;
+
+        let score = 0;
+        
+        // Base weights by source
+        if (doc.recSource === 'related') score += 10;
+        if (doc.recSource === 'profile') score += 8;
+        if (doc.recSource === 'trending') score += 4;
+
+        // Contextual Boosts
+        if (userFavs.includes(doc.subject)) score += 5;
+        
+        // Branch match boost (Fuzzy match since documents table lacks a branch column)
+        if (userBranch && (
+          doc.subject?.toLowerCase().includes(userBranch.toLowerCase()) || 
+          doc.title?.toLowerCase().includes(userBranch.toLowerCase())
+        )) {
+          score += 5; 
+        }
+        
+        // Popularity Tie-breaker using correct view_count field
+        const popularityBonus = doc.view_count ? Math.min(doc.view_count / 50, 3) : 0;
+        score += popularityBonus;
+
+        // Deduplication & Score Aggregation
+        if (scoredDocs.has(doc.id)) {
+          scoredDocs.get(doc.id).score += (score * 0.5); 
+        } else {
+          scoredDocs.set(doc.id, { ...doc, score });
+        }
+      });
+
+      // 5. Sort by final score and take top 3
+      const finalRecommendations = Array.from(scoredDocs.values())
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+
+      setSuggestions(finalRecommendations);
       setLoading(false);
     };
 
@@ -44,8 +136,6 @@ export default function ContinueStudyingPage() {
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
-    
-    // NEW: Lock check
     if (downloadingRef.current.has(doc.id)) return;
     downloadingRef.current.add(doc.id);
 
@@ -57,7 +147,6 @@ export default function ContinueStudyingPage() {
       link.click();
       document.body.removeChild(link);
     } finally {
-      // NEW: Unlock after 2 seconds
       setTimeout(() => {
         downloadingRef.current.delete(doc.id);
       }, 2000);
@@ -66,11 +155,25 @@ export default function ContinueStudyingPage() {
 
   const safeDocuments = Array.isArray(documents) ? documents : [];
 
-  // Reusable Document Card Component to keep JSX clean
   const DocumentCard = ({ doc, isSuggestion = false }: { doc: any, isSuggestion?: boolean }) => {
     const Icon = CATEGORY_ICONS[doc?.category] || FileText;
+    
+    let badgeText = "Recommended";
+    if (isSuggestion && doc.score) {
+      if (doc.recSource === 'related') badgeText = "Because you studied this";
+      else if (doc.recSource === 'profile') badgeText = "Based on your favorites";
+      else if (doc.recSource === 'trending') badgeText = "Trending right now";
+    }
+
     return (
       <article className={`group flex flex-col rounded-2xl border ${isSuggestion ? 'border-amber-500/20 bg-amber-500/5 hover:border-amber-500' : 'border-[#E5E7EB] bg-white hover:border-indigo-500'} p-4 shadow-sm transition-all hover:-translate-y-0.5 dark:border-[#1F2A44] dark:bg-[#111827] dark:hover:border-indigo-500`}>
+        
+        {isSuggestion && (
+          <span className="text-[9px] font-bold text-amber-600 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-2 py-0.5 rounded-full mb-3 self-start">
+            {badgeText}
+          </span>
+        )}
+
         <div className="flex items-start justify-between">
           <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${isSuggestion ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-500'}`}>
             <Icon size={16} />
@@ -118,7 +221,7 @@ export default function ContinueStudyingPage() {
         </div>
       </section>
 
-      {/* SUGGESTIONS SECTION (Only shows if there are suggestions) */}
+      {/* SUGGESTIONS SECTION */}
       {!loading && suggestions.length > 0 && (
         <section className="space-y-6 pt-4 border-t border-gray-100 dark:border-gray-800">
            <div className="flex items-center gap-3 px-2">
