@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       degrees: {
         Row: {
           created_at: string | null
@@ -36,19 +57,25 @@ export type Database = {
         Row: {
           document_id: number
           download_count: number | null
+          downvotes: number | null
           last_accessed: string | null
+          upvotes: number | null
           view_count: number | null
         }
         Insert: {
           document_id: number
           download_count?: number | null
+          downvotes?: number | null
           last_accessed?: string | null
+          upvotes?: number | null
           view_count?: number | null
         }
         Update: {
           document_id?: number
           download_count?: number | null
+          downvotes?: number | null
           last_accessed?: string | null
+          upvotes?: number | null
           view_count?: number | null
         }
         Relationships: [
@@ -59,10 +86,73 @@ export type Database = {
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      document_flags: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          document_id: number | null
+          id: string
+          reason: Database["public"]["Enums"]["flag_reason"]
+          status: Database["public"]["Enums"]["flag_status"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          document_id?: number | null
+          id?: string
+          reason: Database["public"]["Enums"]["flag_reason"]
+          status?: Database["public"]["Enums"]["flag_status"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          document_id?: number | null
+          id?: string
+          reason?: Database["public"]["Enums"]["flag_reason"]
+          status?: Database["public"]["Enums"]["flag_status"] | null
+          user_id?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "fk_analytics_doc"
+            foreignKeyName: "document_flags_document_id_fkey"
             columns: ["document_id"]
-            isOneToOne: true
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_ratings: {
+        Row: {
+          created_at: string | null
+          document_id: number | null
+          id: string
+          is_useful: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_id?: number | null
+          id?: string
+          is_useful: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: number | null
+          id?: string
+          is_useful?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_ratings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -74,7 +164,9 @@ export type Database = {
           created_at: string | null
           file_size: number | null
           file_url: string
+          fts: unknown
           id: number
+          moderated_by: string | null
           module_id: number | null
           page_count: number | null
           status: string | null
@@ -89,7 +181,9 @@ export type Database = {
           created_at?: string | null
           file_size?: number | null
           file_url: string
+          fts?: unknown
           id?: number
+          moderated_by?: string | null
           module_id?: number | null
           page_count?: number | null
           status?: string | null
@@ -104,7 +198,9 @@ export type Database = {
           created_at?: string | null
           file_size?: number | null
           file_url?: string
+          fts?: unknown
           id?: number
+          moderated_by?: string | null
           module_id?: number | null
           page_count?: number | null
           status?: string | null
@@ -112,6 +208,24 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           uploaded_by?: string
+          uploader_name?: string | null
+        }
+        Relationships: []
+      }
+      documents_title_backup: {
+        Row: {
+          id: number | null
+          title: string | null
+          uploader_name: string | null
+        }
+        Insert: {
+          id?: number | null
+          title?: string | null
+          uploader_name?: string | null
+        }
+        Update: {
+          id?: number | null
+          title?: string | null
           uploader_name?: string | null
         }
         Relationships: []
@@ -150,44 +264,54 @@ export type Database = {
       }
       notifications: {
         Row: {
+          created_at: string | null
           id: string
-          user_id: string
-          title: string
+          is_read: boolean | null
           message: string
-          type: string
-          is_read: boolean
           related_entity_id: number | null
-          created_at: string
+          title: string
+          type: string
+          user_id: string
         }
         Insert: {
+          created_at?: string | null
           id?: string
-          user_id: string
-          title: string
+          is_read?: boolean | null
           message: string
-          type: string
-          is_read?: boolean
           related_entity_id?: number | null
-          created_at?: string
+          title: string
+          type: string
+          user_id: string
         }
         Update: {
+          created_at?: string | null
           id?: string
-          user_id?: string
-          title?: string
+          is_read?: boolean | null
           message?: string
-          type?: string
-          is_read?: boolean
           related_entity_id?: number | null
-          created_at?: string
+          title?: string
+          type?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_user"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          favorite_subjects: string[] | null
+          id: string
+          preferred_branch: string | null
+        }
+        Insert: {
+          favorite_subjects?: string[] | null
+          id: string
+          preferred_branch?: string | null
+        }
+        Update: {
+          favorite_subjects?: string[] | null
+          id?: string
+          preferred_branch?: string | null
+        }
+        Relationships: []
       }
       semesters: {
         Row: {
@@ -235,13 +359,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_bookmark_doc"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "documents"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "student_bookmarks_document_id_fkey"
             columns: ["document_id"]
@@ -309,6 +426,27 @@ export type Database = {
           },
         ]
       }
+      study_streaks: {
+        Row: {
+          current_streak: number | null
+          last_active_date: string | null
+          longest_streak: number | null
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number | null
+          last_active_date?: string | null
+          longest_streak?: number | null
+          user_id: string
+        }
+        Update: {
+          current_streak?: number | null
+          last_active_date?: string | null
+          longest_streak?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           created_at: string | null
@@ -333,6 +471,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          badge_type: string
+          earned_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          badge_type: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          badge_type?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           role: string
@@ -348,82 +507,28 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
-        Row: {
-          id: string
-          favorite_subjects: string[] | null
-          preferred_branch: string | null
-        }
-        Insert: {
-          id: string
-          favorite_subjects?: string[] | null
-          preferred_branch?: string | null
-        }
-        Update: {
-          id?: string
-          favorite_subjects?: string[] | null
-          preferred_branch?: string | null
-        }
-        Relationships: []
-      }
-      study_streaks: {
-        Row: {
-          user_id: string
-          current_streak: number | null
-          longest_streak: number | null
-          last_active_date: string | null
-        }
-        Insert: {
-          user_id: string
-          current_streak?: number | null
-          longest_streak?: number | null
-          last_active_date?: string | null
-        }
-        Update: {
-          user_id?: string
-          current_streak?: number | null
-          longest_streak?: number | null
-          last_active_date?: string | null
-        }
-        Relationships: []
-      }
-      user_achievements: {
-        Row: {
-          id: string
-          user_id: string | null
-          badge_type: string
-          earned_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          badge_type: string
-          earned_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          badge_type?: string
-          earned_at?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_subject_counts: {
+        Args: never
+        Returns: {
+          count: number
+          subject: string
+        }[]
+      }
       increment_doc_stat: {
         Args: { doc_id: number; stat_type: string }
         Returns: undefined
       }
-      update_study_streak: {
-        Args: { p_user_id: string }
-        Returns: undefined
-      }
+      update_study_streak: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       doccategory: "pyq" | "tutorial_sheet" | "notes" | "syllabus"
+      flag_reason: "incorrect" | "duplicate" | "low_quality" | "other"
+      flag_status: "pending" | "resolved" | "dismissed"
       reviewstatus: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -553,6 +658,8 @@ export const Constants = {
   public: {
     Enums: {
       doccategory: ["pyq", "tutorial_sheet", "notes", "syllabus"],
+      flag_reason: ["incorrect", "duplicate", "low_quality", "other"],
+      flag_status: ["pending", "resolved", "dismissed"],
       reviewstatus: ["pending", "approved", "rejected"],
     },
   },

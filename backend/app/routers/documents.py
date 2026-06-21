@@ -262,13 +262,13 @@ async def update_document_status(
     payload: StatusUpdatePayload, 
     admin_user: dict = Depends(verify_admin)
 ):
-    """Safely updates a document's status after verifying admin privileges."""
+    """Safely updates a document's status without overwriting original authorship."""
     if payload.status not in ["approved", "rejected", "pending"]:
         raise HTTPException(status_code=400, detail="Invalid status value provided.")
 
     try:
-        # 1. Fetch document details before updating to get the uploader and title
-        doc_res = supabase.table("documents").select("uploaded_by, title").eq("id", document_id).execute()
+        # 1. Fetch document details before updating
+        doc_res = supabase.table("documents").select("uploaded_by, title, uploader_name").eq("id", document_id).execute()
         if not doc_res.data:
             raise HTTPException(status_code=404, detail="Document not found.")
             
@@ -276,26 +276,28 @@ async def update_document_status(
         uploader_id = original_doc.get("uploaded_by")
         doc_title = original_doc.get("title", "Your document")
 
-        # --- EXISTING DATA CORRUPTION FIX ---
-        is_valid_uuid = isinstance(uploader_id, str) and re.match(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', uploader_id)
-        if uploader_id and not is_valid_uuid:
-            supabase.table("documents").update({"uploaded_by": admin_user.get("id")}).eq("id", document_id).execute()
+        # 2. Update status and preserve moderation record separately
+        # Requires adding `moderated_by` to the documents table
+        update_payload = {
+            "status": payload.status,
+            "moderated_by": admin_user.get("id"),
+            "updated_at": "now()" # Optional: if you track last modified time
+        }
         
-        # 2. Update the status
-        db_response = supabase.table("documents").update({"status": payload.status}).eq("id", document_id).execute()
+        db_response = supabase.table("documents").update(update_payload).eq("id", document_id).execute()
         
         if not db_response.data:
             raise HTTPException(status_code=404, detail="Document not found.")
 
-        # 3. Trigger Notification Creation (only if we have a valid contributor UUID)
+        # 3. Trigger Notification (Checking if ID is valid enough to receive notifications)
+        is_valid_uuid = isinstance(uploader_id, str) and len(uploader_id) > 10 # Relaxed validation for legacy IDs
+        
         if is_valid_uuid and payload.status in ["approved", "rejected"]:
             title_text = f"Upload {payload.status.capitalize()}"
             message_text = f"Your document '{doc_title}' has been {payload.status}."
-            
             if payload.status == "rejected" and payload.reason:
                 message_text += f" Reason: {payload.reason}"
 
-            # Insert notification record asynchronously
             supabase.table("notifications").insert({
                 "user_id": uploader_id,
                 "title": title_text,
@@ -307,8 +309,6 @@ async def update_document_status(
             
         return {"message": f"Document successfully marked as {payload.status}", "document": db_response.data[0]}
 
-    except HTTPException:
-        raise
     except Exception as e:
         import traceback
         traceback.print_exc()

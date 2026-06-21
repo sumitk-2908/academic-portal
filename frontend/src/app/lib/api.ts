@@ -209,34 +209,19 @@ export const getStudentBookmarks = async (userId?: string) => {
   let cloudBookmarks: any[] = [];
 
   if (userId) {
-    // Step 1: Fetch relationship and timestamps (Bypass join failure)
+    // Clean Relational Join replacing the two-step workaround
     const { data: bookmarkData, error: bookmarkError } = await supabase
       .from('student_bookmarks')
-      .select('document_id, created_at')
+      .select('created_at, documents!inner(*)') 
       .eq('user_id', userId)
+      .eq('documents.status', 'approved')
       .order('created_at', { ascending: false });
       
-    // Step 2: Manually fetch documents and inject timestamps
     if (!bookmarkError && bookmarkData && bookmarkData.length > 0) {
-      const docIds = bookmarkData.map(b => b.document_id);
-
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('*')
-        .in('id', docIds)
-        .eq('status', 'approved');
-
-      if (docs) {
-        cloudBookmarks = bookmarkData.map((b: any) => {
-          const doc = docs.find(d => d.id === b.document_id);
-          if (!doc) return null;
-          
-          return {
-            ...doc,
-            bookmarked_at: b.created_at 
-          };
-        }).filter((d: any) => d !== null);
-      }
+      cloudBookmarks = bookmarkData.map((b: any) => ({
+        ...b.documents,
+        bookmarked_at: b.created_at 
+      }));
     }
   }
   
@@ -285,34 +270,20 @@ export const getRecentStudyActivity = async (userId?: string) => {
   let cloudHistory: any[] = [];
 
   if (userId) {
-    // Step 1: Fetch relationship and timestamps (Bypass join failure)
+    // Clean Relational Join replacing the two-step workaround
     const { data: historyData, error: historyError } = await supabase
       .from('study_history')
-      .select('document_id, accessed_at')
+      .select('accessed_at, documents!inner(*)')
       .eq('user_id', userId)
+      .eq('documents.status', 'approved') // Ensures we don't fetch deleted/rejected docs
       .order('accessed_at', { ascending: false })
       .limit(5);
 
-    // Step 2: Manually fetch documents and inject timestamps
     if (!historyError && historyData && historyData.length > 0) {
-      const docIds = historyData.map(h => h.document_id);
-      
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('*')
-        .in('id', docIds);
-
-      if (docs) {
-        cloudHistory = historyData.map((h: any) => {
-          const doc = docs.find(d => d.id === h.document_id);
-          if (!doc) return null;
-          
-          return {
-            ...doc,
-            accessed_at: h.accessed_at 
-          };
-        }).filter((d: any) => d !== null);
-      }
+      cloudHistory = historyData.map((h: any) => ({
+        ...h.documents,
+        accessed_at: h.accessed_at 
+      }));
     }
   }
   
@@ -350,33 +321,20 @@ export const getFullStudyHistory = async (userId?: string) => {
   const fetchStartDate = new Date(currentYear, 0, 1);
 
   if (userId) {
+    // Clean Relational Join replacing the two-step workaround
     const { data: historyData, error: historyError } = await supabase
       .from('study_history')
-      .select('document_id, accessed_at')
+      .select('accessed_at, documents!inner(*)')
       .eq('user_id', userId)
       .gte('accessed_at', fetchStartDate.toISOString()) 
+      .eq('documents.status', 'approved')
       .order('accessed_at', { ascending: false });
 
-    
     if (!historyError && historyData && historyData.length > 0) {
-      const docIds = historyData.map(h => h.document_id);
-      
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('*')
-        .in('id', docIds);
-
-      if (docs) {
-        cloudHistory = historyData.map((h: any) => {
-          const doc = docs.find(d => d.id === h.document_id);
-          if (!doc) return null;
-          
-          return {
-            ...doc,
-            accessed_at: h.accessed_at 
-          };
-        }).filter((d: any) => d !== null);
-      }
+      cloudHistory = historyData.map((h: any) => ({
+        ...h.documents,
+        accessed_at: h.accessed_at 
+      }));
     }
   }
   
@@ -414,34 +372,23 @@ export const trackDocumentStat = async (docId: number, type: 'view' | 'download'
 };
 
 export const getTrendingDocuments = async () => {
-  try {
-    // BUG 3 FIX: Two-Step fetch. Bypasses Supabase foreign-key relation ambiguity bugs.
+ try {
+    // Clean Relational Join replacing the two-step workaround
     const { data: analytics, error } = await supabase
       .from('document_analytics')
-      .select('*')
+      .select('view_count, documents!inner(*)')
       .not('view_count', 'is', null)
+      .eq('documents.status', 'approved')
       .order('view_count', { ascending: false })
       .limit(10); 
 
     if (error || !analytics || analytics.length === 0) return [];
 
-    const docIds = analytics.map(a => a.document_id);
-    const { data: docs } = await supabase
-      .from('documents')
-      .select('*')
-      .in('id', docIds)
-      .eq('status', 'approved');
-
-    if (!docs) return [];
-
-    // Manually zip the arrays together
     return analytics
-      .map(stat => {
-        const doc = docs.find(d => d.id === stat.document_id);
-        if (!doc) return null;
-        return { ...doc, view_count: stat.view_count || 0 };
-      })
-      .filter(d => d !== null)
+      .map((stat: any) => ({ 
+        ...stat.documents, 
+        view_count: stat.view_count || 0 
+      }))
       .slice(0, 5); 
   } catch (error) {
     console.error("Failed to fetch global trending:", error);
@@ -503,28 +450,26 @@ export const getAchievements = async (userId: string) => {
 };
 
 export const getEnhancedContributions = async (userId: string) => {
-  // BUG 2 FIX: Two-step fetch bypassing Supabase Join failures
   try {
+    // Clean Relational Join replacing the two-step workaround
     const { data: docs, error } = await supabase
       .from('documents')
-      .select('*')
+      .select('*, document_analytics(*)')
       .eq('uploaded_by', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     if (!docs || docs.length === 0) return [];
 
-    const docIds = docs.map(d => d.id);
-    const { data: analytics } = await supabase
-      .from('document_analytics')
-      .select('*')
-      .in('document_id', docIds);
+    return docs.map((doc: any) => {
+      // Handle the embedded relationship (PostgREST returns an array or object depending on 1:1 setup)
+      const analytics = Array.isArray(doc.document_analytics) 
+        ? doc.document_analytics[0] 
+        : doc.document_analytics;
 
-    return docs.map(doc => {
-      const stat = analytics?.find(a => a.document_id === doc.id);
       return {
         ...doc,
-        document_analytics: stat || { view_count: 0, download_count: 0 }
+        document_analytics: analytics || { view_count: 0, download_count: 0 }
       };
     });
   } catch (error) {
