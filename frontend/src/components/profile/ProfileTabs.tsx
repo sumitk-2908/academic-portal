@@ -10,7 +10,6 @@ import {
   getTrendingDocuments   // NEW: Imported for fallbacks
 } from "@/app/lib/api";
 import ActivityHeatmap from "./ActivityHeatmap";
-import SubjectProgress from "./SubjectProgress";
 import AchievementsList from "./AchievementsList";
 import ActivityTimeline from "./ActivityTimeline";
 
@@ -91,7 +90,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
       {activeTab === "overview" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           {history.length > 0 && <ActivityHeatmap history={history} />}
-          {history.length > 0 && <SubjectProgress history={history} />}
+          
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
