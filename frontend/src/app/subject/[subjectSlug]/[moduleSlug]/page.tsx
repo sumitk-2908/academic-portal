@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { supabase, trackDocumentStat, deleteDocument } from "../../../lib/api";
 import { ArrowLeft, FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
+import * as AlertDialog from "@radix-ui/react-alert-dialog";
 
 interface Document {
   id: number;
@@ -39,6 +40,7 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchModuleContextData = async () => {
@@ -46,12 +48,10 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
       const { data: sess } = await supabase.auth.getSession();
       if (sess?.session?.user) {
         const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', sess.session.user.id).single();
-        // SECURE MFA CHECK
         if (roleData?.role === 'admin' && sessionStorage.getItem("admin_portal_auth") === "true") setIsAdmin(true);
       }
 
       const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
-      // Extract just the IDs so the UI state remains simple and doesn't break
       const userBookmarks = rawBookmarks.map((b: any) => typeof b === 'object' ? b.id : b);
       setBookmarks(userBookmarks);
 
@@ -69,20 +69,15 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
 
   const toggleBookmark = async (id: number) => {
     const isBookmarked = bookmarks.includes(id);
-    
-    // 1. Update the UI state
     const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
     setBookmarks(nextB);
     
-    // 2. Update Local Storage to store the exact timestamp
     const currentStorage = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
     let newStorage;
     
     if (isBookmarked) {
-      // Remove it
       newStorage = currentStorage.filter((b: any) => (typeof b === 'object' ? b.id : b) !== id);
     } else {
-      // Add it as an object with the real-time timestamp
       newStorage = [...currentStorage, { id, bookmarked_at: new Date().toISOString() }];
     }
     
@@ -100,11 +95,12 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
     document.body.removeChild(link);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Confirm file deletion?")) return;
-    await deleteDocument(id);
-    setDocuments(prev => prev.filter(d => d.id !== id));
+  const confirmDelete = async () => {
+    if (!documentToDelete) return;
+    await deleteDocument(documentToDelete);
+    setDocuments(prev => prev.filter(d => d.id !== documentToDelete));
     window.dispatchEvent(new Event("sidebar_update"));
+    setDocumentToDelete(null);
   };
 
   return (
@@ -144,40 +140,21 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
               </div>
 
               <h3 className="text-xs font-bold mt-1 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
-
-              <p className="mt-0.5 text-[10px] font-semibold text-indigo-500 dark:text-indigo-400">
-                by {doc.uploader_name || 'Anonymous'}
-              </p>
-              
-              <p className="mt-1.5 text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">
-                {doc.page_count ? `${doc.page_count} pages` : 'PDF Document'} · {doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'Unknown size'} · uploaded {getTimeAgo(doc.created_at)}
-              </p>
+              <p className="mt-0.5 text-[10px] font-semibold text-indigo-500 dark:text-indigo-400">by {doc.uploader_name || 'Anonymous'}</p>
+              <p className="mt-1.5 text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">{doc.page_count ? `${doc.page_count} pages` : 'PDF Document'} · {doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'Unknown size'} · uploaded {getTimeAgo(doc.created_at)}</p>
 
               <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
-                <button 
-                  onClick={(e) => handleDownload(e, doc)} 
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border bg-[#F8FAFC] py-2 text-[11px] font-bold dark:bg-[#1F2A44] hover:bg-gray-100 transition-colors"
-                >
+                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border bg-[#F8FAFC] py-2 text-[11px] font-bold dark:bg-[#1F2A44] hover:bg-gray-100 transition-colors">
                   <Download size={12} /> Download
                 </button>
-                <Link 
-                  href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} 
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl"
-                >
+                <Link href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#4F46E5] text-white py-2 rounded-xl">
                   <Eye size={12} /> View
                 </Link>
-                <button 
-                  onClick={() => toggleBookmark(doc.id)} 
-                  className={`rounded-xl border p-2 transition-colors ${
-                    bookmarks.includes(doc.id) 
-                      ? "bg-amber-400 text-white border-amber-400" 
-                      : "border-amber-400 text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-400/10"
-                  }`}
-                >
+                <button onClick={() => toggleBookmark(doc.id)} className={`rounded-xl border p-2 transition-colors ${bookmarks.includes(doc.id) ? "bg-amber-400 text-white border-amber-400" : "border-amber-400 text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-400/10"}`}>
                   <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-white text-white" : "text-amber-400"} />
                 </button>
                 {isAdmin && (
-                  <button onClick={() => handleDelete(doc.id)} className="rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/5">
+                  <button onClick={() => setDocumentToDelete(doc.id)} className="rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/5">
                     <Trash2 size={14} />
                   </button>
                 )}
@@ -189,6 +166,26 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
           <p className="col-span-full py-12 text-center text-xs text-[#64748B]">No items indexed for this module.</p>
         )}
       </div>
+
+      <AlertDialog.Root open={documentToDelete !== null} onOpenChange={(open) => !open && setDocumentToDelete(null)}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <AlertDialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] dark:border-[#1F2A44] dark:bg-[#0B1020]">
+            <AlertDialog.Title className="text-lg font-bold text-gray-900 dark:text-white">Confirm Deletion</AlertDialog.Title>
+            <AlertDialog.Description className="text-sm text-gray-600 dark:text-gray-400">
+              Are you sure you want to delete this document? This action cannot be undone.
+            </AlertDialog.Description>
+            <div className="mt-4 flex justify-end gap-3">
+              <AlertDialog.Cancel asChild>
+                <button className="rounded-xl px-4 py-2 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#1F2A44]">Cancel</button>
+              </AlertDialog.Cancel>
+              <AlertDialog.Action asChild>
+                <button onClick={confirmDelete} className="rounded-xl bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600">Delete Document</button>
+              </AlertDialog.Action>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </div>
   );
 }
