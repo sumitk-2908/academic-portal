@@ -6,6 +6,9 @@ import AchievementToast from "@/components/ui/AchievementToast";
 import { supabase, getTrendingDocuments, uploadDocument, getAchievements, searchDocuments } from "./lib/api";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
+import { useQuery } from '@tanstack/react-query';
+import * as Toast from "@radix-ui/react-toast";
+import * as Dialog from "@radix-ui/react-dialog";
 
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
@@ -46,8 +49,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [searchQuery, setSearchQuery] = useState("");
   const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [trendingDocs, setTrendingDocs] = useState<any[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const { data: trendingDocs = [] } = useQuery({
+  queryKey: ['trendingDocuments'],
+  queryFn: getTrendingDocuments,
+  });
 
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -71,6 +77,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  const [globalToast, setGlobalToast] = useState({ open: false, title: "", message: "", type: "default" as "default" | "error" | "success" });
+
+  const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
+    setGlobalToast({ open: true, title, message, type });
+  };
+
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
@@ -83,7 +95,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       });
       if (error) throw error;
     } catch (err: any) {
-      alert(`Google Sign-In failed: ${err.message}`);
+      showToast("Sign-In Error", err.message, "error");
       setGoogleLoading(false);
     }
   };
@@ -99,19 +111,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [uploadModule, setUploadModule] = useState(1);
 
   const refreshSidebarData = useCallback(async (currentUserId?: string) => {
-    // 1. Fetch trending documents
-    getTrendingDocuments().then(setTrendingDocs);
 
-    // 2. Fetch the exact count of pending documents directly (much faster)
-    const { count } = await supabase
-      .from('documents')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending');
-      
-    if (count !== null) {
-      setPendingCount(count);
-    }
-  }, []);
+  const { count } = await supabase
+    .from('documents')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+    
+  if (count !== null) {
+    setPendingCount(count);
+  }
+}, []);
 
   const syncUserFromSession = useCallback(async (session: Session | null) => {
     if (session?.user) {
@@ -155,23 +164,23 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, [refreshSidebarData]);
 
   useEffect(() => {
-    setMounted(true);
-    if (localStorage.getItem("theme") === "dark") setIsDarkMode(true);
+  setMounted(true);
+  if (localStorage.getItem("theme") === "dark") setIsDarkMode(true);
 
-    const initializeData = async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      await refreshSidebarData(sess?.session?.user?.id);
-    };
-    initializeData();
+  const initializeData = async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    await refreshSidebarData(sess?.session?.user?.id);
+  };
+  initializeData();
 
-    const handleUpdate = async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      refreshSidebarData(sess?.session?.user?.id);
-    };
+  const handleUpdate = async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    refreshSidebarData(sess?.session?.user?.id);
+  };
 
-    window.addEventListener("sidebar_update", handleUpdate);
-    return () => window.removeEventListener("sidebar_update", handleUpdate);
-  }, [pathname]);
+  window.addEventListener("sidebar_update", handleUpdate);
+  return () => window.removeEventListener("sidebar_update", handleUpdate);
+}, []); 
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => syncUserFromSession(session));
@@ -292,7 +301,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         });
         if (error) throw error;
         
-        alert("Password reset email sent! Please check your inbox.");
+        showToast("Check Inbox", "Password reset email sent!", "success");
         setAuthMode("signin");
         setShowAuthModal(false);
 
@@ -309,7 +318,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           setAuthPassword("");
           setShowAuthModal(false);
         } else {
-          alert("Registration complete! Please check your email to verify your account before logging in.");
+          showToast("Registration Complete", "Please verify your email.", "success");
           setAuthMode("signin");
         }
       } else {
@@ -321,7 +330,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         setShowAuthModal(false);
       }
     } catch (err: any) {
-      alert(err.message);
+      { showToast("Authentication Error", err.message, "error"); }
     } finally {
       setAuthLoading(false);
     }
@@ -342,7 +351,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return alert("Please map a PDF resource!");
+    if (!file) return showToast("Upload Error", "Please map a PDF resource!", "error");
+
+    if (file.size > 52428800) {
+      return alert("Upload blocked: File size exceeds the 50MB limit.");
+    }
+
     setUploading(true);
     const formData = new FormData();
     const authorName = uploadedBy || (isAdmin ? "Admin" : "Student");
@@ -364,9 +378,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setFile(null); setUploadTitle(""); setShowUploadForm(false);
       const { data: sess } = await supabase.auth.getSession();
       refreshSidebarData(sess?.session?.user?.id);
-      if (!isAdmin) alert("Notes submitted! Pending admin approval.");
+      if (!isAdmin) showToast("Success", "Notes submitted! Pending admin approval.", "success");
     } catch (err) {
-      alert("Error uploading file.");
+      showToast("Upload Error", "Failed to upload file.", "error");
     } finally {
       setUploading(false);
     }
@@ -381,7 +395,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         options: { emailRedirectTo: window.location.origin }
       });
       if (error) throw error;
-      alert("Verification email sent! Please check your inbox.");
+      showToast("Email Sent", "Verification email sent! Please check your inbox.", "success");
     } catch (err: any) {
       alert(err.message);
     }
@@ -423,6 +437,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   return (
     <StudyHistoryProvider>
+     <Toast.Provider swipeDirection="right">
       <div className="flex min-h-[100dvh] flex-col transition-colors duration-300">
 
         {isStudent && !emailConfirmed && (
@@ -828,25 +843,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         )}
 
         
-        {/* AUTH & UPLOAD MODALS */}
-        {showAuthModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div 
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="auth-modal-title"
-              className="w-full max-w-md rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]"
+        {/* AUTH MODAL - ACCESSIBILITY UPGRADED */}
+        <Dialog.Root open={showAuthModal} onOpenChange={setShowAuthModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+            <Dialog.Content 
+              aria-describedby="auth-modal-description"
+              className="fixed left-[50%] top-[50%] z-[100] w-full max-w-md translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 id="auth-modal-title" className="text-xl font-extrabold">
+                <Dialog.Title className="text-xl font-extrabold">
                   {authMode === "signin" ? "Sign In" : authMode === "signup" ? "Sign Up" : "Reset Password"}
-                </h2>
-                <button aria-label="Close authentication window" onClick={() => setShowAuthModal(false)}>
-                  <X size={20} aria-hidden="true" />
-                </button>
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button aria-label="Close authentication window" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <X size={20} aria-hidden="true" />
+                  </button>
+                </Dialog.Close>
               </div>
+              
+              <Dialog.Description id="auth-modal-description" className="sr-only">
+                Authenticate to your student account or create a new one to access the academic portal.
+              </Dialog.Description>
 
-              {/* NEW: Google Auth Button & Divider (Hidden on Forgot Password screen) */}
               {authMode !== "forgot" && (
                 <>
                   <button
@@ -867,11 +886,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               )}
 
               <form onSubmit={handleAuthSubmit} className="space-y-4">
-                <input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:text-white" />
+                <div>
+                  <label htmlFor="authEmailInput" className="sr-only">Email Address</label>
+                  <input id="authEmailInput" required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:text-white" />
+                </div>
                 
-                {/* Hide password input if they are just requesting a reset link */}
                 {authMode !== "forgot" && (
-                  <input required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:text-white" />
+                  <div>
+                    <label htmlFor="authPasswordInput" className="sr-only">Password</label>
+                    <input id="authPasswordInput" required type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-transparent px-4 text-sm outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:text-white" />
+                  </div>
                 )}
                 
                 <button type="submit" disabled={authLoading || googleLoading} className="h-12 w-full rounded-xl bg-[#4F46E5] font-bold text-white hover:bg-[#6366F1]">
@@ -892,37 +916,45 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <button type="button" onClick={() => setAuthMode("signin")} className="w-full mt-2 text-[11px] font-bold text-[#4F46E5] hover:underline">Back to Sign In</button>
                 )}
               </form>
-            </div>
-          </div>
-        )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
 
-        {showUploadForm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div 
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="upload-modal-title"
-              className="w-full max-w-lg rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827]"
+        {/* UPLOAD MODAL - ACCESSIBILITY UPGRADED */}
+        <Dialog.Root open={showUploadForm} onOpenChange={setShowUploadForm}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+            <Dialog.Content 
+              aria-describedby="upload-modal-description"
+              className="fixed left-[50%] top-[50%] z-[100] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 id="upload-modal-title" className="text-lg font-extrabold">
+                <Dialog.Title className="text-lg font-extrabold">
                   {isAdmin ? "Admin Database Upload" : "Student Contribution"}
-                </h2>
-                <button aria-label="Close upload window" onClick={() => setShowUploadForm(false)}>
-                  <X size={20} aria-hidden="true" />
-                </button>
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button aria-label="Close upload window" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <X size={20} aria-hidden="true" />
+                  </button>
+                </Dialog.Close>
               </div>
+              
+              <Dialog.Description id="upload-modal-description" className="sr-only">
+                Fill out the metadata and select a PDF file to contribute to the academic portal repository.
+              </Dialog.Description>
+
               <form onSubmit={handleUpload} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Subject</label>
-                    <select value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
+                    <label htmlFor="uploadSubject" className="block mb-1 text-[10px] font-bold uppercase text-[#64748B]">Subject</label>
+                    <select id="uploadSubject" value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
                       {SUBJECTS_LIST.map(sub => <option key={sub} value={sub} className="bg-white dark:bg-[#0B1020]">{sub}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Module</label>
+                    <label htmlFor="uploadModule" className="block mb-1 text-[10px] font-bold uppercase text-[#64748B]">Module</label>
                     <select 
+                      id="uploadModule"
                       value={uploadModule} 
                       onChange={(e) => setUploadModule(Number(e.target.value))} 
                       disabled={isModuleDisabled}
@@ -933,31 +965,49 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase text-[#64748B]">Document Title</label>
-                  <input required type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020]" />
+                  <label htmlFor="uploadTitle" className="block mb-1 text-[10px] font-bold uppercase text-[#64748B]">Document Title</label>
+                  <input id="uploadTitle" required type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Category</label>
-                    <select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
+                    <label htmlFor="uploadCategory" className="block mb-1 text-[10px] font-bold uppercase text-[#64748B]">Category</label>
+                    <select id="uploadCategory" value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white">
                       <option value="notes" className="bg-white dark:bg-[#0B1020]">Notes</option>
                       <option value="pyq" className="bg-white dark:bg-[#0B1020]">PYQ</option>
                       <option value="syllabus" className="bg-white dark:bg-[#0B1020]">Syllabus</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold uppercase text-[#64748B]">Uploader</label>
-                    <input type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020]" />
+                    <label htmlFor="uploadedBy" className="block mb-1 text-[10px] font-bold uppercase text-[#64748B]">Uploader</label>
+                    <input id="uploadedBy" type="text" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#FAFAF9] px-3 text-xs outline-none dark:border-[#1F2A44] dark:bg-[#0B1020] dark:text-white" />
                   </div>
                 </div>
-                <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs" />
+                <div>
+                  <label htmlFor="uploadFileInput" className="sr-only">Select PDF File</label>
+                  <input id="uploadFileInput" required type="file" accept="application/pdf" onChange={(e) => {
+                    const selectedFile = e.target.files?.[0];
+                    if (selectedFile) {
+                      const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+                      if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+                        alert("File size exceeds the 50MB limit. Please compress your PDF and try again.");
+                        e.target.value = '';
+                        setFile(null);
+                        return;
+                      }
+                      setFile(selectedFile);
+                    } else {
+                      setFile(null);
+                    }
+                  }} className="w-full py-2 text-xs" />
+                </div>
                 <button type="submit" disabled={uploading} className="h-11 w-full rounded-xl bg-[#4F46E5] text-sm font-bold text-white hover:bg-[#6366F1]">
                   {uploading ? "Uploading..." : "Publish Resource"}
                 </button>
               </form>
-            </div>
-          </div>
-        )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+        
         {/* ========================================= */}
         {/* GLOBAL ACHIEVEMENT TOAST */}
         {/* ========================================= */}
@@ -969,6 +1019,21 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           />
         )}
       </div>
-    </StudyHistoryProvider>
+      {/* GLOBAL RADIX TOAST */}
+      <Toast.Root 
+        open={globalToast.open} 
+        onOpenChange={(open) => setGlobalToast(prev => ({...prev, open}))} 
+        className={`fixed z-[150] bottom-4 right-4 w-auto max-w-md rounded-xl p-4 shadow-xl border focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${globalToast.type === 'error' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900/50' : globalToast.type === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' : 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700'}`}
+      >
+        <Toast.Title className={`text-sm font-bold ${globalToast.type === 'error' ? 'text-red-700 dark:text-red-400' : globalToast.type === 'success' ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+          {globalToast.title}
+        </Toast.Title>
+        <Toast.Description className={`mt-1 text-xs ${globalToast.type === 'error' ? 'text-red-600 dark:text-red-300' : globalToast.type === 'success' ? 'text-green-600 dark:text-green-300' : 'text-gray-600 dark:text-gray-400'}`}>
+          {globalToast.message}
+        </Toast.Description>
+      </Toast.Root>
+      <Toast.Viewport className="fixed bottom-0 right-0 z-[150] p-6 w-full md:max-w-[400px] outline-none flex flex-col gap-2" />
+    </Toast.Provider>
+   </StudyHistoryProvider>
   );
 }

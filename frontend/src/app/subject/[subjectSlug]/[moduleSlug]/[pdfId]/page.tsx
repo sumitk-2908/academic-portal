@@ -13,6 +13,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import * as Toast from "@radix-ui/react-toast";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -34,6 +35,12 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
   const hasTrackedView = useRef(false);
   const isDownloading = useRef(false);
 
+  const [toast, setToast] = useState({ open: false, title: "", message: "", type: "error" });
+
+  const showToast = (title: string, message: string, type: "error" | "success") => {
+    setToast({ open: true, title, message, type });
+  };
+
   // --- NEW: Quality System State ---
   const [userRating, setUserRating] = useState<boolean | null>(null);
   const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
@@ -48,7 +55,7 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
     
     try {
       const { data: sess } = await supabase.auth.getSession();
-      if (!sess?.session?.user?.id) return alert("Please log in to rate.");
+      if (!sess?.session?.user?.id) return showToast("Action Required", "Please log in to rate.", "error");
 
       // Upsert the rating (Supabase will handle the ON CONFLICT if you set it up, 
       // otherwise we just use standard insert/update logic)
@@ -73,7 +80,7 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
     try {
       const { data: sess } = await supabase.auth.getSession();
       if (!sess?.session?.user?.id) {
-        alert("Please log in to flag content.");
+        showToast("Action Required", "Please log in to flag content.", "error");
         return;
       }
 
@@ -87,17 +94,17 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
         });
 
       if (error && error.code === '23505') {
-        alert("You have already flagged this document for this reason.");
+        showToast("Notice", "You have already flagged this document for this reason.", "error");
       } else if (error) {
         throw error;
       } else {
-        alert("Thank you! Your report has been submitted to the admins.");
+        showToast("Report Submitted", "Thank you! Your report has been sent.", "success");
         setIsFlagModalOpen(false);
         setFlagDescription('');
       }
     } catch (error) {
       console.error("Failed to flag document:", error);
-      alert("Something went wrong. Please try again.");
+      showToast("Submission Failed", "Something went wrong. Please try again.", "error");
     } finally {
       setIsSubmittingQuality(false);
     }
@@ -201,6 +208,7 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
   }
 
   return (
+   <Toast.Provider swipeDirection="right">
     <div className="flex flex-col h-[calc(100vh-8rem)] w-full overflow-hidden rounded-3xl border border-[#E5E7EB] bg-white shadow-sm dark:border-[#1F2A44] dark:bg-[#111827]">
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#E5E7EB] bg-[#FAFAF9] px-2 sm:px-4 dark:border-[#1F2A44] dark:bg-[#0B1020]">
         <button onClick={() => router.back()} className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-[#64748B] transition-colors hover:bg-[#E5E7EB] dark:hover:bg-[#1F2A44] dark:text-[#94A3B8] dark:hover:text-white">
@@ -361,5 +369,20 @@ export default function PDFViewerPage({ params }: { params: Promise<{ subjectSlu
         </div>
       )}
     </div>
+    {/* GLOBAL RADIX TOAST */}
+      <Toast.Root 
+        open={toast.open} 
+        onOpenChange={(open) => setToast((prev: typeof toast) => ({...prev, open}))} 
+        className={`fixed z-[150] bottom-4 right-4 w-auto max-w-md rounded-xl p-4 shadow-xl border focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${toast.type === 'error' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900/50' : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50'}`}
+      >
+        <Toast.Title className={`text-sm font-bold ${toast.type === 'error' ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+          {toast.title}
+        </Toast.Title>
+        <Toast.Description className={`mt-1 text-xs ${toast.type === 'error' ? 'text-red-600 dark:text-red-300' : 'text-green-600 dark:text-green-300'}`}>
+          {toast.message}
+        </Toast.Description>
+      </Toast.Root>
+     <Toast.Viewport className="fixed bottom-0 right-0 z-[150] p-6 w-full md:max-w-[400px] outline-none flex flex-col gap-2" />
+    </Toast.Provider>
   );
 }

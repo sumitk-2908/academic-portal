@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import ClientLayout from "./ClientLayout";
 import "./globals.css";
+import QueryProvider from "./context/QueryProvider";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -52,11 +53,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body suppressHydrationWarning className="min-h-screen flex flex-col font-sans antialiased">
         
-        
+       <QueryProvider> 
         <ClientLayout>
           {children}
         </ClientLayout>
-
+       </QueryProvider>
       </body>
     </html>
   );
