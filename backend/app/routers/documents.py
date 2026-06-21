@@ -4,6 +4,8 @@ import asyncio
 import fitz  
 import httpx
 import re
+import json
+import base64
 from enum import Enum
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request, Depends
 from app.auth import verify_admin, verify_token
@@ -12,6 +14,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from pydantic import BaseModel
 from typing import Optional
+
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -65,14 +68,6 @@ async def upload_document(
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
     
-    # SAFETY: Strip out the old hack if a cached frontend still sends it
-    if " |By| " in title:
-        parts = title.split(" |By| ")
-        title = parts[0].strip()
-        # Fallback to the extracted name if the frontend didn't pass the new field
-        if not uploader_name and len(parts) > 1:
-            uploader_name = parts[1].strip()
-
     user_id = user.get("id")
     user_email = user.get("email")
 
@@ -85,13 +80,33 @@ async def upload_document(
         print(f"Role verification warning: {e}")
     
     if is_admin:
-        # Admins can upload directly as "approved" (or whatever they pass)
+        # SECURITY FIX: Enforce AAL2 for direct publishing
+        # Prevent compromised admin passwords from bypassing moderation
+        if status != "pending":
+            token = user.get("raw_jwt")
+            if not token:
+                raise HTTPException(status_code=403, detail="Authentication token required for MFA validation.")
+            
+            try:
+                payload_b64 = token.split(".")[1]
+                payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
+                payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
+                
+                # Strictly enforce AAL2 for publishing actions
+                if payload.get("aal") != "aal2":
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="Direct publishing requires Authenticator MFA (AAL2). Please verify at /portal-admin or upload as 'pending'."
+                    )
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Invalid token format")
+
         secure_status = status 
         secure_uploaded_by = user_id
     else:
         # SECURITY FIX: Forcefully override student uploads to "pending" 
-        # Even if a hacker modifies the frontend POST request to say status="approved", 
-        # the backend ignores it.
         secure_status = "pending"
         secure_uploaded_by = user_id
 

@@ -134,7 +134,7 @@ export default function AdminInboxAuditingRoute() {
             
             {/* PENDING TAB RENDER */}
             {activeTab === 'pending' && pendingDocs.map(doc => {
-              const titleParts = doc.title.split(' |By| ');
+              
               return (
                 <article key={doc.id} className="flex flex-col rounded-2xl border border-amber-500/20 bg-white p-4 shadow-sm dark:bg-[#111827]">
                   <div className="flex justify-between items-start">
@@ -143,7 +143,7 @@ export default function AdminInboxAuditingRoute() {
                     </div>
                     <span className="text-[9px] font-extrabold uppercase bg-amber-500/10 text-amber-600 px-2.5 py-1 rounded-full">PENDING</span>
                   </div>
-                  <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{titleParts[0]}</h3>
+                  <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
                   <p className="text-[10px] text-[#64748B] mt-2 font-semibold">{doc.subject} • Module {doc.module_id || 1}</p>
                   
                   <div className="mt-auto flex gap-2 border-t border-[#E5E7EB] pt-4 dark:border-[#1F2A44]">
@@ -172,7 +172,7 @@ export default function AdminInboxAuditingRoute() {
                      {doc.flags?.length} Flags
                    </span>
                  </div>
-                 <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title.split(' |By| ')[0]}</h3>
+                 <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
                  <p className="text-[10px] text-[#64748B] mt-2 font-semibold">{doc.subject} • {doc.category}</p>
                  
                  <div className="mt-auto flex gap-2 border-t border-[#E5E7EB] pt-4 dark:border-[#1F2A44]">
@@ -233,7 +233,7 @@ export default function AdminInboxAuditingRoute() {
                   <Dialog.Title className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <ShieldAlert className="text-red-500" /> Review Flags
                   </Dialog.Title>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-1">{reviewingFlagsDoc?.title.split(' |By| ')[0]}</p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-1">{reviewingFlagsDoc?.title[0]}</p>
                 </div>
                 <Dialog.Close asChild>
                   <button className="text-gray-400 hover:text-gray-600"><X size={20} /></button>

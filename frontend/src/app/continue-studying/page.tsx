@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-// Import getSuggestedNextSteps and getTrendingDocuments
+import { useEffect, useState, useRef } from "react";
 import { supabase, getRecentStudyActivity, trackDocumentStat, getSuggestedNextSteps, getTrendingDocuments } from "../lib/api";
-// Added Sparkles icon for the recommendations section
 import { Clock, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -13,6 +11,7 @@ export default function ContinueStudyingPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     const fetchHistoryAndSuggestions = async () => {
@@ -43,14 +42,26 @@ export default function ContinueStudyingPage() {
     fetchHistoryAndSuggestions();
   }, []);
 
-  const handleDownload = (e: React.MouseEvent, doc: any) => {
+  const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
-    trackDocumentStat(doc.id, 'download');
-    const link = document.createElement("a");
-    link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    // NEW: Lock check
+    if (downloadingRef.current.has(doc.id)) return;
+    downloadingRef.current.add(doc.id);
+
+    try {
+      await trackDocumentStat(doc.id, 'download');
+      const link = document.createElement("a");
+      link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      // NEW: Unlock after 2 seconds
+      setTimeout(() => {
+        downloadingRef.current.delete(doc.id);
+      }, 2000);
+    }
   };
 
   const safeDocuments = Array.isArray(documents) ? documents : [];
@@ -71,7 +82,7 @@ export default function ContinueStudyingPage() {
           <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]">
             <Download size={12} /> Download
           </button>
-          <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => trackDocumentStat(doc.id, 'view')} className={`flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold text-white py-2 rounded-xl ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
+          <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} className={`flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold text-white py-2 rounded-xl ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
             <Eye size={12} /> View
           </Link>
         </div>

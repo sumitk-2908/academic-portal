@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FileText, Eye, Download, BookOpen, Clock, Activity, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { 
@@ -15,7 +15,8 @@ import ActivityTimeline from "./ActivityTimeline";
 
 export default function ProfileTabs({ user, history, bookmarks, uploads, achievements }: any) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [suggestions, setSuggestions] = useState<any[]>([]); // NEW: State for suggestions
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const downloadingRef = useRef<Set<number>>(new Set());
   
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -61,12 +62,24 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
-    await trackDocumentStat(doc.id, 'download');
-    const link = document.createElement("a");
-    link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    // NEW: Lock check
+    if (downloadingRef.current.has(doc.id)) return;
+    downloadingRef.current.add(doc.id);
+
+    try {
+      await trackDocumentStat(doc.id, 'download');
+      const link = document.createElement("a");
+      link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      // NEW: Unlock after 2 seconds
+      setTimeout(() => {
+        downloadingRef.current.delete(doc.id);
+      }, 2000);
+    }
   };
 
   return (

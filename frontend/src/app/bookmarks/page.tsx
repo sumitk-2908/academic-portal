@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
 import { Bookmark, Download, Eye, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +13,7 @@ export default function BookmarksPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     let isMounted = true;
@@ -71,14 +72,26 @@ export default function BookmarksPage() {
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
-  const handleDownload = (e: React.MouseEvent, doc: any) => {
+  const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
-    trackDocumentStat(doc.id, 'download');
-    const link = document.createElement("a");
-    link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    // NEW: Lock check
+    if (downloadingRef.current.has(doc.id)) return;
+    downloadingRef.current.add(doc.id);
+
+    try {
+      await trackDocumentStat(doc.id, 'download');
+      const link = document.createElement("a");
+      link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      // NEW: Unlock after 2 seconds
+      setTimeout(() => {
+        downloadingRef.current.delete(doc.id);
+      }, 2000);
+    }
   };
 
   return (
@@ -109,7 +122,7 @@ export default function BookmarksPage() {
                 <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]">
                   <Download size={12} /> Download
                 </button>
-                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => trackDocumentStat(doc.id, 'view')} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-amber-500 text-white py-2 rounded-xl">
+                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-amber-500 text-white py-2 rounded-xl">
                   <Eye size={12} /> View
                 </Link>
                 <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border bg-amber-500/10 text-amber-500 border-amber-500/30 shrink-0">

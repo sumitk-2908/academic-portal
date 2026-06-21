@@ -345,13 +345,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (!file) return alert("Please map a PDF resource!");
     setUploading(true);
     const formData = new FormData();
-    
-    // --- UI TRICK: Attach the custom Uploader name to the title so it safely bypasses the backend ---
     const authorName = uploadedBy || (isAdmin ? "Admin" : "Student");
-    const secureTitle = `${uploadTitle} |By| ${authorName}`;
     
     formData.append("file", file); 
-    formData.append("title", secureTitle); // Send the bundled title
+    formData.append('title', uploadTitle); 
+    formData.append('uploader_name', authorName);
     formData.append("category", uploadCategory); 
     
     const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);

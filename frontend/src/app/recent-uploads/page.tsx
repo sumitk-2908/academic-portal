@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef} from "react";
 import { supabase, trackDocumentStat, searchDocuments } from "../lib/api";
 import { Upload, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
@@ -10,6 +10,8 @@ const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuest
 export default function RecentUploadsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
   const fetchRecent = async () => {
@@ -22,14 +24,26 @@ export default function RecentUploadsPage() {
   fetchRecent();
 }, []);
 
-  const handleDownload = (e: React.MouseEvent, doc: any) => {
+  const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
-    trackDocumentStat(doc.id, 'download');
-    const link = document.createElement("a");
-    link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    // NEW: Lock check
+    if (downloadingRef.current.has(doc.id)) return;
+    downloadingRef.current.add(doc.id);
+
+    try {
+      await trackDocumentStat(doc.id, 'download');
+      const link = document.createElement("a");
+      link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      // NEW: Unlock after 2 seconds
+      setTimeout(() => {
+        downloadingRef.current.delete(doc.id);
+      }, 2000);
+    }
   };
 
   return (
@@ -58,7 +72,7 @@ export default function RecentUploadsPage() {
                 <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]">
                   <Download size={12} /> Download
                 </button>
-                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} onClick={() => trackDocumentStat(doc.id, 'view')} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-emerald-500 text-white py-2 rounded-xl">
+                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-emerald-500 text-white py-2 rounded-xl">
                   <Eye size={12} /> View
                 </Link>
               </div>
