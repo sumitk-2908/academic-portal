@@ -5,6 +5,7 @@ import { supabase, trackDocumentStat, deleteDocument } from "../../../lib/api";
 import { ArrowLeft, FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
+import { manageOfflinePdf } from "../../../lib/offline-manager";
 
 interface Document {
   id: number;
@@ -72,13 +73,28 @@ export default function ModulePage({ params }: { params: Promise<{ subjectSlug: 
     const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
     setBookmarks(nextB);
     
+    // Find the specific document so we can get its file_url
+    const targetDoc = documents.find(d => d.id === id);
+    
     const currentStorage = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
     let newStorage;
     
     if (isBookmarked) {
+      // 1. User is REMOVING the bookmark
       newStorage = currentStorage.filter((b: any) => (typeof b === 'object' ? b.id : b) !== id);
+      
+      // Trigger Service Worker to delete the PDF from device storage
+      if (targetDoc?.file_url) {
+        manageOfflinePdf(targetDoc.file_url, 'REMOVE_PDF').catch(console.error);
+      }
     } else {
+      // 2. User is ADDING the bookmark
       newStorage = [...currentStorage, { id, bookmarked_at: new Date().toISOString() }];
+      
+      // Trigger Service Worker to download and cache the PDF
+      if (targetDoc?.file_url) {
+        manageOfflinePdf(targetDoc.file_url, 'CACHE_PDF').catch(console.error);
+      }
     }
     
     localStorage.setItem("portal_bookmarks", JSON.stringify(newStorage));

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
 import { Bookmark, Download, Eye, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
+import { manageOfflinePdf } from "../lib/offline-manager";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
@@ -54,10 +55,15 @@ export default function BookmarksPage() {
   }, []);
 
   const toggleBookmark = async (id: number) => {
+    const docToRemove = documents.find(d => d.id === id);
     const nextDocs = documents.filter(d => d.id !== id);
     setDocuments(nextDocs);
     const nextIds = nextDocs.map(d => d.id);
     localStorage.setItem("portal_bookmarks", JSON.stringify(nextIds));
+
+    if (docToRemove?.file_url) {
+    manageOfflinePdf(docToRemove.file_url, 'REMOVE_PDF').catch(console.error);
+    }
     
     if (userId) {
       await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
