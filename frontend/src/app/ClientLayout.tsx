@@ -854,18 +854,46 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {/* 2. App & Support */}
                 <div className="space-y-2">
                   <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B]">App & Support</p>
-                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
-                    <Settings size={18} className="text-[#64748B]" /> Settings
+                  
+                  <button 
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      showToast("Coming Soon", "Settings module is currently under development.", "default");
+                    }}
+                    aria-label="Open Settings"
+                    className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Settings size={18} className="text-[#64748B]" aria-hidden="true" /> Settings
                   </button>
-                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
-                    <Info size={18} className="text-[#64748B]" /> About Portal
+                  
+                  <button 
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      showToast("Coming Soon", "About page is currently under development.", "default");
+                    }}
+                    aria-label="About Portal"
+                    className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Info size={18} className="text-[#64748B]" aria-hidden="true" /> About Portal
                   </button>
-                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
-                    <Phone size={18} className="text-[#64748B]" /> Contact Us
-                  </button>
-                  <button className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
-                    <AlertTriangle size={18} className="text-[#64748B]" /> Report Issue
-                  </button>
+                  
+                  <a 
+                    href="mailto:support@academicportal.com?subject=Contact%20Support"
+                    onClick={() => setShowMobileMenu(false)}
+                    aria-label="Contact Us via Email"
+                    className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Phone size={18} className="text-[#64748B]" aria-hidden="true" /> Contact Us
+                  </a>
+                  
+                  <a 
+                    href="mailto:support@academicportal.com?subject=Issue%20Report&body=Please%20describe%20the%20issue%20you%20are%20facing:%0D%0A"
+                    onClick={() => setShowMobileMenu(false)}
+                    aria-label="Report an Issue via Email"
+                    className="flex w-full items-center gap-3 rounded-xl p-3 text-sm font-semibold text-[#111827] hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <AlertTriangle size={18} className="text-[#64748B]" aria-hidden="true" /> Report Issue
+                  </a>
                 </div>
                 
                 {/* 3. Admin Controls (Kept intact) */}
