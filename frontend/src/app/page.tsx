@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { supabase, getSubjects, Subject } from "./lib/api";
+import { supabase, getSubjects, Subject, getProfilePreferences } from "./lib/api";
 import { SUBJECT_UI_MAP } from "./lib/subject-config";
 
 export default function SubjectDirectory() {
@@ -12,15 +12,39 @@ export default function SubjectDirectory() {
   
   const [activeIndex, setActiveIndex] = useState(0);
   const elementsRef = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [favoriteSubjects, setFavoriteSubjects] = useState<string[]>([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const dbSubjects = await getSubjects();
-        setSubjects(dbSubjects);
-      } catch (e) {
-        console.error("Failed to load subjects", e);
+  const loadData = async () => {
+    try {
+      // Fetch authenticated user and profile
+      const { data: { session } } = await supabase.auth.getSession();
+      let userFavs: string[] = [];
+      
+      if (session?.user) {
+        const profile = await getProfilePreferences(session.user.id);
+        if (profile?.favorite_subjects) {
+          userFavs = profile.favorite_subjects;
+          setFavoriteSubjects(userFavs);
+        }
       }
+
+      const dbSubjects = await getSubjects();
+      
+      // Sort: Favorites first, then alphabetical
+      const sortedSubjects = [...dbSubjects].sort((a, b) => {
+        const aIsFav = userFavs.includes(a.name);
+        const bIsFav = userFavs.includes(b.name);
+        
+        if (aIsFav && !bIsFav) return -1;
+        if (!aIsFav && bIsFav) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      setSubjects(sortedSubjects);
+    } catch (e) {
+      console.error("Failed to load subjects", e);
+    }
       
       const { data, error } = await supabase.rpc('get_subject_counts');
       if (data && !error) {

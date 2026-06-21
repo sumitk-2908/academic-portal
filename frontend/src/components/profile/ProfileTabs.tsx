@@ -1,8 +1,14 @@
 "use client";
-import { useState } from "react";
-import { FileText, Eye, Download, BookOpen, Clock, Activity } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FileText, Eye, Download, BookOpen, Clock, Activity, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { trackDocumentStat, triggerStreakUpdate, logStudySession } from "@/app/lib/api";
+import { 
+  trackDocumentStat, 
+  triggerStreakUpdate, 
+  logStudySession,
+  getSuggestedNextSteps, // NEW: Imported for recommendations
+  getTrendingDocuments   // NEW: Imported for fallbacks
+} from "@/app/lib/api";
 import ActivityHeatmap from "./ActivityHeatmap";
 import SubjectProgress from "./SubjectProgress";
 import AchievementsList from "./AchievementsList";
@@ -10,6 +16,7 @@ import ActivityTimeline from "./ActivityTimeline";
 
 export default function ProfileTabs({ user, history, bookmarks, uploads, achievements }: any) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [suggestions, setSuggestions] = useState<any[]>([]); // NEW: State for suggestions
   
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -19,11 +26,34 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
     { id: "activity", label: "Activity" }
   ];
 
-const handleViewDocument = async (docId: number) => {
-    // 1. Track global view count
+  // NEW: Fetch suggestions dynamically for the Profile Overview tab
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      // Only fetch if we are on the overview tab
+      if (activeTab !== "overview") return;
+
+      try {
+        if (history.length > 0 && history.length < 5) {
+          const lastDoc = history[0];
+          const excludeIds = history.map((d: any) => d.id);
+          const related = await getSuggestedNextSteps(lastDoc, excludeIds, 3);
+          setSuggestions(related || []);
+        } else if (history.length === 0) {
+          const trending = await getTrendingDocuments();
+          setSuggestions(trending ? trending.slice(0, 3) : []);
+        } else {
+          setSuggestions([]);
+        }
+      } catch (error) {
+        console.error("Failed to load profile suggestions:", error);
+      }
+    };
+
+    fetchSuggestions();
+  }, [history, activeTab]);
+
+  const handleViewDocument = async (docId: number) => {
     await trackDocumentStat(docId, 'view');
-    
-    // 2. Wrap user-specific stats securely in curly braces
     if (user?.id) {
       await triggerStreakUpdate(user.id);
       await logStudySession(user.id, docId);
@@ -32,11 +62,7 @@ const handleViewDocument = async (docId: number) => {
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
-    
-    // 1. Fire and await the backend tracker first
     await trackDocumentStat(doc.id, 'download');
-    
-    // 2. Execute the actual browser download
     const link = document.createElement("a");
     link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
     document.body.appendChild(link);
@@ -73,6 +99,7 @@ const handleViewDocument = async (docId: number) => {
               <Link href="/continue-studying" className="text-xs font-bold text-[#4F46E5] hover:underline">View All</Link>
             </div>
             
+            {/* Standard History Render */}
             {history.length > 0 ? history.slice(0, 3).map((item: any, idx: number) => (
               <div key={idx} className="flex items-center gap-4 rounded-2xl border border-[#E5E7EB] bg-white p-3 dark:border-[#1F2A44] dark:bg-[#131625]">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEEDFE] text-[#3C3489] dark:bg-[#26215C] dark:text-[#AFA9EC]">
@@ -91,14 +118,46 @@ const handleViewDocument = async (docId: number) => {
                 </Link>
               </div>
             )) : (
-              <div className="py-12 text-center rounded-2xl border border-dashed border-[#E5E7EB] bg-white/50 dark:border-[#1F2A44] dark:bg-[#131625]/50">
+              <div className="py-8 text-center rounded-2xl border border-dashed border-[#E5E7EB] bg-white/50 dark:border-[#1F2A44] dark:bg-[#131625]/50">
                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No recent study activity.</p>
+              </div>
+            )}
+
+            {/* NEW: Dynamic Suggestions / Trending Fallback */}
+            {suggestions.length > 0 && (
+              <div className="mt-8 pt-4 border-t border-[#E5E7EB] dark:border-[#1F2A44] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-500 flex items-center gap-2">
+                    <Sparkles size={14} />
+                    {history.length === 0 ? "Trending Right Now" : "Suggested Next Steps"}
+                  </h3>
+                </div>
+                
+                {suggestions.map((item: any, idx: number) => (
+                  <div key={`sugg-${idx}`} className="flex items-center gap-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 hover:border-amber-500 transition-colors">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500">
+                      <Sparkles size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.title}</p>
+                      <p className="text-xs text-[#64748B] truncate capitalize">{item.subject} • {item.category}</p>
+                    </div>
+                    <Link 
+                      href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
+                      onClick={() => handleViewDocument(item.id)}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[10px] font-bold uppercase text-white hover:bg-amber-600"
+                    >
+                      <Eye size={12} /> View
+                    </Link>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
       )}
 
+      {/* Library Tab (Unchanged) */}
       {activeTab === "library" && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
            {bookmarks.length > 0 ? bookmarks.map((item: any, idx: number) => (
@@ -109,7 +168,6 @@ const handleViewDocument = async (docId: number) => {
                  <p className="text-xs text-[#64748B] truncate capitalize">{item.subject}</p>
                </div>
                
-               {/* NEW: Flex container holding both View and Download buttons */}
                <div className="shrink-0 flex items-center gap-2">
                  <Link 
                    href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
@@ -130,7 +188,7 @@ const handleViewDocument = async (docId: number) => {
         </div>
       )}
 
-      {/* PHASE 3.4: UPGRADED CONTRIBUTIONS DASHBOARD */}
+      {/* Contributions Tab (Unchanged) */}
       {activeTab === "contributions" && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="mb-6 grid grid-cols-2 gap-4">
@@ -167,14 +225,14 @@ const handleViewDocument = async (docId: number) => {
         </div>
       )}
 
-      {/* PHASE 3.4: ACHIEVEMENTS TAB */}
+      {/* Achievements Tab (Unchanged) */}
       {activeTab === "achievements" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
            <AchievementsList achievements={achievements} />
         </div>
       )}
 
-      {/* PHASE 3.4: ACTIVITY TAB */}
+      {/* Activity Tab (Unchanged) */}
       {activeTab === "activity" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
            <ActivityTimeline history={history} bookmarks={bookmarks} uploads={uploads} />

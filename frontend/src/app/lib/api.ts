@@ -591,3 +591,115 @@ export const logStudySession = async (userId: string, documentId: number) => {
     console.error("Failed to log study session:", error);
   }
 };
+
+// --- PERSONALIZED FEEDS ---
+
+export const getPersonalizedRecentUploads = async (userId?: string, limit = 5) => {
+  let personalizedDocs: any[] = [];
+  let userFavs: string[] = [];
+
+  // Step 1: Attempt personalized fetch if logged in
+  if (userId) {
+    const profile = await getProfilePreferences(userId);
+    userFavs = profile?.favorite_subjects || [];
+
+    if (userFavs.length > 0) {
+      const { data } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('status', 'approved')
+        .in('subject', userFavs)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+        
+      if (data) personalizedDocs = data;
+    }
+  }
+
+  // Step 2: Graceful Fallback / Backfill
+  if (personalizedDocs.length < limit) {
+    const remainingLimit = limit - personalizedDocs.length;
+    const excludeIds = personalizedDocs.map(d => d.id);
+    
+    let fallbackQuery = supabase
+      .from('documents')
+      .select('*')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(remainingLimit);
+
+    if (excludeIds.length > 0) {
+      // Exclude already fetched docs to prevent duplicates
+      fallbackQuery = fallbackQuery.not('id', 'in', `(${excludeIds.join(',')})`);
+    }
+
+    const { data: fallbackDocs } = await fallbackQuery;
+    if (fallbackDocs) {
+      personalizedDocs = [...personalizedDocs, ...fallbackDocs];
+    }
+  }
+
+  return personalizedDocs;
+};
+
+export const getPersonalizedRecommendations = async (userId?: string, limit = 5) => {
+  // Leverages trending analytics but heavily weights them towards preferred_branch and favorites
+  const globalTrending = await getTrendingDocuments();
+  
+  if (!userId) return globalTrending;
+
+  const profile = await getProfilePreferences(userId);
+  if (!profile || (!profile.favorite_subjects?.length && !profile.preferred_branch)) {
+    return globalTrending;
+  }
+
+  const { data: personalizedTrending } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('status', 'approved')
+    .in('subject', profile.favorite_subjects || [])
+    .order('created_at', { ascending: false }) // Fallback order if views are missing
+    .limit(limit);
+
+  // Merge and deduplicate, prioritizing personalized items
+  const combined = [...(personalizedTrending || [])];
+  const existingIds = new Set(combined.map(d => d.id));
+
+  for (const doc of globalTrending) {
+    if (combined.length >= limit) break;
+    if (!existingIds.has(doc.id)) {
+      combined.push(doc);
+      existingIds.add(doc.id);
+    }
+  }
+
+  return combined;
+};
+
+// Add this near the bottom of your API file
+export const getSuggestedNextSteps = async (lastDoc: any, excludeIds: number[] = [], limit = 3) => {
+  if (!lastDoc || !lastDoc.subject) return [];
+  
+  let query = supabase
+    .from('documents')
+    .select('*')
+    .eq('status', 'approved')
+    .eq('subject', lastDoc.subject); // Find docs in the exact same subject
+    
+  if (excludeIds.length > 0) {
+    // Don't recommend what they've already seen recently
+    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+  }
+  
+  // Try to recommend PYQs or Notes primarily, fallback to newest
+  const { data, error } = await query
+    .order('category', { ascending: false }) 
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Failed to fetch suggestions:", error);
+    return [];
+  }
+  return data || [];
+};
