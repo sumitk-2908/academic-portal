@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import type { Session } from "@supabase/supabase-js";
 import AchievementToast from "@/components/ui/AchievementToast";
-import { supabase, getTrendingDocuments, uploadDocument, getAchievements, searchDocuments } from "./lib/api";
+import { supabase, getTrendingDocuments, uploadDocument, getAchievements, searchDocuments, UploadState } from "./lib/api";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 import { useQuery } from '@tanstack/react-query';
 import * as Toast from "@radix-ui/react-toast";
 import * as Dialog from "@radix-ui/react-dialog";
+import UploadProgressBar from "@/components/ui/UploadProgressBar";
 
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
@@ -109,6 +110,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [uploadedBy, setUploadedBy] = useState("");
   const [uploadSubject, setUploadSubject] = useState("MATHS 1");
   const [uploadModule, setUploadModule] = useState(1);
+  const [uploadState, setUploadState] = useState<UploadState>("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadErrorMsg, setUploadErrorMsg] = useState("");
 
   const refreshSidebarData = useCallback(async (currentUserId?: string) => {
 
@@ -349,7 +353,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     router.push('/');
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
+ const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return showToast("Upload Error", "Please map a PDF resource!", "error");
 
@@ -357,7 +361,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       return alert("Upload blocked: File size exceeds the 50MB limit.");
     }
 
+    // Reset UX States
+    setUploadState("idle");
+    setUploadProgress(0);
+    setUploadErrorMsg("");
     setUploading(true);
+
     const formData = new FormData();
     const authorName = uploadedBy || (isAdmin ? "Admin" : "Student");
     
@@ -369,20 +378,37 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
     formData.append("module_id", isModuleDisabled ? "null" : String(uploadModule));
     
-    formData.append("uploaded_by", authorName); // Backend will still overwrite this with UUID, which is fine!
+    formData.append("uploaded_by", authorName); // Backend overwrites with UUID
     formData.append("subject", uploadSubject); 
     formData.append("status", isAdmin ? "approved" : "pending");
 
     try {
-      await uploadDocument(formData);
-      setFile(null); setUploadTitle(""); setShowUploadForm(false);
-      const { data: sess } = await supabase.auth.getSession();
-      refreshSidebarData(sess?.session?.user?.id);
-      if (!isAdmin) showToast("Success", "Notes submitted! Pending admin approval.", "success");
-    } catch (err) {
-      showToast("Upload Error", "Failed to upload file.", "error");
-    } finally {
+      // Call the new progressive uploader
+      await uploadDocument(
+        formData,
+        (percent) => setUploadProgress(percent),
+        (state) => setUploadState(state)
+      );
+      
+      // Delay closing modal so user sees the green "Complete!" state
+      setTimeout(async () => {
+        setFile(null); 
+        setUploadTitle(""); 
+        setShowUploadForm(false);
+        setUploadState("idle");
+        setUploading(false);
+        
+        const { data: sess } = await supabase.auth.getSession();
+        refreshSidebarData(sess?.session?.user?.id);
+        if (!isAdmin) showToast("Success", "Notes submitted! Pending admin approval.", "success");
+      }, 1500);
+
+    } catch (err: any) {
+      setUploadState("error");
+      setUploadErrorMsg(err.message || "Failed to upload file.");
       setUploading(false);
+      // Keep your global toast error as a backup
+      showToast("Upload Error", err.message || "Failed to upload file.", "error");
     }
   };
 
@@ -998,16 +1024,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     } else {
                       setFile(null);
                     }
-                  }} className="w-full py-2 text-xs" />
+                  }} className="w-full py-2 text-xs disabled:opacity-50" />
                 </div>
-                <button type="submit" disabled={uploading} className="h-11 w-full rounded-xl bg-[#4F46E5] text-sm font-bold text-white hover:bg-[#6366F1]">
-                  {uploading ? "Uploading..." : "Publish Resource"}
+
+                {/* --- NEW PROGRESS BAR --- */}
+                <UploadProgressBar 
+                  state={uploadState} 
+                  progress={uploadProgress} 
+                  fileName={file?.name} 
+                  errorMessage={uploadErrorMsg} 
+                />
+
+                {/* --- UPDATED SUBMIT BUTTON --- */}
+                <button 
+                  type="submit" 
+                  disabled={uploadState === "uploading" || uploadState === "processing" || uploadState === "success"} 
+                  className="h-11 w-full rounded-xl bg-[#4F46E5] text-sm font-bold text-white hover:bg-[#6366F1] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {(uploadState === "uploading" || uploadState === "processing") ? "Processing..." : "Publish Resource"}
                 </button>
               </form>
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
-        
+
         {/* ========================================= */}
         {/* GLOBAL ACHIEVEMENT TOAST */}
         {/* ========================================= */}

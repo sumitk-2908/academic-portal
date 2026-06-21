@@ -12,6 +12,7 @@ import {
 import ActivityHeatmap from "./ActivityHeatmap";
 import AchievementsList from "./AchievementsList";
 import ActivityTimeline from "./ActivityTimeline";
+import UserDocumentCard from "./UserDocumentCard";
 
 export default function ProfileTabs({ user, history, bookmarks, uploads, achievements }: any) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -218,21 +219,11 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#64748B]">Upload History</h3>
           {uploads.length > 0 ? uploads.map((item: any, idx: number) => (
-             <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#E5E7EB] bg-white p-4 dark:border-[#1F2A44] dark:bg-[#131625]">
-               <div className="flex items-center gap-4 min-w-0">
-                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500"><FileText size={18} /></div>
-                 <div className="flex-1 min-w-0">
-                   <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{item.title}</p>
-                   <p className="text-xs text-[#64748B] truncate capitalize">
-                     {item.subject} • <span className={item.status === 'approved' ? 'text-emerald-600' : 'text-amber-600'}>{item.status}</span>
-                   </p>
-                 </div>
-               </div>
-               <div className="flex items-center gap-4 text-xs font-bold text-[#64748B] dark:text-[#94A3B8] sm:ml-auto ml-14 shrink-0">
-                 <span className="flex items-center gap-1.5"><Eye size={14} /> {item.document_analytics?.view_count || 0}</span>
-                 <span className="flex items-center gap-1.5"><Download size={14} /> {item.document_analytics?.download_count || 0}</span>
-               </div>
-             </div>
+             <UserDocumentCard 
+               key={idx} 
+               item={item} 
+               onRefresh={() => window.dispatchEvent(new Event("sidebar_update"))} 
+             />
            )) : <p className="text-sm text-gray-500">You haven't uploaded any resources yet.</p>}
         </div>
       )}

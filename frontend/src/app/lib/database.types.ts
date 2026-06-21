@@ -175,6 +175,9 @@ export type Database = {
           title: string
           uploaded_by: string
           uploader_name: string | null
+          rejection_reason: string | null
+          updated_at: string | null
+          resubmission_count: number
         }
         Insert: {
           category: string
@@ -192,6 +195,9 @@ export type Database = {
           title: string
           uploaded_by?: string
           uploader_name?: string | null
+          rejection_reason: string | null
+          updated_at: string | null
+          resubmission_count: number
         }
         Update: {
           category?: string
@@ -209,6 +215,9 @@ export type Database = {
           title?: string
           uploaded_by?: string
           uploader_name?: string | null
+          rejection_reason: string | null
+          updated_at: string | null
+          resubmission_count: number
         }
         Relationships: []
       }

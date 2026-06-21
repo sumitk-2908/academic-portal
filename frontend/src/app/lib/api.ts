@@ -137,25 +137,26 @@ export const searchDocuments = async (options: SearchOptions = {}) => {
 
 // --- UPLOAD & DELETE (Routed through FastAPI) ---
 
-export const uploadDocument = async (formData: FormData) => {
+export const uploadDocument = async (
+  formData: FormData,
+  onProgress: (percent: number) => void,
+  onStateChange: (state: UploadState) => void
+) => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`
-      },
-      body: formData
-    });
+    const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload/`;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("SERVER REJECTED UPLOAD:", errorText);
-      throw new Error(`Upload failed: ${errorText}`);
-    }
+    // Call the new progressive uploader
+    const response = await uploadWithProgress(
+      endpoint,
+      formData,
+      session?.access_token || '',
+      onProgress,
+      onStateChange
+    );
 
-    return await response.json();
+    return response;
   } catch (error) {
     console.error("UPLOAD CRASH:", error);
     throw error;
@@ -705,4 +706,88 @@ export const dismissDocumentFlags = async (documentId: number) => {
     console.error("Failed to dismiss flags:", error);
     throw error;
   }
+};
+
+export async function resubmitDocument(
+  documentId: number,
+  formData: FormData,
+  token: string
+) {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${documentId}/resubmit`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Do NOT set Content-Type here; let the browser set it automatically for FormData (multipart/form-data)
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Failed to resubmit document");
+  }
+
+  return response.json();
+}
+
+export type UploadState = "idle" | "uploading" | "processing" | "success" | "error";
+
+export const uploadWithProgress = (
+  endpointUrl: string,
+  formData: FormData,
+  token: string,
+  onProgress: (progress: number) => void,
+  onStateChange: (state: UploadState) => void
+): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", endpointUrl, true);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    // 1. Track Network Transfer
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        
+        // UX Trick: Cap at 99% while uploading. 
+        // 100% means the network transfer is done, but the backend is still "processing" the PDF.
+        if (percentComplete >= 100) {
+          onProgress(99);
+          onStateChange("processing");
+        } else {
+          onProgress(percentComplete);
+        }
+      }
+    };
+
+    // 2. Handle Server Response
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress(100);
+        onStateChange("success");
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        onStateChange("error");
+        let errorMsg = "Upload failed on the server.";
+        try {
+          errorMsg = JSON.parse(xhr.responseText).detail || errorMsg;
+        } catch (e) {}
+        reject(new Error(errorMsg));
+      }
+    };
+
+    // 3. Handle Network Interruptions
+    xhr.onerror = () => {
+      onStateChange("error");
+      reject(new Error("Network connection lost. Please check your internet."));
+    };
+
+    xhr.onabort = () => {
+      onStateChange("error");
+      reject(new Error("Upload was manually aborted."));
+    };
+
+    onStateChange("uploading");
+    xhr.send(formData);
+  });
 };

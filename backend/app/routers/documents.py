@@ -281,9 +281,10 @@ async def update_document_status(
         update_payload = {
             "status": payload.status,
             "moderated_by": admin_user.get("id"),
-            "updated_at": "now()" # Optional: if you track last modified time
+            "rejection_reason": payload.reason if payload.status == "rejected" else None,
+            "updated_at": "now()" 
         }
-        
+                
         db_response = supabase.table("documents").update(update_payload).eq("id", document_id).execute()
         
         if not db_response.data:
@@ -313,3 +314,139 @@ async def update_document_status(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to update document status: {str(e)}")
+    
+@router.post("/{document_id}/resubmit")
+@limiter.limit("5/minute")
+async def resubmit_document(
+    request: Request,
+    document_id: int,
+    title: str = Form(...),
+    category: DocCategory = Form(...),
+    module_id: str = Form("null"),
+    subject: str = Form("General"),
+    uploader_name: str = Form(None),
+    file: Optional[UploadFile] = File(None), # Optional: User might only be fixing typos
+    user: dict = Depends(verify_token)
+):
+    """Allows a contributor to edit and resubmit a rejected document."""
+    user_id = user.get("id")
+
+    try:
+        # 1. Fetch existing document
+        doc_res = supabase.table("documents").select("*").eq("id", document_id).execute()
+        if not doc_res.data:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        existing_doc = doc_res.data[0]
+
+        # 2. Security Authorizations
+        if existing_doc.get("uploaded_by") != user_id:
+            raise HTTPException(status_code=403, detail="Only the original uploader can resubmit this document.")
+
+        if existing_doc.get("status") != "rejected":
+            raise HTTPException(status_code=400, detail="Only rejected documents can be resubmitted.")
+
+        # 3. Prepare Metadata Update Payload
+        safe_module_id = None if module_id == "null" else int(module_id)
+        category_val = category.value if hasattr(category, 'value') else category
+
+        update_payload = {
+            "title": title,
+            "category": category_val,
+            "module_id": safe_module_id,
+            "subject": subject,
+            "uploader_name": uploader_name.strip() if uploader_name else "Anonymous",
+            "status": "pending",
+            "updated_at": "now()",
+            "resubmission_count": existing_doc.get("resubmission_count", 0) + 1
+            # Note: We intentionally leave rejection_reason intact so admins can see context during review
+        }
+
+        files_to_remove = []
+
+        # 4. Handle File Replacement (If provided)
+        if file and file.filename:
+            if not file.filename.endswith(".pdf"):
+                raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+
+            unique_prefix = uuid.uuid4().hex[:8]
+            original_clean_name = file.filename.replace(" ", "_")
+            safe_filename = f"{unique_prefix}_{original_clean_name}"
+
+            file_bytes = await file.read()
+            file_size_mb = round(len(file_bytes) / (1024 * 1024), 2)
+            
+            try:
+                page_count, thumbnail_bytes = await asyncio.to_thread(extract_pdf_metadata, file_bytes)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail="Invalid, corrupted, or spoofed PDF file.")
+
+            safe_thumb_filename = f"thumb_{safe_filename.replace('.pdf', '.jpg')}"
+            base_url = SUPABASE_URL.rstrip("/")
+            upload_url = f"{base_url}/storage/v1/object/documents/{safe_filename}"
+            thumb_upload_url = f"{base_url}/storage/v1/object/documents/{safe_thumb_filename}" if thumbnail_bytes else None
+
+            headers = {
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "apikey": SUPABASE_KEY,
+                "Content-Type": file.content_type or "application/pdf",
+                "x-upsert": "true"
+            }
+
+            # Direct Upload to Cloud Storage
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(upload_url, content=file_bytes, headers=headers)
+                if response.status_code >= 400:
+                    raise HTTPException(status_code=500, detail=f"Direct Upload Failed: {response.text}")
+
+                if thumbnail_bytes and thumb_upload_url:
+                    thumb_headers = {**headers, "Content-Type": "image/jpeg"}
+                    thumb_response = await client.post(thumb_upload_url, content=thumbnail_bytes, headers=thumb_headers)
+                    if thumb_response.status_code < 400:
+                        update_payload["thumbnail_url"] = f"{base_url}/storage/v1/object/public/documents/{safe_thumb_filename}"
+
+            update_payload["file_url"] = f"{base_url}/storage/v1/object/public/documents/{safe_filename}"
+            update_payload["file_size"] = file_size_mb
+            update_payload["page_count"] = page_count
+
+            # Queue old files for deletion to prevent storage bloat
+            public_prefix = f"{base_url}/storage/v1/object/public/documents/"
+            if existing_doc.get("file_url") and existing_doc["file_url"].startswith(public_prefix):
+                files_to_remove.append(existing_doc["file_url"].replace(public_prefix, ""))
+            if existing_doc.get("thumbnail_url") and existing_doc["thumbnail_url"].startswith(public_prefix):
+                files_to_remove.append(existing_doc["thumbnail_url"].replace(public_prefix, ""))
+
+        # 5. Commit Updates to Database
+        db_response = supabase.table("documents").update(update_payload).eq("id", document_id).execute()
+        
+        if not db_response.data:
+            raise Exception("Database update failed.")
+
+        # 6. Notify the user
+        try:
+            supabase.table("notifications").insert({
+                "user_id": user_id,
+                "title": "Document Resubmitted",
+                "message": f"Your document '{title}' has been successfully resubmitted and is pending review.",
+                "type": "document_resubmitted",
+                "related_entity_id": document_id,
+                "is_read": False
+            }).execute()
+        except Exception as notif_err:
+            print(f"Warning: Failed to log resubmission notification: {notif_err}")
+
+        # 7. Clean up orphaned cloud files
+        if files_to_remove:
+            try:
+                supabase.storage.from_("documents").remove(files_to_remove)
+            except Exception as cleanup_err:
+                print(f"Warning: Failed to clean up orphaned files: {cleanup_err}")
+
+        return {"message": "Document resubmitted successfully", "document": db_response.data[0]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Resubmission Error: {str(e)}")    

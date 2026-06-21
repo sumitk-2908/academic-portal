@@ -145,6 +145,19 @@ export default function AdminInboxAuditingRoute() {
                   </div>
                   <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
                   <p className="text-[10px] text-[#64748B] mt-2 font-semibold">{doc.subject} • Module {doc.module_id || 1}</p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {doc.resubmission_count > 0 && (
+                      <span className="inline-flex items-center self-start rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                        Resubmission (Attempt #{doc.resubmission_count})
+                      </span>
+                    )}
+
+                    {doc.rejection_reason && (
+                      <div className="text-[11px] text-gray-500 italic bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <strong>Prior Rejection Note:</strong> "{doc.rejection_reason}"
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="mt-auto flex gap-2 border-t border-[#E5E7EB] pt-4 dark:border-[#1F2A44]">
                     <a href={doc.file_url} target="_blank" className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#4F46E5] py-2 text-[11px] font-bold text-white hover:bg-[#6366F1]">
