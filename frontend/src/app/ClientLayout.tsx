@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { Session } from "@supabase/supabase-js";
 import AchievementToast from "@/components/ui/AchievementToast";
 import { supabase, getTrendingDocuments, uploadDocument, getAchievements, searchDocuments } from "./lib/api";
@@ -11,7 +11,8 @@ import {
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, 
   PanelLeftClose, TrendingUp, X, BookOpen, Bookmark, Clock, 
   Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2, 
-  User, Settings, Info, Phone, AlertTriangle, Medal, Activity
+  User, Settings, Info, Phone, AlertTriangle, Medal, Activity,
+  Bell, CheckCheck
 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import Link from 'next/link';
@@ -47,10 +48,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [isSearching, setIsSearching] = useState(false);
   const [trendingDocs, setTrendingDocs] = useState<any[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+
+  // --- NOTIFICATION STATE ---
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
   
 
   // --- ACHIEVEMENT TOAST STATE ---
-  const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
+  const earnedBadgesRef = useRef<Set<string>>(new Set());
   const [activeToast, setActiveToast] = useState<{title: string, description: string} | null>(null);
 
   // Auth States
@@ -123,13 +129,28 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         setUploadedBy(session.user.email?.split('@')[0] || "Student");
       }
       const initialBadges = await getAchievements(session.user.id);
-      setEarnedBadgeIds(initialBadges.map((b: any) => b.badge_id));
+      earnedBadgesRef.current = new Set(initialBadges.map((b: any) => b.badge_id));
+
+      // --- NEW: FETCH INITIAL NOTIFICATIONS ---
+      const { data: notifs } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (notifs) {
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter(n => !n.is_read).length);
+      }
 
       refreshSidebarData(session.user.id);
     } else {
       setIsAdmin(false); setIsStudent(false);
-      setEarnedBadgeIds([]);
+      earnedBadgesRef.current.clear();
       refreshSidebarData();
+      setNotifications([]);
+      setUnreadCount(0);
     }
   }, [refreshSidebarData]);
 
@@ -162,31 +183,31 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return () => subscription.unsubscribe();
   }, [syncUserFromSession]);
 
-  // --- REAL-TIME ACHIEVEMENT LISTENER ---
+  // --- REAL-TIME LISTENERS ---
   useEffect(() => {
-    let channel: any;
+    let achieveChannel: any;
+    let notifChannel: any;
+    let notifUpdateChannel: any;
 
-    const setupListener = async () => {
+    const setupListeners = async () => {
+      // 1. Fetch session FIRST
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // 2. Stop here if there is no logged-in user
       if (!session?.user) return;
       
-      // FIX 1: Use a unique channel name so React Strict Mode doesn't collide with itself
-      channel = supabase
+      // 3. Achievements Listener
+      achieveChannel = supabase
         .channel(`achievements-${session.user.id}`)
         .on(
           'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'user_achievements',
-            filter: `user_id=eq.${session.user.id}`
-          },
+          { event: 'INSERT', schema: 'public', table: 'user_achievements', filter: `user_id=eq.${session.user.id}` },
           (payload) => {
             const newBadgeId = payload.new.badge_id;
             
-            // FIX 2: Use functional state update so we don't need earnedBadgeIds in the dependency array
-            setEarnedBadgeIds((prev) => {
-              if (prev.includes(newBadgeId)) return prev; // Ignore if we already have it
+            // If we haven't seen this badge yet during this session
+            if (!earnedBadgesRef.current.has(newBadgeId)) {
+              earnedBadgesRef.current.add(newBadgeId); // Mark as seen
               
               const badgeLookup: Record<string, {title: string, desc: string}> = {
                 "first_upload": { title: "First Contribution", desc: "You uploaded your first resource." },
@@ -198,23 +219,55 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
               const badgeInfo = badgeLookup[newBadgeId] || { title: "New Badge", desc: "You earned a new achievement!" };
               setActiveToast({ title: badgeInfo.title, description: badgeInfo.desc });
-              
-              return [...prev, newBadgeId]; // Add to tracked state
+            }
+          }
+        )
+        .subscribe();
+
+      // 4. Notifications Listener (INSERT - New Notifications)
+      notifChannel = supabase
+        .channel(`notifications-${session.user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },
+          (payload) => {
+            setNotifications(prev => [payload.new, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            
+            setActiveToast({ 
+              title: payload.new.title, 
+              description: payload.new.message 
+            });
+          }
+        )
+        .subscribe();
+
+      // 5. Notifications Listener (UPDATE - Syncing Read States across tabs)
+      notifUpdateChannel = supabase
+        .channel(`notifications-update-${session.user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },
+          (payload) => {
+            setNotifications(prev => {
+              const updatedList = prev.map(n => n.id === payload.new.id ? payload.new : n);
+              setUnreadCount(updatedList.filter(n => !n.is_read).length);
+              return updatedList;
             });
           }
         )
         .subscribe();
     };
 
-    setupListener();
+    setupListeners();
 
-    // FIX 3: Proper React synchronous cleanup function
+    // 6. Cleanup channels when component unmounts
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      if (achieveChannel) supabase.removeChannel(achieveChannel);
+      if (notifChannel) supabase.removeChannel(notifChannel);
+      if (notifUpdateChannel) supabase.removeChannel(notifUpdateChannel);
     };
-  }, []); // <--- Empty dependency array! Safely runs only once on mount.
+  }, []); // Empty dependency array ensures this only runs once
 
   const toggleTheme = () => {
     const html = document.documentElement;
@@ -358,6 +411,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return () => clearTimeout(debounceTimer);
 }, [searchQuery]);
 
+  const handleMarkAsRead = async (id: string, isRead: boolean) => {
+    if (isRead) return;
+
+    // Optimistic UI update
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+
+    // Update database
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+  };
+
 
   return (
     <StudyHistoryProvider>
@@ -447,6 +511,70 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : null}
               </button>
               
+              {/* --- NEW NOTIFICATION BELL --- */}
+              {(isAdmin || isStudent) && (
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowNotifications(!showNotifications)} 
+                    className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] hover:bg-gray-50 dark:hover:bg-[#1F2A44] transition-colors"
+                  >
+                    <Bell size={18} className="text-[#64748B] dark:text-[#94A3B8]" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-[#111827]">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* NOTIFICATION DROPDOWN */}
+                  {showNotifications && (
+                    <>
+                      {/* Invisible backdrop to catch outside clicks */}
+                      <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>
+                      
+                      <div className="absolute -right-2 sm:right-0 top-12 z-50 w-[320px] max-w-[calc(100vw-2rem)] sm:w-80 rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] animate-in slide-in-from-top-2">
+                        <div className="flex items-center justify-between border-b border-[#E5E7EB] p-3 dark:border-[#1F2A44]">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Notifications</p>
+                          {unreadCount > 0 && (
+                            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                              {unreadCount} New
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+                          {notifications.length === 0 ? (
+                            <p className="p-4 text-center text-xs text-[#64748B]">You're all caught up!</p>
+                          ) : (
+                            notifications.map(notif => (
+                              <div 
+                                key={notif.id}
+                                onClick={() => handleMarkAsRead(notif.id, notif.is_read)}
+                                className={`flex cursor-pointer flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-[#1F2A44] ${!notif.is_read ? 'bg-indigo-50/50 dark:bg-indigo-500/5' : ''}`}
+                              >
+                                <div className="flex justify-between items-start">
+                                  <p className={`text-xs ${!notif.is_read ? 'font-bold text-gray-900 dark:text-white' : 'font-semibold text-gray-700 dark:text-gray-300'}`}>
+                                    {notif.title}
+                                  </p>
+                                  {!notif.is_read ? (
+                                    <span className="h-2 w-2 rounded-full bg-indigo-500 mt-1 shrink-0"></span>
+                                  ) : (
+                                    <CheckCheck size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                                  )}
+                                </div>
+                                <p className="text-[11px] leading-tight text-[#64748B] dark:text-[#94A3B8]">
+                                  {notif.message}
+                                </p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {(isAdmin || isStudent) ? (
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowUploadForm(true)} className="flex h-9 items-center gap-2 rounded-xl bg-[#4F46E5] px-4 text-xs font-bold text-white hover:bg-[#6366F1]">
@@ -613,6 +741,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {/* 1. Quick Links Grid */}
                 <div className="space-y-3">
                   <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Quick Links</p>
+                  
+                  {/* Grid for standard links */}
                   <div className="grid grid-cols-2 gap-3">
                     <Link href="/recent-uploads" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
                       <Upload size={18} className="text-emerald-500" /> Uploads
@@ -627,6 +757,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       <Activity size={18} className="text-blue-500" /> Activity
                     </Link>
                   </div>
+
+                  {/* --- NEW: MOBILE NOTIFICATION LINK --- */}
+                  <button 
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setShowNotifications(true);
+                      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top where the bell is
+                    }} 
+                    className="mt-3 flex w-full items-center justify-between rounded-2xl bg-indigo-50 p-3.5 text-xs font-bold text-indigo-900 dark:bg-indigo-500/10 dark:text-indigo-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Bell size={18} className="text-indigo-500" /> Notifications
+                    </div>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] text-white">
+                        {unreadCount} New
+                      </span>
+                    )}
+                  </button>
                 </div>
 
                 {/* 2. App & Support */}

@@ -11,6 +11,7 @@ from supabase import create_client, Client
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -235,6 +236,7 @@ async def delete_document(request: Request, document_id: int, admin_user: dict =
     
 class StatusUpdatePayload(BaseModel):
     status: str
+    reason: Optional[str] = None
 
 # --- UPDATE STATUS ENDPOINT (APPROVE/REJECT) ---
 @router.patch("/{document_id}/status")
@@ -250,25 +252,43 @@ async def update_document_status(
         raise HTTPException(status_code=400, detail="Invalid status value provided.")
 
     try:
-        # --- DATA CORRUPTION FIX ---
-        # If the existing document has an email in the uploaded_by column, 
-        # the database triggers will crash (they expect a UUID). 
-        # We fix it by safely reassigning ownership to the admin's UUID.
-        doc_res = supabase.table("documents").select("uploaded_by").eq("id", document_id).execute()
-        if doc_res.data:
-            ub = doc_res.data[0].get("uploaded_by")
-            # Check if it is a valid UUID
-            is_valid_uuid = isinstance(ub, str) and re.match(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', ub)
+        # 1. Fetch document details before updating to get the uploader and title
+        doc_res = supabase.table("documents").select("uploaded_by, title").eq("id", document_id).execute()
+        if not doc_res.data:
+            raise HTTPException(status_code=404, detail="Document not found.")
             
-            if ub and not is_valid_uuid:
-                # Fix the row before attempting the status update
-                supabase.table("documents").update({"uploaded_by": admin_user.get("id")}).eq("id", document_id).execute()
+        original_doc = doc_res.data[0]
+        uploader_id = original_doc.get("uploaded_by")
+        doc_title = original_doc.get("title", "Your document")
+
+        # --- EXISTING DATA CORRUPTION FIX ---
+        is_valid_uuid = isinstance(uploader_id, str) and re.match(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', uploader_id)
+        if uploader_id and not is_valid_uuid:
+            supabase.table("documents").update({"uploaded_by": admin_user.get("id")}).eq("id", document_id).execute()
         
-        # Now safely update the status
+        # 2. Update the status
         db_response = supabase.table("documents").update({"status": payload.status}).eq("id", document_id).execute()
         
         if not db_response.data:
             raise HTTPException(status_code=404, detail="Document not found.")
+
+        # 3. Trigger Notification Creation (only if we have a valid contributor UUID)
+        if is_valid_uuid and payload.status in ["approved", "rejected"]:
+            title_text = f"Upload {payload.status.capitalize()}"
+            message_text = f"Your document '{doc_title}' has been {payload.status}."
+            
+            if payload.status == "rejected" and payload.reason:
+                message_text += f" Reason: {payload.reason}"
+
+            # Insert notification record asynchronously
+            supabase.table("notifications").insert({
+                "user_id": uploader_id,
+                "title": title_text,
+                "message": message_text,
+                "type": f"document_{payload.status}",
+                "related_entity_id": document_id,
+                "is_read": False
+            }).execute()
             
         return {"message": f"Document successfully marked as {payload.status}", "document": db_response.data[0]}
 

@@ -451,9 +451,18 @@ export const getTrendingDocuments = async () => {
 
 // --- CROWDSOURCING / APPROVALS ---
 
-export const updateDocumentStatus = async (id: number, status: 'approved' | 'rejected') => {
+export const updateDocumentStatus = async (
+  id: number, 
+  status: 'approved' | 'rejected', 
+  reason?: string 
+) => {
   try {
-    const response = await api.patch(`/api/v1/documents/${id}/status`, { status });
+    const payload: { status: string; reason?: string } = { status };
+    if (reason) {
+      payload.reason = reason;
+    }
+    
+    const response = await api.patch(`/api/v1/documents/${id}/status`, payload);
     return response.data;
   } catch (error: any) {
     console.error("FastAPI Status Update Error:", error.response?.data || error);

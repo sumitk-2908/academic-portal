@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { supabase, updateDocumentStatus, deleteDocument } from "../../../lib/api";
-import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, Loader2 } from "lucide-react";
+import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, Loader2, X } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminInboxAuditingRoute() {
   const [pendingDocs, setPendingDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Rejection Modal State
+  const [rejectingDocId, setRejectingDocId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const loadInbox = async () => {
     setLoading(true);
@@ -30,10 +35,32 @@ export default function AdminInboxAuditingRoute() {
     setPendingDocs(prev => prev.filter(d => d.id !== id));
   };
 
-  const handleReject = async (id: number) => {
-    if (!window.confirm("Reject and permanently delete submission?")) return;
-    await deleteDocument(id);
-    setPendingDocs(prev => prev.filter(d => d.id !== id));
+  // Opens the modal instead of instant deletion
+  const handleRejectClick = (id: number) => {
+    setRejectingDocId(id);
+    setRejectReason("");
+  };
+
+  const confirmReject = async () => {
+    if (!rejectingDocId) return;
+    setIsRejecting(true);
+    
+    try {
+      // Send the rejection to the backend (which triggers the notification)
+      await updateDocumentStatus(rejectingDocId, 'rejected', rejectReason);
+      
+      // Optionally, you can still call deleteDocument if you don't want to keep rejected records
+      // await deleteDocument(rejectingDocId);
+      
+      setPendingDocs(prev => prev.filter(d => d.id !== rejectingDocId));
+      setRejectingDocId(null);
+    } catch (error) {
+      console.error("Rejection failed:", error);
+      alert("Failed to reject document. Please try again.");
+    } finally {
+      setIsRejecting(false);
+      setRejectReason("");
+    }
   };
 
   return (
@@ -57,12 +84,8 @@ export default function AdminInboxAuditingRoute() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pendingDocs.map(doc => {
-            // UI TRICK: Split the title and author back apart
             const titleParts = doc.title.split(' |By| ');
             const cleanTitle = titleParts[0];
-            
-            // If it has our secret tag, show the typed name. 
-            // If it's an older document with an ugly UUID (36 chars), show a fallback.
             const authorName = titleParts.length > 1 
               ? titleParts[1] 
               : (doc.uploaded_by?.length === 36 ? "Verified Student" : doc.uploaded_by);
@@ -76,18 +99,15 @@ export default function AdminInboxAuditingRoute() {
                   <span className="text-[9px] font-extrabold uppercase bg-amber-500/10 text-amber-600 px-2.5 py-1 rounded-full">PENDING AUDIT</span>
                 </div>
                 
-                {/* Render the Cleaned Title */}
                 <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{cleanTitle}</h3>
                 
                 <p className="text-[10px] text-[#64748B] mt-2 font-semibold">
                   {doc.subject} • Module {doc.module_id || 1}
                 </p>
                 
-                {/* Render the Cleaned Author Name */}
                 <p className="text-[10px] text-[#64748B] mt-0.5">By: {authorName}</p>
                 
                 <div className="mt-auto flex gap-2 border-t border-[#E5E7EB] pt-4 dark:border-[#1F2A44]">
-                  {/* PREVIEW BUTTON */}
                   <a 
                     href={doc.file_url} 
                     target="_blank" 
@@ -97,7 +117,6 @@ export default function AdminInboxAuditingRoute() {
                     <Eye size={12} /> Preview
                   </a>
 
-                  {/* APPROVE BUTTON */}
                   <button 
                     onClick={() => handleApprove(doc.id)} 
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-[11px] font-bold text-white transition-colors hover:bg-emerald-600"
@@ -105,11 +124,10 @@ export default function AdminInboxAuditingRoute() {
                     <CheckCircle size={12} /> Approve
                   </button>
 
-                  {/* REJECT BUTTON */}
                   <button 
-                    onClick={() => handleReject(doc.id)} 
+                    onClick={() => handleRejectClick(doc.id)} 
                     className="flex items-center justify-center rounded-xl border border-red-500/30 p-2 text-red-500 transition-colors hover:bg-red-500/10"
-                    title="Reject & Delete"
+                    title="Reject Document"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -120,6 +138,53 @@ export default function AdminInboxAuditingRoute() {
           {pendingDocs.length === 0 && (
             <p className="col-span-full text-center py-12 text-xs text-[#64748B]">Inbox clear! No outstanding crowdsourcing requests.</p>
           )}
+        </div>
+      )}
+
+      {/* REJECTION REASON MODAL */}
+      {rejectingDocId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-[#0B1020] border border-[#E5E7EB] dark:border-[#1F2A44] animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Reject Submission</h3>
+              <button 
+                onClick={() => setRejectingDocId(null)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Please provide a reason for rejecting this document. This feedback will be sent directly to the contributor.
+            </p>
+            
+            <textarea
+              autoFocus
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g., Low quality scan, duplicate content, incorrect subject..."
+              className="w-full h-32 p-3 text-sm rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] bg-transparent text-gray-900 dark:text-white mb-6 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none resize-none"
+            />
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setRejectingDocId(null)}
+                disabled={isRejecting}
+                className="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-xl dark:text-gray-300 dark:hover:bg-[#1F2A44] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={isRejecting || !rejectReason.trim()}
+                className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl disabled:opacity-50 transition-colors"
+              >
+                {isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>
