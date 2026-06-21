@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '../../utils/supabase/client';
 import { Database } from "./database.types";
 
 // 1. Initialize Supabase Auth
@@ -10,9 +10,8 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error("Missing Supabase environment variables");
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+export const supabase = createClient();
 
 export const api = axios.create({
   baseURL: API_URL,
