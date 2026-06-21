@@ -6,6 +6,10 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development",
   // register and skipWaiting are handled automatically by this package!
   cacheOnFrontEndNav: true, 
+  // Add explicit fallback routing for offline support
+  fallbacks: {
+    document: "/~offline",
+  },
 });
 
 const nextConfig: NextConfig = {

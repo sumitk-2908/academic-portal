@@ -16,7 +16,7 @@ import {
   PanelLeftClose, TrendingUp, X, BookOpen, Bookmark, Clock, 
   Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2, 
   User, Settings, Info, Phone, AlertTriangle, Medal, Activity,
-  Bell, CheckCheck
+  Bell, CheckCheck, WifiOff
 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import Link from 'next/link';
@@ -83,6 +83,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
     setGlobalToast({ open: true, title, message, type });
   };
+
+  const [isOffline, setIsOffline] = useState(false);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -460,6 +462,27 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     await supabase.from('notifications').update({ is_read: true }).eq('id', id);
   };
 
+  useEffect(() => {
+  setIsOffline(!navigator.onLine);
+
+  const handleOnline = () => {
+    setIsOffline(false);
+    showToast("Connection Restored", "You are back online.", "success");
+  };
+  const handleOffline = () => {
+    setIsOffline(true);
+    showToast("Connection Lost", "You are operating offline. You can still access saved bookmarks.", "error");
+  };
+
+  window.addEventListener("online", handleOnline);
+  window.addEventListener("offline", handleOffline);
+
+  return () => {
+    window.removeEventListener("online", handleOnline);
+    window.removeEventListener("offline", handleOffline);
+  };
+}, []);
+
 
   return (
     <StudyHistoryProvider>
@@ -635,6 +658,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
           </div>
         </header>
+
+        {/* --- OFFLINE BANNER --- */}
+        {isOffline && (
+          <div className="z-40 flex items-center justify-center gap-2 bg-red-500 px-4 py-2 text-center text-xs font-semibold text-white">
+            <WifiOff size={14} />
+            <span>You are currently offline. Viewing cached pages and bookmarked PDFs only.</span>
+            <Link href="/bookmarks" className="ml-2 font-bold underline hover:text-gray-200">
+              Go to Bookmarks
+            </Link>
+          </div>
+        )}
 
         <div className="mx-auto flex w-full max-w-[1600px] flex-1">
           
