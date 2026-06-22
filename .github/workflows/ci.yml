@@ -1,0 +1,100 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # Job 1: Static Analysis & Build Verification
+  verify-build:
+    name: Typecheck, Lint, and Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Type Check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Next.js Build Verification
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "dummy-key-for-build"
+          NEXT_PUBLIC_API_URL: "http://127.0.0.1:8000"
+
+  # Job 2: End-to-End Integration Tests
+  integration-tests:
+    name: Playwright Integration Tests
+    runs-on: ubuntu-latest
+    needs: verify-build # Only run tests if build passes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Local Supabase
+        run: supabase start
+        
+      - name: Install Backend Dependencies
+        working-directory: ./backend
+        run: pip install -r requirements.txt
+
+      - name: Start FastAPI Backend (Background)
+        working-directory: ./backend
+        run: uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        env:
+          # In CI, Supabase CLI outputs standard local keys
+          SUPABASE_URL: "http://127.0.0.1:54321" 
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Install Frontend Dependencies & Playwright
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Run E2E Tests
+        working-directory: ./frontend
+        run: npx playwright test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_API_URL: "http://127.0.0.1:8000"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
