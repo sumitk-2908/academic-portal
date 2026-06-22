@@ -15,6 +15,6 @@ VALUES
 ('22222222-2222-2222-2222-222222222222', 'admin');
 
 -- 4. Add the Admin to the 'admins' table so they pass the /portal-admin middleware check
-INSERT INTO public.admins (user_id)
+INSERT INTO public.admins (user_id, email)
 VALUES 
-('22222222-2222-2222-2222-222222222222');
+('22222222-2222-2222-2222-222222222222', 'admin@test.com');
