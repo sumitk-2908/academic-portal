@@ -611,26 +611,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
                           <div className="flex items-center gap-2">
                             {notifications.some((n) => n.is_read) && (
-                              <button
+                              <button 
                                 onClick={async () => {
-                                  if (
-                                    window.confirm(
-                                      "Are you sure you want to clear all read notifications?"
-                                    )
-                                  ) {
-                                    const { data: sess } =
-                                      await supabase.auth.getSession();
-
+                                  if(window.confirm("Are you sure you want to clear all read notifications?")) {
+                                    const { data: sess } = await supabase.auth.getSession();
                                     if (sess?.session?.user) {
-                                      await supabase
-                                        .from("notifications")
-                                        .delete()
-                                        .eq("user_id", sess.session.user.id)
-                                        .eq("is_read", true);
-
-                                      setNotifications((prev) =>
-                                        prev.filter((n) => !n.is_read)
-                                      );
+                                      // Capture error from Supabase
+                                      const { error } = await supabase
+                                          .from('notifications')
+                                          .delete()
+                                          .eq('user_id', sess.session.user.id)
+                                          .eq('is_read', true);
+                                      
+                                      if (error) {
+                                        console.error("Delete failed:", error);
+                                        alert("Could not clear notifications. Please check Supabase RLS DELETE permissions.");
+                                      } else {
+                                        // Only clear UI if DB deletion was successful
+                                        setNotifications(prev => prev.filter(n => !n.is_read));
+                                      }
                                     }
                                   }
                                 }}
