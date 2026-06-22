@@ -721,16 +721,13 @@ export const getFlaggedDocuments = async () => {
 
 export const dismissDocumentFlags = async (documentId: number) => {
   try {
-    const { error } = await supabase
-      .from('document_flags')
-      .update({ status: 'dismissed' })
-      .eq('document_id', documentId)
-      .eq('status', 'pending');
-
-    if (error) throw error;
-  } catch (error) {
-    console.error("Failed to dismiss flags:", error);
-    throw error;
+    // Routes directly to the secure FastAPI backend, 
+    // automatically attaching the JWT via the Axios interceptor
+    const response = await api.post(`/api/v1/documents/${documentId}/dismiss-flags`);
+    return response.data;
+  } catch (error: any) {
+    console.error("FastAPI Flag Dismissal Error:", error.response?.data || error);
+    throw new Error(error.response?.data?.detail || "Failed to dismiss flags.");
   }
 };
 

@@ -469,3 +469,33 @@ async def resubmit_document(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Resubmission Error: {str(e)}")
+
+
+@router.post("/{document_id}/dismiss-flags")
+@limiter.limit("20/minute")
+async def dismiss_flags(
+    request: Request,
+    document_id: int,
+    admin_user: dict = Depends(verify_admin),
+):
+    """Dismiss all pending flags for a document (False Alarm)."""
+    try:
+        db_response = (
+            supabase.table("document_flags")
+            .update({"status": "dismissed"})
+            .eq("document_id", document_id)
+            .eq("status", "pending")
+            .execute()
+        )
+        
+        return {
+            "message": "Flags dismissed successfully", 
+            "document_id": document_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to dismiss flags: {str(e)}")

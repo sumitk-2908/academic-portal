@@ -34,8 +34,42 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refreshing the auth token
-  await supabase.auth.getUser()
+  // 1. Get the authenticated user
+  const { data: { user } } = await supabase.auth.getUser()
+  const { pathname } = request.nextUrl
+
+  // Define protected routes
+  const isPortalAdmin = pathname.startsWith('/portal-admin')
+  const isSubjectAdmin = pathname.startsWith('/subject/admin')
+
+  if (isPortalAdmin || isSubjectAdmin) {
+    // 2. Redirect unauthenticated users immediately
+    if (!user) {
+      return NextResponse.redirect(new URL('/', request.url)) // Or redirect to '/login'
+    }
+
+    // 3. Verify Admin Role securely on the server
+    const { data: adminData } = await supabase
+      .from('admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!adminData) {
+      // User is logged in but not an admin
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    // 4. Enforce MFA (AAL2) for internal admin routes (like /subject/admin/inbox)
+    if (isSubjectAdmin) {
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      
+      if (aalData?.currentLevel !== 'aal2') {
+        // Admin hasn't completed MFA, redirect them to the MFA setup/verify portal
+        return NextResponse.redirect(new URL('/portal-admin', request.url))
+      }
+    }
+  }
 
   return response
 }

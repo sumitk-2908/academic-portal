@@ -27,8 +27,22 @@ export default function BookmarksPage() {
       
       if (currentUserId && isMounted) {
         setUserId(currentUserId);
-        const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', currentUserId).single();
-        if (roleData?.role === 'admin' && sessionStorage.getItem("admin_portal_auth") === "true") setIsAdmin(true);
+        
+        // 1. Check user role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', currentUserId)
+          .single();
+          
+        // 2. Check MFA status securely
+        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const isMfaVerified = aalData?.currentLevel === 'aal2';
+
+        // 3. Set admin state only if BOTH are true
+        if (roleData?.role === 'admin' && isMfaVerified) {
+          setIsAdmin(true);
+        }
       }
 
       const userBookmarks = await getStudentBookmarks(currentUserId);

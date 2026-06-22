@@ -133,9 +133,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setEmailConfirmed(!!session.user.email_confirmed_at);
       setCurrentUserEmail(session.user.email || "");
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
-      
       const isDbAdmin = roleData?.role === 'admin';
-      const isPortalAdminFlow = sessionStorage.getItem("admin_portal_auth") === "true";
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      const isPortalAdminFlow = aalData?.currentLevel === 'aal2';
 
       if (isDbAdmin && isPortalAdminFlow) {
         setIsAdmin(true); setIsStudent(false);

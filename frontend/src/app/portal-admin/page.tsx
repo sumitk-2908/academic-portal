@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/api";
-import { useRouter, notFound } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Shield, Loader2, KeyRound, QrCode } from "lucide-react";
 import * as Toast from "@radix-ui/react-toast";
 
@@ -21,27 +21,11 @@ export default function AdminPortalLogin() {
 
   useEffect(() => {
     const initializeMFA = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        notFound();
-        return;
-      }
-
-      const { data: adminData, error: adminError } = await supabase
-        .from('admins')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .single();
-
-      if (adminError || !adminData) {
-        notFound();
-        return;
-      }
+      
 
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.currentLevel === 'aal2') {
-        sessionStorage.setItem("admin_portal_auth", "true");
-        router.push("/");
+        router.push("/subject/admin/inbox");
         return;
       }
 
@@ -85,8 +69,8 @@ export default function AdminPortalLogin() {
       });
       if (verifyError) throw verifyError;
 
-      sessionStorage.setItem("admin_portal_auth", "true");
-      router.push("/");
+      router.refresh();
+      router.push("/subject/admin/inbox");
       
     } catch (err: any) {
       setToast({ open: true, message: `Invalid Authenticator Code: ${err.message}`, type: "error" });
