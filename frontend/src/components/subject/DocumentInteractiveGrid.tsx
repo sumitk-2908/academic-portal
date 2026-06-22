@@ -77,15 +77,36 @@ export default function DocumentInteractiveGrid({
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
-  const handleDownload = (e: React.MouseEvent, doc: any) => {
-    e.preventDefault();
-    trackDocumentStat(doc.id, 'download');
+ const handleDownload = async (e: React.MouseEvent, doc: any) => {
+  e.preventDefault();
+  trackDocumentStat(doc.id, 'download');
+  
+  try {
+    // 1. Fetch the file securely from your new R2 public URL
+    const response = await fetch(doc.file_url);
+    if (!response.ok) throw new Error("Network response was not ok");
+    
+    // 2. Convert to a Blob
+    const blob = await response.blob();
+    
+    // 3. Create a local temporary URL
+    const localUrl = window.URL.createObjectURL(blob);
+    
+    // 4. Trigger the download automatically
     const link = document.createElement("a");
-    link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
+    link.href = localUrl;
+    link.download = `${doc.title}.pdf`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-  };
+    
+    // 5. Clean up the temporary URL to free up memory
+    link.remove();
+    window.URL.revokeObjectURL(localUrl);
+  } catch (error) {
+    console.error("Download failed:", error);
+    alert("Failed to download document. Ensure CORS is configured on your R2 bucket.");
+  }
+};
 
   const confirmDelete = async () => {
     if (!documentToDelete) return;

@@ -13,8 +13,17 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  // Any existing Next.js config options go here
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pub-11c1374f05774b54a2ab6c8bc83d6f7f.r2.dev', // Replace with your exact R2 public domain
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
 };
 
 export default withPWA(nextConfig);

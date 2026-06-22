@@ -11,7 +11,13 @@ sw.addEventListener('message', async (event: ExtendableMessageEvent) => {
   if (event.data.type === 'CACHE_PDF') {
     try {
       const cache = await caches.open(PDF_CACHE_NAME);
-      const response = await fetch(event.data.url);
+      
+      // CRITICAL UPDATE: mode: 'cors' prevents massive Opaque Responses from R2
+      const response = await fetch(event.data.url, {
+        mode: 'cors',
+        credentials: 'omit' // R2 does not require cookies
+      });
+      
       if (response.ok) {
         await cache.put(event.data.url, response.clone());
         if (event.ports && event.ports[0]) {
@@ -46,14 +52,23 @@ sw.addEventListener('message', async (event: ExtendableMessageEvent) => {
 sw.addEventListener('fetch', (event: FetchEvent) => {
   const url = new URL(event.request.url);
   
-  if (url.pathname.includes('/storage/v1/object/public/') && url.pathname.endsWith('.pdf')) {
+  // CRITICAL UPDATE: Removed the Supabase-specific path check. 
+  // Now intercepts any PDF request to support the new R2 URLs.
+  if (url.pathname.endsWith('.pdf')) {
     event.respondWith(
       caches.open(PDF_CACHE_NAME).then((cache) => {
         return cache.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
-            return cachedResponse;
+            return cachedResponse; // Serve from cache if available
           }
-          return fetch(event.request);
+          
+          // Use CORS for live fallback fetches as well
+          const fetchRequest = new Request(event.request, {
+            mode: 'cors',
+            credentials: 'omit'
+          });
+          
+          return fetch(fetchRequest);
         });
       })
     );
