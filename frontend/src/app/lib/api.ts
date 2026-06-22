@@ -47,6 +47,30 @@ export const getDocumentsByModule = async (moduleId: number) => {
   return data || [];
 };
 
+export const getPaginatedDocumentsByModule = async (moduleId: number, page = 1, limit = 20) => {
+  const fromIndex = (page - 1) * limit;
+  const toIndex = fromIndex + limit - 1;
+
+  const { data, count, error } = await supabase
+    .from('documents')
+    .select('*', { count: 'exact' })
+    .eq('module_id', moduleId)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .range(fromIndex, toIndex);
+
+  if (error) {
+    console.error("Fetch Paginated Error:", error);
+    return { data: [], nextCursor: null, total: 0 };
+  }
+
+  const hasMore = count ? fromIndex + (data?.length || 0) < count : false;
+  return { 
+    data: data || [], 
+    nextCursor: hasMore ? page + 1 : null,
+    total: count || 0
+  };
+};
 // --- ENHANCED SEARCH (Server-Side Pagination & FTS) ---
 
 export interface SearchOptions {
