@@ -549,11 +549,13 @@ export const getPersonalizedRecentUploads = async (userId?: string, limit = 5) =
     userFavs = profile?.favorite_subjects || [];
 
     if (userFavs.length > 0) {
+  
+      const orQuery = userFavs.map((f: string) => `subject.ilike.%${f.trim()}%`).join(',');
       const { data } = await supabase
         .from('documents')
         .select('*')
         .eq('status', 'approved')
-        .in('subject', userFavs)
+        .or(orQuery)
         .order('created_at', { ascending: false })
         .limit(limit);
         
@@ -598,12 +600,13 @@ export const getPersonalizedRecommendations = async (userId?: string, limit = 5)
     return globalTrending;
   }
 
+  const orQuery = profile.favorite_subjects.map((f: string) => `subject.ilike.%${f.trim()}%`).join(',');
   const { data: personalizedTrending } = await supabase
     .from('documents')
     .select('*')
     .eq('status', 'approved')
-    .in('subject', profile.favorite_subjects || [])
-    .order('created_at', { ascending: false }) // Fallback order if views are missing
+    .or(orQuery)
+    .order('created_at', { ascending: false }) 
     .limit(limit);
 
   // Merge and deduplicate, prioritizing personalized items

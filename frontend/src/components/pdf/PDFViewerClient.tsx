@@ -183,7 +183,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
         </div>
         
         <div className="flex items-center gap-1 sm:gap-2">
-          <div className="hidden sm:flex items-center gap-1 mr-2 border-r border-gray-200 dark:border-gray-700 pr-3">
+          <div className="flex items-center gap-1 mr-2 border-r border-gray-200 dark:border-gray-700 pr-2 sm:pr-3">
             <button onClick={() => handleRateDocument(true)} className={`p-1.5 rounded-lg transition-colors ${userRating === true ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}>
               <ThumbsUp size={16} className={userRating === true ? 'fill-current' : ''} />
             </button>

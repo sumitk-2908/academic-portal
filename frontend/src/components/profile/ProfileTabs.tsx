@@ -26,6 +26,18 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
     { id: "achievements", label: "Achievements" },
     { id: "activity", label: "Activity" }
   ];
+   
+  useEffect(() => {
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab && tabs.some(t => t.id === tab)) {
+      setActiveTab(tab);
+      // Clean up URL to prevent history clutter
+      window.history.replaceState(null, '', '/profile');
+    }
+  }
+}, []);
 
   // NEW: Fetch suggestions dynamically for the Profile Overview tab
   useEffect(() => {

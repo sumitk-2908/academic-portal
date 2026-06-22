@@ -576,14 +576,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               {/* --- NEW NOTIFICATION BELL --- */}
               {(isAdmin || isStudent) && (
                 <div className="relative">
-                  <button 
-                    onClick={() => setShowNotifications(!showNotifications)} 
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
                     className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5E7EB] dark:border-[#1F2A44] hover:bg-gray-50 dark:hover:bg-[#1F2A44] transition-colors"
                   >
-                    <Bell size={18} className="text-[#64748B] dark:text-[#94A3B8]" />
+                    <Bell
+                      size={18}
+                      className="text-[#64748B] dark:text-[#94A3B8]"
+                    />
+
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-[#111827]">
-                        {unreadCount > 9 ? '9+' : unreadCount}
+                        {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
                   </button>
@@ -592,38 +596,98 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   {showNotifications && (
                     <>
                       {/* Invisible backdrop to catch outside clicks */}
-                      <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>
-                      
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowNotifications(false)}
+                      />
+
                       <div className="absolute -right-2 sm:right-0 top-12 z-50 w-[320px] max-w-[calc(100vw-2rem)] sm:w-80 rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl dark:border-[#1F2A44] dark:bg-[#111827] animate-in slide-in-from-top-2">
-                        <div className="flex items-center justify-between border-b border-[#E5E7EB] p-3 dark:border-[#1F2A44]">
-                          <p className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Notifications</p>
-                          {unreadCount > 0 && (
-                            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-                              {unreadCount} New
-                            </span>
-                          )}
-                        </div>
                         
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-[#E5E7EB] p-3 dark:border-[#1F2A44]">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                            Notifications
+                          </p>
+
+                          <div className="flex items-center gap-2">
+                            {notifications.some((n) => n.is_read) && (
+                              <button
+                                onClick={async () => {
+                                  if (
+                                    window.confirm(
+                                      "Are you sure you want to clear all read notifications?"
+                                    )
+                                  ) {
+                                    const { data: sess } =
+                                      await supabase.auth.getSession();
+
+                                    if (sess?.session?.user) {
+                                      await supabase
+                                        .from("notifications")
+                                        .delete()
+                                        .eq("user_id", sess.session.user.id)
+                                        .eq("is_read", true);
+
+                                      setNotifications((prev) =>
+                                        prev.filter((n) => !n.is_read)
+                                      );
+                                    }
+                                  }
+                                }}
+                                className="text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors"
+                              >
+                                Clear Read
+                              </button>
+                            )}
+
+                            {unreadCount > 0 && (
+                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                                {unreadCount} New
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Notification List */}
                         <div className="max-h-80 overflow-y-auto p-2 space-y-1">
                           {notifications.length === 0 ? (
-                            <p className="p-4 text-center text-xs text-[#64748B]">You're all caught up!</p>
+                            <p className="p-4 text-center text-xs text-[#64748B]">
+                              You're all caught up!
+                            </p>
                           ) : (
-                            notifications.map(notif => (
-                              <div 
+                            notifications.map((notif) => (
+                              <div
                                 key={notif.id}
-                                onClick={() => handleMarkAsRead(notif.id, notif.is_read)}
-                                className={`flex cursor-pointer flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-[#1F2A44] ${!notif.is_read ? 'bg-indigo-50/50 dark:bg-indigo-500/5' : ''}`}
+                                onClick={() =>
+                                  handleMarkAsRead(notif.id, notif.is_read)
+                                }
+                                className={`flex cursor-pointer flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-[#1F2A44] ${
+                                  !notif.is_read
+                                    ? "bg-indigo-50/50 dark:bg-indigo-500/5"
+                                    : ""
+                                }`}
                               >
-                                <div className="flex justify-between items-start">
-                                  <p className={`text-xs ${!notif.is_read ? 'font-bold text-gray-900 dark:text-white' : 'font-semibold text-gray-700 dark:text-gray-300'}`}>
+                                <div className="flex items-start justify-between">
+                                  <p
+                                    className={`text-xs ${
+                                      !notif.is_read
+                                        ? "font-bold text-gray-900 dark:text-white"
+                                        : "font-semibold text-gray-700 dark:text-gray-300"
+                                    }`}
+                                  >
                                     {notif.title}
                                   </p>
+
                                   {!notif.is_read ? (
-                                    <span className="h-2 w-2 rounded-full bg-indigo-500 mt-1 shrink-0"></span>
+                                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
                                   ) : (
-                                    <CheckCheck size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                                    <CheckCheck
+                                      size={12}
+                                      className="mt-0.5 shrink-0 text-emerald-500"
+                                    />
                                   )}
                                 </div>
+
                                 <p className="text-[11px] leading-tight text-[#64748B] dark:text-[#94A3B8]">
                                   {notif.message}
                                 </p>
@@ -818,38 +882,52 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   {/* Grid for standard links */}
                   <div className="grid grid-cols-2 gap-3">
                     <Link href="/recent-uploads" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
-                      <Upload size={18} className="text-emerald-500" /> Uploads
+                      <Upload size={18} className="text-emerald-500 shrink-0" /> <span className="truncate">Uploads</span>
                     </Link>
                     <Link href="/continue-studying" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
-                      <Clock size={18} className="text-[#4F46E5]" /> Continue
+                      <Clock size={18} className="text-[#4F46E5] shrink-0" /> <span className="truncate">Continue</span>
                     </Link>
-                    <Link href="/profile" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
-                      <Medal size={18} className="text-amber-500" /> Badges
+                    <Link href="/profile?tab=achievements" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
+                      <Medal size={18} className="text-amber-500 shrink-0" /> <span className="truncate">Badges</span>
                     </Link>
-                    <Link href="/profile" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
-                      <Activity size={18} className="text-blue-500" /> Activity
+                    <Link href="/profile?tab=activity" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
+                      <Activity size={18} className="text-blue-500 shrink-0" /> <span className="truncate">Activity</span>
                     </Link>
+                    <button onClick={() => { setShowMobileMenu(false); setShowNotifications(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center justify-between gap-1.5 rounded-2xl bg-indigo-50 p-3.5 text-xs font-bold text-indigo-900 dark:bg-indigo-500/10 dark:text-indigo-100">
+                      <div className="flex items-center gap-2.5 truncate">
+                        <Bell size={18} className="text-indigo-500 shrink-0" /> 
+                        <span className="truncate">Notifications</span>
+                      </div>
+                      {unreadCount > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] text-white shrink-0">{unreadCount}</span>}
+                    </button>
+                    <a href="#mobile-trending" onClick={(e) => { e.preventDefault(); document.getElementById('mobile-trending')?.scrollIntoView({ behavior: 'smooth' }); }} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3.5 text-xs font-bold text-[#111827] dark:bg-[#1F2A44] dark:text-white">
+                      <TrendingUp size={18} className="text-purple-500 shrink-0" /> <span className="truncate">Trending</span>
+                    </a>
                   </div>
-
-                  {/* --- NEW: MOBILE NOTIFICATION LINK --- */}
-                  <button 
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setShowNotifications(true);
-                      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top where the bell is
-                    }} 
-                    className="mt-3 flex w-full items-center justify-between rounded-2xl bg-indigo-50 p-3.5 text-xs font-bold text-indigo-900 dark:bg-indigo-500/10 dark:text-indigo-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Bell size={18} className="text-indigo-500" /> Notifications
-                    </div>
-                    {unreadCount > 0 && (
-                      <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] text-white">
-                        {unreadCount} New
-                      </span>
-                    )}
-                  </button>
                 </div>
+
+                {/* 1.5 Trending Now (Mobile) */}
+                {trendingDocs.length > 0 && (
+                  <div id="mobile-trending" className="space-y-2 pt-2">
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B] flex items-center gap-1">
+                      <TrendingUp size={14} className="text-[#4F46E5]" /> Trending Now
+                    </p>
+                    <div className="rounded-2xl bg-gray-50 p-4 dark:bg-[#1F2A44] space-y-3">
+                       {trendingDocs.slice(0, 5).map((doc: any, idx: number) => (
+                          <Link 
+                            key={`mob-tr-${doc.id}`} 
+                            href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} 
+                            onClick={() => setShowMobileMenu(false)} 
+                            className="block text-xs group"
+                          >
+                            <p className="truncate font-bold text-[#111827] dark:text-white group-hover:text-[#4F46E5] transition-colors">
+                              {idx + 1}. {doc.title}
+                            </p>
+                          </Link>
+                       ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* 2. App & Support */}
                 <div className="space-y-2">

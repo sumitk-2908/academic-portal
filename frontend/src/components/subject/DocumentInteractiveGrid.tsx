@@ -152,6 +152,12 @@ export default function DocumentInteractiveGrid({
               </div>
 
               <h3 className="text-xs font-bold mt-1 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
+              <p className="text-[10px] font-semibold text-indigo-500 truncate mt-0.5">
+                Uploaded by {doc.uploader_name || 'Anonymous'}
+              </p>
+              <p className="mt-1.5 text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">
+                {doc.page_count ? `${doc.page_count} pages` : 'PDF Document'} · {doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'Unknown size'} · uploaded {getTimeAgo(doc.created_at)}
+              </p>
               <p className="mt-1.5 text-[10px] font-medium text-[#64748B] dark:text-[#94A3B8]">{doc.page_count ? `${doc.page_count} pages` : 'PDF Document'} · {doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'Unknown size'} · uploaded {getTimeAgo(doc.created_at)}</p>
 
               <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
