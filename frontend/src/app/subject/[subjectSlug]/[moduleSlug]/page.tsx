@@ -1,4 +1,4 @@
-import { supabase } from "@/app/lib/api";
+import { getPaginatedDocumentsByModule } from "@/app/lib/api";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import DocumentInteractiveGrid from "@/components/subject/DocumentInteractiveGrid";
@@ -19,13 +19,8 @@ export default async function ModulePage({ params }: { params: Promise<{ subject
   const subjectName = subjectSlug.replace(/-/g, ' ').toUpperCase();
   const moduleNumber = parseInt(moduleSlug.replace('module-', '')) || 1;
 
-  // Server-side fetching
-  const { data: documents } = await supabase.from('documents')
-    .select('*')
-    .ilike('subject', subjectName)
-    .eq('module_id', moduleNumber)
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false });
+  // 1. Fetch only Page 1 on the server using the NEW function
+  const initialData = await getPaginatedDocumentsByModule(moduleNumber, 1, 20);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 animate-fade-up">
@@ -35,12 +30,17 @@ export default async function ModulePage({ params }: { params: Promise<{ subject
 
       <div className="border-b pb-4 dark:border-[#1F2A44]">
         <h1 className="text-xl font-extrabold sm:text-2xl">{subjectName}</h1>
-        <p className="mt-1 text-xs font-bold text-[#4F46E5]">Module {moduleNumber} Repository</p>
+        <p className="mt-1 text-xs font-bold text-[#4F46E5]">Module {moduleNumber} Repository ({initialData.total} items)</p>
       </div>
 
       <DocumentInteractiveGrid 
-        initialDocuments={documents || []} 
+        initialDocuments={initialData.data} 
         subjectSlug={subjectSlug} 
+        // 2. Pass this config to activate React Query Infinite Scroll
+        paginationConfig={{
+          queryKey: ['moduleDocs', subjectSlug, String(moduleNumber)],
+          moduleId: moduleNumber
+        }}
       />
     </div>
   );
