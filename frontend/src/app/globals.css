@@ -5,76 +5,74 @@
 @layer base {
   /* Global Focus Visible States for Accessibility */
   a, button, [tabindex="0"] {
-    @apply focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none focus-visible:ring-offset-2;
+    @apply focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none focus-visible:ring-offset-2;
   }
 }
 
 :root {
-  /* Light Theme (Premium academic feel) */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Light Theme (Zinc neutral palette) */
+  --background: #f7f7f8;
+  --foreground: #09090b;
   --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --border: #e5e7eb;
-  --muted: #64748b;
-  --hover: #f1f5f9;
+  --surface-hover: #f4f4f5;
+  --border: #e4e4e7;
+  --muted: #a1a1aa;
 
-  /* Primary brand accent (refined blue) */
-  --primary: #2563eb;
+  /* Primary brand accent (Strict Indigo-500) */
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --primary-soft: #eff6ff;
-
-  /* Semantic Colors */
-  --success: #059669;
-  --warning: #d97706;
-  --destructive: #dc2626;
+  --accent: #eef2ff;
+  
+  /* Retained Semantic Tokens & structural variables */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --radius: 0.875rem;
+  --radius: 0.5rem; /* Standardized to 8px for general UI */
 }
 
 .dark {
-  /* Dark Theme (Deep navy, low eye-strain — avoids pure black) */
-  --background: #0b0f19;
-  --foreground: #f1f5f9;
-  --surface: #111827;
-  --surface-2: #0f1626;
-  --border: #1f2937;
-  --muted: #94a3b8;
-  --hover: #1e293b;
+  /* Dark Theme (Product-y dark mode tones) */
+  --background: #0a0a0b;
+  --foreground: #fafafa;
+  --surface: #111113;
+  --surface-hover: #18181b;
+  --border: #27272a;
+  --muted: #52525b;
 
-  /* Primary brand accent stays vivid for contrast */
-  --primary: #3b82f6;
+  /* Adjusted Indigo for dark mode contrast */
+  --primary: #818cf8;
   --primary-foreground: #ffffff;
-  --primary-soft: #16243f;
+  --accent: #312e81;
 
   /* Semantic adjustments for dark contrast */
   --success: #34d399;
   --warning: #fbbf24;
   --destructive: #f87171;
-  --destructive-foreground: #0b0f19;
+  --destructive-foreground: #0a0a0b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
   --color-border: var(--border);
   --color-muted: var(--muted);
-  --color-hover: var(--hover);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  
   --font-sans: var(--font-jakarta), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius: var(--radius);
 }
 
-/* Base resets & focus outlines for accessibility */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -90,7 +88,6 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Hide scrollbar for nav items but keep functionality */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -99,7 +96,58 @@ body {
   scrollbar-width: none;
 }
 
-/* Subtle entrance animation utility */
+/* ========================================= */
+/* MOTION SYSTEM (PREMIUM EASING)            */
+/* ========================================= */
+@layer utilities {
+  /* Global Token for Premium Easing */
+  .ease-premium {
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1) !important;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+
+  /* 1. Standard Hover: Unifies colors, transforms, opacity, shadows */
+  .motion-hover {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* 2. Active State: Satisfying 'press' detent effect */
+  .motion-active:active {
+    transform: scale(0.97);
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* 3. Focus State: Inputs, forms, and selections */
+  .motion-focus {
+    transition-property: box-shadow, border-color, outline, background-color;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* 4. Dropdowns/Popovers: Snappy entrances */
+  .motion-dropdown {
+    animation-duration: 150ms;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* 5. Modals/Dialogs: Slightly longer timing for cognitive tracking */
+  .motion-modal {
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* 6. Layout Shifts: Sidebars, panel sliding */
+  .motion-sidebar {
+    transition-property: width, transform, margin, padding, opacity, background-color, border-color;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+/* Subtle entrance animation utility updated to premium easing */
 @keyframes v0-fade-up {
   from {
     opacity: 0;
@@ -111,5 +159,5 @@ body {
   }
 }
 .animate-fade-up {
-  animation: v0-fade-up 0.4s ease-out both;
+  animation: v0-fade-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) both;
 }

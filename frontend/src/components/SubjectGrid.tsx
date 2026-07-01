@@ -41,7 +41,7 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
         <select
           value={selectedSubject}
           onChange={(e) => setSelectedSubject(e.target.value)}
-          className="w-full max-w-xs cursor-pointer rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#111827] shadow-sm outline-none transition-colors focus:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#111827] dark:text-white sm:max-w-sm"
+          className="w-full max-w-xs cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-foreground shadow-sm outline-none motion-hover motion-focus focus:border-primary sm:max-w-sm"
         >
           <option value="All">All Subjects</option>
           {subjects.map((sub) => (
@@ -54,7 +54,8 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
 
       <div role="grid" aria-label="Subjects Grid" className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 sm:px-0">
         {filteredSubjects.map((sub, index) => {
-          // Look up the visual styling from our config file based on the slug from the database
+          // Note: ui.bg, ui.color, and ui.hoverBg are external tailwind dependencies driven by subject-config.ts
+          // These may still contain hardcoded tailwind values depending on that file's contents, but they are logically separated.
           const ui = SUBJECT_UI_MAP[sub.slug] || SUBJECT_UI_MAP["default"];
           const Icon = ui.icon;
           
@@ -66,20 +67,20 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
               ref={(el) => { if (el) elementsRef.current[index] = el; }}
               tabIndex={activeIndex === index ? 0 : -1}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              className="group flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center transition-all hover:-translate-y-1 hover:border-indigo-400 hover:shadow-md dark:border-[#1F2A44] dark:bg-[#111827] dark:hover:border-indigo-400/60 dark:hover:bg-[#161f33]"
+              className="group flex flex-col items-center justify-center rounded-2xl border border-border bg-surface p-6 text-center motion-hover motion-active hover:-translate-y-1 hover:border-primary/60 hover:bg-surface-hover hover:shadow-md"
             >
-              <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${ui.bg} ${ui.color} transition-transform group-hover:scale-110 ${ui.hoverBg} group-hover:text-white`}>
+              <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${ui.bg} ${ui.color} motion-hover group-hover:scale-110 ${ui.hoverBg} group-hover:text-white`}>  
                 <Icon size={24} />
               </div>
-              <h2 className="text-xs font-bold tracking-tight text-[#111827] dark:text-white">{sub.name}</h2>
-              <span className="mt-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-[#64748B] dark:bg-gray-800 dark:text-[#94A3B8]">
+              <h2 className="text-xs font-bold tracking-tight text-foreground">{sub.name}</h2>
+              <span className="mt-2 rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-semibold text-muted">
                 {subjectCounts[sub.name.toUpperCase()] || 0} items
               </span>
             </Link>
           );
         })}
         {subjects.length === 0 && (
-           <p className="col-span-full text-center py-12 text-sm text-[#64748B]">No subjects found.</p>
+           <p className="col-span-full text-center py-12 text-sm text-muted">No subjects found.</p>
         )}
       </div>
     </>
