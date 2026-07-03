@@ -2,14 +2,20 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks, Loader2 } from "lucide-react";
+import { FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import { trackDocumentStat, deleteDocument, supabase, getPaginatedDocumentsByModule } from "@/app/lib/api";
 import { manageOfflinePdf } from "@/app/lib/offline-manager";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import { LoadingGrid, EmptyState, CenteredSpinner } from "@/components/layout/SharedLayouts";
+import DocumentCard from "@/components/ui/DocumentCard";
 
-const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+const CATEGORY_ICONS: Record<string, any> = { 
+  notes: NotebookPen, 
+  pyq: FileQuestion, 
+  syllabus: ListChecks 
+};
 
 const getTimeAgo = (dateStr: string) => {
   const days = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / (1000 * 3600 * 24));
@@ -67,19 +73,9 @@ export default function DocumentInteractiveGrid({
       const { data: sess } = await supabase.auth.getSession();
       if (sess?.session?.user) {
         setUserId(sess.session.user.id);
-        
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sess.session.user.id)
-          .single();
-          
+        const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', sess.session.user.id).single();
         const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        const isMfaVerified = aalData?.currentLevel === 'aal2';
-
-        if (roleData?.role === 'admin' && isMfaVerified) {
-          setIsAdmin(true);
-        }
+        if (roleData?.role === 'admin' && aalData?.currentLevel === 'aal2') setIsAdmin(true);
       }
     };
     initClientState();
@@ -107,7 +103,6 @@ export default function DocumentInteractiveGrid({
   useEffect(() => {
     const lastItem = virtualItems[virtualItems.length - 1];
     if (!lastItem) return;
-
     if (lastItem.index >= rowCount - 1 && hasNextPage && !isFetchingNextPage && paginationConfig) {
       fetchNextPage();
     }
@@ -160,7 +155,6 @@ export default function DocumentInteractiveGrid({
   const confirmDelete = async () => {
     if (!documentToDelete) return;
     await deleteDocument(documentToDelete);
-    
     setLocalDocuments(prev => prev.filter(d => d.id !== documentToDelete));
     
     if (paginationConfig) {
@@ -175,24 +169,12 @@ export default function DocumentInteractiveGrid({
         };
       });
     }
-    
     window.dispatchEvent(new Event("sidebar_update"));
     setDocumentToDelete(null);
   };
 
-  if (loading) {
-    return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-64 w-full animate-pulse rounded-2xl bg-surface-hover" />
-        ))}
-      </div>
-    );
-  }
-
-  if (displayDocuments.length === 0 && !hasNextPage) {
-    return <p className="col-span-full py-12 text-center text-xs text-muted">No items indexed for this selection.</p>;
-  }
+  if (loading) return <LoadingGrid count={6} />;
+  if (displayDocuments.length === 0 && !hasNextPage) return <EmptyState message="No items indexed for this selection." icon={FileQuestion} />;
 
   return (
     <>
@@ -217,9 +199,7 @@ export default function DocumentInteractiveGrid({
               }}
             >
               {isLoaderRow ? (
-                 <div className="col-span-full flex justify-center py-6">
-                    <Loader2 className="animate-spin text-primary" size={24} />
-                 </div>
+                 <CenteredSpinner />
               ) : (
                 Array.from({ length: cols }).map((_, colIndex) => {
                   const itemIndex = virtualRow.index * cols + colIndex;
@@ -227,48 +207,17 @@ export default function DocumentInteractiveGrid({
                   
                   if (!doc) return <div key={`empty-${colIndex}`} />;
 
-                  const Icon = CATEGORY_ICONS[doc.category] || FileText;
-
                   return (
-                    <article key={doc.id} className="group flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm motion-hover hover:-translate-y-0.5 hover:border-primary">
-                      <div className="relative mb-3 h-32 w-full overflow-hidden rounded-xl bg-background flex items-center justify-center">
-                        {doc.thumbnail_url ? (
-                          <img src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} className="object-cover object-top w-full h-full opacity-90 motion-hover group-hover:opacity-100" />
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 text-muted">
-                            <Icon size={32} className="opacity-50" />
-                          </div>
-                        )}
-                        <span className="absolute top-2 right-2 rounded-full bg-slate-900/70 backdrop-blur-md px-2 py-0.5 text-[9px] font-extrabold uppercase text-white shadow-sm">
-                          {doc.category}
-                        </span>
-                      </div>
-
-                      <h3 className="text-xs font-bold mt-1 line-clamp-2 min-h-[2rem] text-foreground">{doc.title}</h3>
-                      <p className="text-[10px] font-semibold text-primary truncate mt-0.5">
-                        Uploaded by {doc.uploader_name || 'Anonymous'}
-                      </p>
-                      <p className="mt-1.5 text-[10px] font-medium text-muted">
-                        {doc.page_count ? `${doc.page_count} pages` : 'PDF Document'} · {doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'Unknown size'} · uploaded {getTimeAgo(doc.created_at)}
-                      </p>
-                      
-                      <div className="mt-4 flex gap-2 border-t border-border pt-3">
-                        <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-transparent bg-surface-hover py-2 text-[11px] font-bold text-foreground hover:opacity-80 motion-hover motion-active">
-                          <Download size={12} /> Download
-                        </button>
-                        <Link href={`/subject/${subjectSlug}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-primary text-primary-foreground py-2 rounded-xl hover:opacity-90 transition-opacity motion-hover motion-active">
-                          <Eye size={12} /> View
-                        </Link>
-                        <button onClick={() => toggleBookmark(doc.id)} className={`rounded-xl border p-2 transition-colors ${bookmarks.includes(doc.id) ? "bg-warning text-white border-warning motion-hover motion-active" : "border-warning text-warning hover:bg-warning/10 motion-hover motion-active"}`}>
-                          <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-white text-white" : "text-warning"} />
-                        </button>
-                        {isAdmin && (
-                          <button onClick={() => setDocumentToDelete(doc.id)} className="rounded-xl border border-destructive/30 p-2 text-destructive hover:bg-destructive/10 transition-colors motion-hover motion-active">
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </article>
+                    <DocumentCard
+                      key={doc.id}
+                      doc={doc}
+                      subjectSlug={subjectSlug}
+                      isBookmarked={bookmarks.includes(doc.id)}
+                      isAdmin={isAdmin}
+                      onDownload={handleDownload}
+                      onToggleBookmark={toggleBookmark}
+                      onDelete={setDocumentToDelete}
+                    />
                   );
                 })
               )}
@@ -279,7 +228,7 @@ export default function DocumentInteractiveGrid({
 
       <AlertDialog.Root open={documentToDelete !== null} onOpenChange={(open) => !open && setDocumentToDelete(null)}>
         <AlertDialog.Portal>
-          <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <AlertDialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border border-border bg-surface p-6 shadow-lg motion-modal">
             <AlertDialog.Title className="text-lg font-bold text-foreground">Confirm Deletion</AlertDialog.Title>
             <AlertDialog.Description className="text-sm text-muted">
@@ -287,10 +236,10 @@ export default function DocumentInteractiveGrid({
             </AlertDialog.Description>
             <div className="mt-4 flex justify-end gap-3">
               <AlertDialog.Cancel asChild>
-                <button className="rounded-xl px-4 py-2 text-sm font-bold text-muted transition-colors hover:bg-surface-hover">Cancel</button>
+                <button className="rounded-xl px-4 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover">Cancel</button>
               </AlertDialog.Cancel>
               <AlertDialog.Action asChild>
-                <button onClick={confirmDelete} className="rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-white transition-colors hover:opacity-90">Delete Document</button>
+                <button onClick={confirmDelete} className="rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground motion-hover motion-active hover:opacity-90">Delete Document</button>
               </AlertDialog.Action>
             </div>
           </AlertDialog.Content>

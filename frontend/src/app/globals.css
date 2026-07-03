@@ -67,6 +67,29 @@
   --color-warning: var(--warning);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
+  /*
+   * STRICT TYPOGRAPHY SCALE LOCK 
+   * Maps standard classes to the 11/12/13/14/16/20/24/32px scale 
+   */
+  --text-xs:   11px; /* Micro labels, badges, helper text */
+  --text-sm:   12px; /* Metadata, timestamps, secondary labels */
+  --text-base: 13px; /* Standard UI text, secondary body */
+  --text-lg:   14px; /* Primary body text, inputs */
+  --text-xl:   16px; /* Card titles, modal headers */
+  --text-2xl:  20px; /* Section titles, sub-headers */
+  --text-3xl:  24px; /* Small page titles */
+  --text-4xl:  32px; /* Large page titles, hero text */
+
+  /* Locked line heights to maintain strict vertical rhythm */
+  --text-xs--line-height:   1.2;
+  --text-sm--line-height:   1.4;
+  --text-base--line-height: 1.5;
+  --text-lg--line-height:   1.5;
+  --text-xl--line-height:   1.4;
+  --text-2xl--line-height:  1.3;
+  --text-3xl--line-height:  1.2;
+  --text-4xl--line-height:  1.1;
   
   --font-sans: var(--font-jakarta), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

@@ -49,7 +49,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={18} />
           <input
             type="text"
-            placeholder="Search globally for PDFs, subjects, modules..."
+            placeholder="Search everything..."
             value={ctx.searchQuery}
             onChange={(e) => ctx.setSearchQuery(e.target.value)}
             className="h-10 w-full rounded-full border border-border bg-surface-hover pl-11 pr-10 text-sm outline-none motion-hover motion-focus focus:border-primary focus:bg-surface text-foreground"
@@ -62,7 +62,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
 
           {ctx.searchQuery && (
             <div className="absolute top-12 left-0 w-full rounded-2xl border border-border bg-surface p-2 shadow-2xl z-50">
-              <p className="px-3 py-2 text-[10px] font-bold uppercase text-muted">Global Search Results</p>
+              <p className="px-3 py-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Global Search Results</p>
               {ctx.isSearching ? (
                 <p className="p-4 text-xs text-center text-muted">Searching...</p>
               ) : (
@@ -77,7 +77,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
                       <FileText size={16} className="text-primary" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate text-foreground">{doc.title}</p>
-                        <p className="text-[10px] text-muted uppercase">{doc.subject} • Module {doc.module_id || "N/A"} • {doc.category}</p>
+                        <p className="text-xs tracking-[0.06em] text-muted uppercase">{doc.subject} • Module {doc.module_id || "N/A"} • {doc.category}</p>
                       </div>
                     </Link>
                   ))}
@@ -98,7 +98,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
           <div className="relative">
             <button onClick={() => ctx.setShowNotifications(!ctx.showNotifications)} className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border hover:bg-surface-hover transition-colors">
               <Bell size={18} className="text-muted" />
-              {ctx.unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm ring-2 ring-surface">{ctx.unreadCount > 9 ? "9+" : ctx.unreadCount}</span>}
+              {ctx.unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white shadow-sm ring-2 ring-surface">{ctx.unreadCount > 9 ? "9+" : ctx.unreadCount}</span>}
             </button>
             {ctx.showNotifications && (
               <>
@@ -118,10 +118,10 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
                               }
                             }
                           }}
-                          className="text-[10px] font-bold text-destructive hover:opacity-80 transition-opacity"
+                          className="text-xs tracking-[0.06em] font-bold text-destructive hover:opacity-80 transition-opacity"
                         >Clear Read</button>
                       )}
-                      {ctx.unreadCount > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-primary">{ctx.unreadCount} New</span>}
+                      {ctx.unreadCount > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-xs tracking-[0.06em] font-bold text-primary">{ctx.unreadCount} New</span>}
                     </div>
                   </div>
                   <div className="max-h-80 overflow-y-auto p-2 space-y-1">
@@ -168,20 +168,20 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
 export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
   <div className="space-y-6 flex-1">
     <div>
-      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-muted">Navigation</p>}
+      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Navigation</p>}
       <Link href="/" title={ctx.sidebarCollapsed ? "Back to Homepage" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface hover:text-primary motion-hover motion-active">
         <Home size={18} /> {!ctx.sidebarCollapsed && "Back to Homepage"}
       </Link>
       {ctx.isAdmin && (
         <Link href="/subject/admin/inbox" title={ctx.sidebarCollapsed ? "Approval Inbox" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-warning hover:bg-warning/10 motion-hover motion-active">
           <Inbox size={18} /> {!ctx.sidebarCollapsed && <span className="flex-1">Approval Inbox</span>}
-          {!ctx.sidebarCollapsed && ctx.pendingCount > 0 && <span className="rounded-full bg-warning/20 px-2 text-[10px]">{ctx.pendingCount}</span>}
+          {!ctx.sidebarCollapsed && ctx.pendingCount > 0 && <span className="rounded-full bg-warning/20 px-2 text-xs tracking-[0.06em]">{ctx.pendingCount}</span>}
         </Link>
       )}
     </div>
 
     <div>
-      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase text-muted">Student Workspace</p>}
+      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Student Workspace</p>}
       <Link href="/continue-studying" title={ctx.sidebarCollapsed ? "Continue Studying" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface hover:text-primary motion-hover motion-active">
         <Clock size={18} /> {!ctx.sidebarCollapsed && "Continue Studying"}
       </Link>
@@ -195,9 +195,9 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
 
     {!ctx.sidebarCollapsed && ctx.trendingDocs.length > 0 && (
       <div>
-        <p className="px-3 pb-2 text-[10px] font-bold uppercase text-muted">Discovery</p>
+        <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Discovery</p>
         <div className="rounded-2xl border border-border bg-surface p-3 space-y-2.5">
-          <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-[10px] font-extrabold uppercase tracking-wider">Trending Now</h3></div>
+          <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-xs tracking-[0.06em] font-extrabold uppercase">Trending Now</h3></div>
           {ctx.trendingDocs.slice(0, 5).map((doc: any, idx: number) => (
             <Link key={`tr-${doc.id}`} href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="block text-xs group">
               <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">{idx + 1}. {doc.title}</p>
@@ -216,7 +216,7 @@ export const SidebarFooter = ({ ctx }: { ctx: ClientLayoutContext }) => {
       {(ctx.isAdmin || ctx.isStudent) && (
         <ProfileSidebarCard userName={ctx.uploadedBy || (ctx.isAdmin ? "Admin" : "Student")} role={ctx.isAdmin ? "Administrator" : "1st year · CSE"} />
       )}
-      <div className="space-y-0.5 border-t border-border mt-3 px-3 pt-4 text-[10px] font-medium text-muted">
+      <div className="space-y-0.5 border-t border-border mt-3 px-3 pt-4 text-xs tracking-[0.06em] font-medium text-muted">
         <p>Academic Portal • Version 1.6</p>
         <p>© {new Date().getFullYear()} All Rights Reserved.</p>
       </div>
@@ -247,7 +247,7 @@ export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
             <button type="button" onClick={ctx.handleGoogleLogin} disabled={ctx.googleLoading || ctx.authLoading} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface font-bold text-foreground motion-hover motion-active hover:bg-surface-hover hover:shadow-sm">
               {ctx.googleLoading ? <Loader2 className="animate-spin text-muted" size={20} /> : <><FcGoogle size={24} /> Continue with Google</>}
             </button>
-            <div className="my-6 flex items-center"><div className="flex-grow border-t border-border"></div><span className="mx-4 text-[10px] font-extrabold uppercase tracking-wider text-muted">Or use email</span><div className="flex-grow border-t border-border"></div></div>
+            <div className="my-6 flex items-center"><div className="flex-grow border-t border-border"></div><span className="mx-4 text-xs tracking-[0.06em] font-extrabold uppercase text-muted">Or use email</span><div className="flex-grow border-t border-border"></div></div>
           </>
         )}
         <form onSubmit={ctx.handleAuthSubmit} className="space-y-4">
@@ -282,20 +282,20 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
         <form onSubmit={ctx.handleUpload} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block mb-1 text-[10px] font-bold uppercase text-muted">Subject</label>
+              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Subject</label>
               <select value={ctx.uploadSubject} onChange={(e) => ctx.setUploadSubject(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus">{SUBJECTS_LIST.map(sub => <option key={sub} value={sub}>{sub}</option>)}</select>
             </div>
             <div>
-              <label className="block mb-1 text-[10px] font-bold uppercase text-muted">Module</label>
+              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Module</label>
               <select value={ctx.uploadModule} onChange={(e) => ctx.setUploadModule(Number(e.target.value))} disabled={ctx.uploadCategory === "syllabus" || isNonModuleSubject(ctx.uploadSubject)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus disabled:opacity-50 disabled:cursor-not-allowed">
                 {[1, 2, 3, 4, 5].map(m => <option key={m} value={m}>Module {m}</option>)}
               </select>
             </div>
           </div>
-          <div><label className="block mb-1 text-[10px] font-bold uppercase text-muted">Title</label><input required type="text" value={ctx.uploadTitle} onChange={(e) => ctx.setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
+          <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Title</label><input required type="text" value={ctx.uploadTitle} onChange={(e) => ctx.setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="block mb-1 text-[10px] font-bold uppercase text-muted">Category</label><select value={ctx.uploadCategory} onChange={(e) => ctx.setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
-            <div><label className="block mb-1 text-[10px] font-bold uppercase text-muted">Uploader</label><input type="text" value={ctx.uploadedBy} onChange={(e) => ctx.setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
+            <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Category</label><select value={ctx.uploadCategory} onChange={(e) => ctx.setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
+            <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Uploader</label><input type="text" value={ctx.uploadedBy} onChange={(e) => ctx.setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
           </div>
           <div><input required type="file" accept="application/pdf" onChange={(e) => ctx.setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs text-foreground disabled:opacity-50" /></div>
           <UploadProgressBar state={ctx.uploadState} progress={ctx.uploadProgress} fileName={ctx.file?.name} errorMessage={ctx.uploadErrorMsg} />
@@ -309,10 +309,10 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
 export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => (
   <>
     <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-border bg-surface/90 backdrop-blur-xl pb-safe lg:hidden">
-      <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/' ? 'text-primary' : 'text-muted'}`}><Home size={22} /><span className="text-[10px] font-bold">Home</span></Link>
-      <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/profile' ? 'text-primary' : 'text-muted'}`}><User size={22} /><span className="text-[10px] font-bold">Profile</span></Link>
-      <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/bookmarks' ? 'text-warning' : 'text-muted'}`}><Bookmark size={22} /><span className="text-[10px] font-bold">Bookmarks</span></Link>
-      <button onClick={() => ctx.setShowMobileMenu(true)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.showMobileMenu ? 'text-primary' : 'text-muted'}`}><Menu size={22} /><span className="text-[10px] font-bold">More</span></button>
+      <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/' ? 'text-primary' : 'text-muted'}`}><Home size={22} /><span className="text-xs font-bold">Home</span></Link>
+      <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/profile' ? 'text-primary' : 'text-muted'}`}><User size={22} /><span className="text-xs font-bold">Profile</span></Link>
+      <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/bookmarks' ? 'text-warning' : 'text-muted'}`}><Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span></Link>
+      <button onClick={() => ctx.setShowMobileMenu(true)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.showMobileMenu ? 'text-primary' : 'text-muted'}`}><Menu size={22} /><span className="text-xs font-bold">More</span></button>
     </nav>
     {ctx.showMobileMenu && (
       <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden motion-modal" onClick={() => ctx.setShowMobileMenu(false)}>

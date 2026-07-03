@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Subject } from "@/app/lib/api"; 
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
+import { CardGrid, EmptyState } from "@/components/layout/SharedLayouts";
+import { BookOpen } from "lucide-react";
 
 interface SubjectGridProps {
   subjects: Subject[];
@@ -52,37 +54,36 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
         </select>
       </div>
 
-      <div role="grid" aria-label="Subjects Grid" className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 sm:px-0">
-        {filteredSubjects.map((sub, index) => {
-          // Note: ui.bg, ui.color, and ui.hoverBg are external tailwind dependencies driven by subject-config.ts
-          // These may still contain hardcoded tailwind values depending on that file's contents, but they are logically separated.
-          const ui = SUBJECT_UI_MAP[sub.slug] || SUBJECT_UI_MAP["default"];
-          const Icon = ui.icon;
+      {filteredSubjects.length === 0 ? (
+        <EmptyState message="No subjects found." icon={BookOpen} />
+      ) : (
+        <CardGrid cols="5">
+          {filteredSubjects.map((sub, index) => {
+            const ui = SUBJECT_UI_MAP[sub.slug] || SUBJECT_UI_MAP["default"];
+            const Icon = ui.icon;
           
           return (
-            <Link 
-              key={sub.slug} 
-              href={`/subject/${sub.slug}`}
-              role="gridcell"
-              ref={(el) => { if (el) elementsRef.current[index] = el; }}
-              tabIndex={activeIndex === index ? 0 : -1}
-              onKeyDown={(e) => handleKeyDown(e, index)}
-              className="group flex flex-col items-center justify-center rounded-2xl border border-border bg-surface p-6 text-center motion-hover motion-active hover:-translate-y-1 hover:border-primary/60 hover:bg-surface-hover hover:shadow-md"
-            >
-              <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${ui.bg} ${ui.color} motion-hover group-hover:scale-110 ${ui.hoverBg} group-hover:text-white`}>  
-                <Icon size={24} />
-              </div>
-              <h2 className="text-xs font-bold tracking-tight text-foreground">{sub.name}</h2>
-              <span className="mt-2 rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-semibold text-muted">
-                {subjectCounts[sub.name.toUpperCase()] || 0} items
-              </span>
-            </Link>
-          );
-        })}
-        {subjects.length === 0 && (
-           <p className="col-span-full text-center py-12 text-sm text-muted">No subjects found.</p>
-        )}
-      </div>
+              <Link 
+                key={sub.slug} 
+                href={`/subject/${sub.slug}`}
+                role="gridcell"
+                ref={(el) => { if (el) elementsRef.current[index] = el; }}
+                tabIndex={activeIndex === index ? 0 : -1}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                className={`group flex flex-col items-center justify-center rounded-2xl border border-border bg-surface p-6 text-center motion-hover motion-active hover:-translate-y-1 hover:border-primary/60 hover:bg-surface-hover hover:shadow-md ${ui.border}`}
+              >
+                <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${ui.bg} ${ui.color} motion-hover group-hover:scale-110 ${ui.hoverBg} group-hover:text-white`}>
+                  <Icon size={24} />
+                </div>
+                <h2 className="text-xs font-bold tracking-tight text-foreground">{sub.name}</h2>
+                <span className="mt-2 rounded-full bg-surface-hover px-2 py-0.5 text-xs tabular-nums font-semibold text-muted">
+                  {subjectCounts[sub.name.toUpperCase()] || 0} items
+                </span>
+              </Link>
+            );
+          })}
+        </CardGrid>
+      )}
     </>
   );
 }
