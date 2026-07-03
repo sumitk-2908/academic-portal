@@ -166,10 +166,10 @@ export default function ContinueStudyingPage() {
     }
 
     return (
-      <article className={`group flex flex-col rounded-2xl border ${isSuggestion ? 'border-amber-500/20 bg-amber-500/5 hover:border-amber-500' : 'border-[#E5E7EB] bg-white hover:border-indigo-500'} p-4 shadow-sm transition-all hover:-translate-y-0.5 dark:border-[#1F2A44] dark:bg-[#111827] dark:hover:border-indigo-500`}>
+      <article className={`group flex flex-col rounded-2xl border ${isSuggestion ? 'border-amber-500/20 bg-amber-500/5 hover:border-amber-500' : 'border-border bg-surface hover:border-indigo-500'} p-4 shadow-sm transition-all hover:-translate-y-0.5   dark:hover:border-indigo-500`}>
         
         {isSuggestion && (
-          <span className="text-[9px] font-bold text-amber-600 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-2 py-0.5 rounded-full mb-3 self-start">
+          <span className="text-xs font-bold text-amber-600 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-2 py-0.5 rounded-full mb-3 self-start">
             {badgeText}
           </span>
         )}
@@ -178,14 +178,14 @@ export default function ContinueStudyingPage() {
           <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${isSuggestion ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-500'}`}>
             <Icon size={16} />
           </div>
-          <span className="text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.subject}</span>
+          <span className="text-xs font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.subject}</span>
         </div>
         <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
-        <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
-          <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]">
+        <div className="mt-4 flex gap-2 border-t pt-3 ">
+          <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border  hover:bg-surface-hover ">
             <Download size={12} /> Download
           </button>
-          <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} className={`flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold text-white py-2 rounded-xl ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
+          <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white py-2 rounded-xl ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
             <Eye size={12} /> View
           </Link>
         </div>
@@ -215,7 +215,7 @@ export default function ContinueStudyingPage() {
           
           {safeDocuments.length === 0 && !loading && (
             <div className="col-span-full rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-              <p className="text-sm text-[#64748B]">Your history is empty. Time to start studying!</p>
+              <p className="text-sm text-muted">Your history is empty. Time to start studying!</p>
             </div>
           )}
         </div>
@@ -228,7 +228,7 @@ export default function ContinueStudyingPage() {
             <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
               <Sparkles size={18} />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-foreground ">
               {safeDocuments.length === 0 ? "Trending Right Now" : "Suggested Next Steps"}
             </h2>
           </div>

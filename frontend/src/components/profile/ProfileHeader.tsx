@@ -102,7 +102,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
 
   return (
     <>
-      <div className="mb-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 dark:border-[#1F2A44] dark:bg-[#131625]">
+      <div className="mb-4 rounded-2xl border border-border bg-surface p-5">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
           {avatarUrl ? (
             <img src={avatarUrl} alt={name} className="h-20 w-20 sm:h-14 sm:w-14 shrink-0 rounded-full object-cover shadow-sm" />
@@ -114,7 +114,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
 
           <div className="flex-1 min-w-0 w-full flex flex-col items-center sm:items-start">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mb-1 sm:mb-0.5">
-              <h1 className="text-xl sm:text-lg font-black text-gray-900 dark:text-white">{name}</h1>
+              <h1 className="text-xl sm:text-lg font-black text-foreground dark:text-white">{name}</h1>
               {currentStreak > 0 && (
                 <div className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-600 dark:bg-orange-500/10 dark:text-orange-500">
                   <Flame size={12} fill="currentColor" aria-hidden="true"/>
@@ -123,8 +123,8 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
               )}
             </div>
             
-            <p className="text-sm sm:text-xs text-gray-500 dark:text-gray-400 mb-3">{email}</p>
-            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+            <p className="text-sm sm:text-xs text-muted dark:text-gray-400 mb-3">{email}</p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-xs font-medium text-muted">
               <span className="flex items-center gap-1.5"><GraduationCap size={14} aria-hidden="true"/> {branch || "Academic Portal"}</span>
               <span className="flex items-center gap-1.5"><BookOpen size={14} aria-hidden="true"/> Student Account</span>
             </div>
@@ -132,7 +132,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
           <button 
             ref={editButtonRef}
             onClick={() => setIsEditModalOpen(true)}
-            className="mt-3 flex w-full sm:mt-0 sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2.5 sm:py-2 text-sm sm:text-xs font-bold text-[#64748B] transition-colors hover:bg-gray-50 dark:border-[#1F2A44] dark:text-[#94A3B8] dark:hover:bg-[#1F2A44]"
+            className="mt-3 flex w-full sm:mt-0 sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 sm:py-2 text-sm sm:text-xs font-bold text-muted transition-colors hover:bg-gray-50 dark:hover:bg-[#1F2A44]"
           >
             <Edit size={14} aria-hidden="true"/> Edit Profile
           </button>
@@ -146,10 +146,10 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
             role="dialog" 
             aria-modal="true" 
             aria-labelledby="edit-profile-title"
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-[#131625] dark:border dark:border-[#1F2A44]"
+            className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl dark:border"
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 id="edit-profile-title" className="text-lg font-bold text-gray-900 dark:text-white">Personalize Profile</h2>
+              <h2 id="edit-profile-title" className="text-lg font-bold text-foreground dark:text-white">Personalize Profile</h2>
               <button 
                 aria-label="Close modal"
                 onClick={() => setIsEditModalOpen(false)} 
@@ -161,32 +161,32 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
             
             <div className="space-y-4 mb-6">
               <div>
-                <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-2">Preferred Branch / Course</label>
+                <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Preferred Branch / Course</label>
                 <input 
                   id="branchInput"
                   type="text" 
                   placeholder="e.g. B.Tech Computer Science"
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
-                  className="w-full rounded-xl border border-[#E5E7EB] bg-gray-50 p-3 text-sm text-gray-900 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#0D0F1A] dark:text-white"
+                  className="w-full rounded-xl border border-border bg-gray-50 p-3 text-sm text-foreground outline-none focus:border-[#4F46E5] dark:text-white"
                 />
               </div>
               <div>
-                <label htmlFor="subjectsInput" className="block text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] mb-2">Favorite Subjects</label>
+                <label htmlFor="subjectsInput" className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Favorite Subjects</label>
                 <input 
                   id="subjectsInput"
                   type="text" 
                   placeholder="Maths, Physics, BEE (Comma separated)"
                   value={subjectsStr}
                   onChange={(e) => setSubjectsStr(e.target.value)}
-                  className="w-full rounded-xl border border-[#E5E7EB] bg-gray-50 p-3 text-sm text-gray-900 outline-none focus:border-[#4F46E5] dark:border-[#1F2A44] dark:bg-[#0D0F1A] dark:text-white"
+                  className="w-full rounded-xl border border-border bg-gray-50 p-3 text-sm text-foreground outline-none focus:border-[#4F46E5] dark:text-white"
                 />
-                <p className="mt-1.5 text-xs text-gray-500">We will use this to recommend resources in the future.</p>
+                <p className="mt-1.5 text-xs text-muted">We will use this to recommend resources in the future.</p>
               </div>
             </div>
 
             <div className="flex justify-end gap-3">
-              <button onClick={() => setIsEditModalOpen(false)} className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#1F2A44]">Cancel</button>
+              <button onClick={() => setIsEditModalOpen(false)} className="rounded-xl px-4 py-2.5 text-sm font-bold text-muted hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#1F2A44]">Cancel</button>
               <button 
                 onClick={handleSave} 
                 disabled={isSaving}

@@ -126,17 +126,17 @@ export default function BookmarksPage() {
         ) : documents.map(doc => {
           const Icon = CATEGORY_ICONS[doc.category] || FileText;
           return (
-            <article key={doc.id} className="group flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-500 dark:border-[#1F2A44] dark:bg-[#111827]">
+            <article key={doc.id} className="group flex flex-col rounded-2xl border border-border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-500 ">
               <div className="flex items-start justify-between">
                 <div className="h-9 w-9 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center"><Icon size={16} /></div>
-                <span className="text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.subject}</span>
+                <span className="text-xs font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.subject}</span>
               </div>
               <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
-              <div className="mt-4 flex gap-2 border-t pt-3 dark:border-[#1F2A44]">
-                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-[#F8FAFC] py-2 rounded-xl border dark:bg-[#1F2A44] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]">
+              <div className="mt-4 flex gap-2 border-t pt-3">
+                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border hover:bg-[#E5E7EB] ">
                   <Download size={12} /> Download
                 </button>
-                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-amber-500 text-white py-2 rounded-xl">
+                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-amber-500 text-white py-2 rounded-xl">
                   <Eye size={12} /> View
                 </Link>
                 <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border bg-amber-500/10 text-amber-500 border-amber-500/30 shrink-0">
@@ -147,7 +147,7 @@ export default function BookmarksPage() {
           );
         })}
         {documents.length === 0 && !loading && (
-          <p className="col-span-full text-center py-12 text-xs text-[#64748B]">You haven't bookmarked any documents yet.</p>
+          <p className="col-span-full text-center py-12 text-xs text-muted">You haven't bookmarked any documents yet.</p>
         )}
       </div>
     </div>

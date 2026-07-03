@@ -79,10 +79,10 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-[#111827] dark:border dark:border-[#1F2A44]">
+      <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-2xl dark:border">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#0F172A] dark:text-white">Edit & Resubmit</h2>
-          <button onClick={onClose} disabled={uploadState === "uploading" || uploadState === "processing"} className="text-[#64748B] hover:text-red-500 dark:text-[#94A3B8] disabled:opacity-50">
+          <h2 className="text-xl font-bold text-foreground dark:text-white">Edit & Resubmit</h2>
+          <button onClick={onClose} disabled={uploadState === "uploading" || uploadState === "processing"} className="text-muted hover:text-red-500 disabled:opacity-50">
             <XCircle size={24} />
           </button>
         </div>
@@ -99,13 +99,13 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">Document Title</label>
-            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} disabled={uploadState !== "idle" && uploadState !== "error"} className="w-full rounded-xl border border-[#E5E7EB] bg-transparent p-3 outline-none focus:border-amber-500 dark:border-[#1F2A44] dark:text-white disabled:opacity-50" />
+            <label className="mb-1 block text-sm font-medium text-muted">Document Title</label>
+            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} disabled={uploadState !== "idle" && uploadState !== "error"} className="w-full rounded-xl border border-border bg-transparent p-3 outline-none focus:border-amber-500 dark:text-white disabled:opacity-50" />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">Category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={uploadState !== "idle" && uploadState !== "error"} className="w-full rounded-xl border border-[#E5E7EB] bg-transparent p-3 outline-none focus:border-amber-500 dark:border-[#1F2A44] dark:text-white disabled:opacity-50">
+            <label className="mb-1 block text-sm font-medium text-muted">Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={uploadState !== "idle" && uploadState !== "error"} className="w-full rounded-xl border border-border bg-transparent p-3 outline-none focus:border-amber-500 dark:text-white disabled:opacity-50">
               <option value="notes">Notes</option>
               <option value="pyq">PYQ</option>
               <option value="syllabus">Syllabus</option>
@@ -113,10 +113,10 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">Replace PDF (Optional)</label>
+            <label className="mb-1 block text-sm font-medium text-muted">Replace PDF (Optional)</label>
             <div 
               onClick={() => { if(uploadState === "idle" || uploadState === "error") fileInputRef.current?.click() }}
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E5E7EB] bg-[#FAFAF9] p-6 transition-colors dark:border-[#1F2A44] dark:bg-[#0B1020] ${(uploadState === "idle" || uploadState === "error") ? "hover:border-amber-500 hover:bg-amber-50 dark:hover:border-amber-500/50" : "opacity-50 cursor-not-allowed"}`}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background p-6 transition-colors ${(uploadState === "idle" || uploadState === "error") ? "hover:border-amber-500 hover:bg-amber-50 dark:hover:border-amber-500/50" : "opacity-50 cursor-not-allowed"}`}
             >
               {newFile ? (
                 <div className="flex flex-col items-center text-amber-600 dark:text-amber-500">
@@ -125,7 +125,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
                   <span className="text-xs opacity-70">Click to change</span>
                 </div>
               ) : (
-                <div className="flex flex-col items-center text-[#64748B] dark:text-[#94A3B8]">
+                <div className="flex flex-col items-center text-muted">
                   <UploadCloud size={32} className="mb-2" />
                   <span className="text-sm">Click to upload a new PDF</span>
                 </div>

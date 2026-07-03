@@ -15,11 +15,15 @@ export default function OfflineFallbackPage() {
 
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center text-center px-4">
-      <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-500">
+      <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-red-100 text-red-600">
         <WifiOff size={48} />
       </div>
-      <h1 className="mb-2 text-3xl font-extrabold text-gray-900 dark:text-white">You're Offline</h1>
-      <p className="mb-8 max-w-md text-sm text-gray-600 dark:text-gray-400">
+
+      <h1 className="mb-2 text-3xl font-extrabold text-foreground">
+        You're Offline
+      </h1>
+
+      <p className="mb-8 max-w-md text-sm text-gray-600">
         It seems you've lost your internet connection. Don't worry, your cached portal and offline materials are still available.
       </p>
 
@@ -31,11 +35,11 @@ export default function OfflineFallbackPage() {
           <RefreshCcw size={18} />
           Retry Connection
         </button>
-        
+
         {/* Directs user to the PDF bookmarks cached via your offline-manager */}
         <Link
           href="/bookmarks"
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-900 transition-colors hover:bg-gray-50 dark:border-[#1F2A44] dark:bg-[#111827] dark:text-white dark:hover:bg-[#1F2A44]"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-6 py-3 text-sm font-bold text-foreground transition-colors hover:bg-gray-50"
         >
           <Bookmark size={18} className="text-amber-500" />
           View Bookmarks

@@ -134,7 +134,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
                             <p className={`text-xs ${!notif.is_read ? "font-bold text-foreground" : "font-semibold text-muted"}`}>{notif.title}</p>
                             {!notif.is_read ? <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" /> : <CheckCheck size={12} className="mt-0.5 shrink-0 text-success" />}
                           </div>
-                          <p className="text-[11px] leading-tight text-muted">{notif.message}</p>
+                          <p className="text-xs leading-tight text-muted">{notif.message}</p>
                         </div>
                       ))
                     )}
@@ -257,13 +257,13 @@ export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
             {ctx.authLoading ? <Loader2 className="mx-auto animate-spin" size={18} /> : ctx.authMode === "signin" ? "Login" : ctx.authMode === "signup" ? "Create Account" : "Send Reset Link"}
           </button>
           {ctx.authMode === "signin" && (
-            <div className="flex justify-between w-full mt-2 text-[11px] font-bold text-primary">
+            <div className="flex justify-between w-full mt-2 text-xs font-bold text-primary">
               <button type="button" onClick={() => ctx.setAuthMode("forgot")} className="hover:underline">Forgot Password?</button>
               <button type="button" onClick={() => ctx.setAuthMode("signup")} className="hover:underline">New student? Sign Up</button>
             </div>
           )}
-          {ctx.authMode === "signup" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="w-full mt-2 text-[11px] font-bold text-primary hover:underline">Already have an account? Sign In</button>}
-          {ctx.authMode === "forgot" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="w-full mt-2 text-[11px] font-bold text-primary hover:underline">Back to Sign In</button>}
+          {ctx.authMode === "signup" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="w-full mt-2 text-xs font-bold text-primary hover:underline">Already have an account? Sign In</button>}
+          {ctx.authMode === "forgot" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="w-full mt-2 text-xs font-bold text-primary hover:underline">Back to Sign In</button>}
         </form>
       </Dialog.Content>
     </Dialog.Portal>

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  supabase, 
-  getStudentBookmarks, 
-  getFullStudyHistory, 
+import {
+  supabase,
+  getStudentBookmarks,
+  getFullStudyHistory,
   getSubjects,
   getStudyStreak,
   getAchievements,
-  getEnhancedContributions
+  getEnhancedContributions,
 } from "@/app/lib/api";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileStats from "@/components/profile/ProfileStats";
@@ -18,12 +18,18 @@ import { Loader2 } from "lucide-react";
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
-  const [stats, setStats] = useState({ subjects: 0, bookmarks: 0, uploads: 0, downloads: 0});
+
+  const [stats, setStats] = useState({
+    subjects: 0,
+    bookmarks: 0,
+    uploads: 0,
+    downloads: 0,
+  });
+
   const [history, setHistory] = useState<any[]>([]);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [uploads, setUploads] = useState<any[]>([]);
-  
+
   // New Phase 3 States
   const [streak, setStreak] = useState<any>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
@@ -35,7 +41,7 @@ export default function ProfilePage() {
       // 1. Get Auth Session
       const { data: sess } = await supabase.auth.getSession();
       const currentUser = sess?.session?.user;
-      
+
       if (isMounted) {
         setUser(currentUser || null);
       }
@@ -47,19 +53,19 @@ export default function ProfilePage() {
 
       // 2. Fetch All Data Concurrently (Performance Optimized)
       const [
-        userBookmarks, 
-        userHistory, 
-        allSubjects, 
-        userUploads, 
-        userStreak, 
-        userAchievements
+        userBookmarks,
+        userHistory,
+        allSubjects,
+        userUploads,
+        userStreak,
+        userAchievements,
       ] = await Promise.all([
         getStudentBookmarks(currentUser.id),
         getFullStudyHistory(currentUser.id),
         getSubjects(),
         getEnhancedContributions(currentUser.id),
         getStudyStreak(currentUser.id),
-        getAchievements(currentUser.id)
+        getAchievements(currentUser.id),
       ]);
 
       // 3. Update states only if the component is still mounted
@@ -70,16 +76,20 @@ export default function ProfilePage() {
         setStreak(userStreak);
         setAchievements(userAchievements || []);
 
-        const totalImpact = (userUploads || []).reduce((acc: number, u: any) => {
-          return acc + (u.document_analytics?.download_count || 0);
-        }, 0);
-        
+        const totalImpact = (userUploads || []).reduce(
+          (acc: number, u: any) => {
+            return acc + (u.document_analytics?.download_count || 0);
+          },
+          0
+        );
+
         setStats({
           subjects: allSubjects?.length || 0,
           bookmarks: userBookmarks?.length || 0,
           uploads: userUploads?.length || 0,
-          downloads: totalImpact
+          downloads: totalImpact,
         });
+
         setLoading(false);
       }
     };
@@ -99,30 +109,30 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#4F46E5]" />
+      <div className="mx-auto flex h-64 w-full max-w-4xl items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl w-full pb-12">
-      <h1 className="mb-6 hidden text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:block">
+    <div className="mx-auto w-full max-w-4xl pb-12">
+      <h1 className="mb-6 hidden text-2xl font-extrabold tracking-tight text-foreground sm:block">
         Student Profile
       </h1>
-      
+
       {/* Passing the new streak state to the Header */}
       <ProfileHeader user={user} streak={streak} />
-      
+
       <ProfileStats stats={stats} />
-      
+
       {/* Passing new states to Tabs so they can render the Heatmap, Timeline, and Achievements */}
-      <ProfileTabs 
+      <ProfileTabs
         user={user}
-        history={history} 
-        bookmarks={bookmarks} 
-        uploads={uploads} 
-        achievements={achievements} 
+        history={history}
+        bookmarks={bookmarks}
+        uploads={uploads}
+        achievements={achievements}
       />
     </div>
   );
