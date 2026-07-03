@@ -19,7 +19,6 @@ export default function BookmarksPage() {
     let isMounted = true;
 
     const fetchBookmarks = async (silent = false) => {
-      // Avoid flickering if we are just doing a silent background update
       if (!silent) setLoading(true); 
       
       const { data: sess } = await supabase.auth.getSession();
@@ -57,9 +56,7 @@ export default function BookmarksPage() {
 
     const handleUpdate = () => fetchBookmarks(true);
 
-    // Listen for global updates to bypass Next.js Mobile Router caching
     window.addEventListener("sidebar_update", handleUpdate);
-    // Also ensure the state updates if the user switches browser tabs
     window.addEventListener("focus", handleUpdate);
 
     return () => {
@@ -77,7 +74,7 @@ export default function BookmarksPage() {
     localStorage.setItem("portal_bookmarks", JSON.stringify(nextIds));
 
     if (docToRemove?.file_url) {
-    manageOfflinePdf(docToRemove.file_url, 'REMOVE_PDF').catch(console.error);
+      manageOfflinePdf(docToRemove.file_url, 'REMOVE_PDF').catch(console.error);
     }
     
     if (userId) {
@@ -89,7 +86,6 @@ export default function BookmarksPage() {
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
     
-    // NEW: Lock check
     if (downloadingRef.current.has(doc.id)) return;
     downloadingRef.current.add(doc.id);
 
@@ -101,7 +97,6 @@ export default function BookmarksPage() {
       link.click();
       document.body.removeChild(link);
     } finally {
-      // NEW: Unlock after 2 seconds
       setTimeout(() => {
         downloadingRef.current.delete(doc.id);
       }, 2000);
@@ -110,44 +105,44 @@ export default function BookmarksPage() {
 
   return (
     <div className="space-y-6 animate-fade-up max-w-6xl mx-auto w-full">
-      <div className="rounded-3xl border border-amber-500/20 bg-amber-500/5 p-6 shadow-sm flex items-center gap-4">
-        <div className="h-12 w-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+      <div className="rounded-3xl border border-warning/20 bg-warning/5 p-6 shadow-sm flex items-center gap-4">
+        <div className="h-12 w-12 rounded-xl bg-warning text-primary-foreground flex items-center justify-center shrink-0">
           <Bookmark size={24} />
         </div>
         <div>
-          <h1 className="text-xl font-extrabold sm:text-3xl">My Bookmarks</h1>
-          <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">Your saved PDFs and study materials</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">My Bookmarks</h1>
+          <p className="text-sm font-semibold tracking-wider text-warning mt-1">Your saved PDFs and study materials</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
-          <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-amber-500" /></div>
+          <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-warning" /></div>
         ) : documents.map(doc => {
           const Icon = CATEGORY_ICONS[doc.category] || FileText;
           return (
-            <article key={doc.id} className="group flex flex-col rounded-2xl border border-border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-500 ">
+            <article key={doc.id} className="group flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm motion-hover hover:-translate-y-0.5 hover:border-warning">
               <div className="flex items-start justify-between">
-                <div className="h-9 w-9 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center"><Icon size={16} /></div>
-                <span className="text-xs font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.subject}</span>
+                <div className="h-9 w-9 bg-warning/10 text-warning rounded-xl flex items-center justify-center"><Icon size={16} /></div>
+                <span className="text-xs font-bold uppercase tracking-[0.06em] bg-surface-hover px-2 py-0.5 rounded-full text-muted">{doc.subject}</span>
               </div>
-              <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
-              <div className="mt-4 flex gap-2 border-t pt-3">
-                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border hover:bg-surface-hover">
+              <h3 className="text-sm font-bold mt-3 line-clamp-2 min-h-[2rem] text-foreground tracking-tight">{doc.title}</h3>
+              <div className="mt-4 flex gap-2 border-t border-border pt-3">
+                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-surface py-2 rounded-xl border border-border motion-hover motion-active hover:bg-surface-hover text-foreground">
                   <Download size={12} /> Download
                 </button>
-                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-amber-500 text-white py-2 rounded-xl">
+                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-warning text-white py-2 rounded-xl motion-hover motion-active hover:opacity-90">
                   <Eye size={12} /> View
                 </Link>
-                <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border bg-amber-500/10 text-amber-500 border-amber-500/30 shrink-0">
-                  <Bookmark size={14} className="fill-amber-500" />
+                <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border border-warning/30 bg-warning/10 text-warning shrink-0 motion-hover motion-active">
+                  <Bookmark size={14} className="fill-warning" />
                 </button>
               </div>
             </article>
           );
         })}
         {documents.length === 0 && !loading && (
-          <p className="col-span-full text-center py-12 text-xs text-muted">You haven't bookmarked any documents yet.</p>
+          <p className="col-span-full text-center py-12 text-sm font-medium text-muted">You haven't bookmarked any documents yet.</p>
         )}
       </div>
     </div>

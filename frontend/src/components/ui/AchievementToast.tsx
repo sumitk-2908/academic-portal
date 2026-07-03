@@ -32,7 +32,7 @@ export default function AchievementToast({
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 flex max-w-sm transform items-start gap-4 rounded-2xl border border-yellow-200 bg-surface p-4 shadow-xl transition-all duration-300 ease-out
+      className={`fixed bottom-6 right-6 z-50 flex max-w-sm transform items-start gap-4 rounded-2xl border border-warning/20 bg-surface p-4 shadow-xl premium-transition
         ${
           isVisible
             ? "translate-y-0 opacity-100"
@@ -40,15 +40,15 @@ export default function AchievementToast({
         }
       `}
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning/10 text-warning">
         <Medal size={20} />
       </div>
 
       <div className="flex-1">
-        <h4 className="text-sm font-extrabold text-foreground">
+        <h4 className="text-sm font-extrabold tracking-tight text-foreground">
           🏆 Badge Unlocked!
         </h4>
-        <p className="mt-0.5 text-xs font-bold text-yellow-600">
+        <p className="mt-0.5 text-xs font-bold uppercase tracking-wider text-warning">
           {title}
         </p>
         <p className="mt-1 text-xs text-muted">
@@ -58,7 +58,7 @@ export default function AchievementToast({
 
       <button
         onClick={() => setIsVisible(false)}
-        className="shrink-0 text-gray-400 hover:text-gray-600"
+        className="shrink-0 text-muted hover:text-foreground motion-hover"
       >
         <X size={16} />
       </button>

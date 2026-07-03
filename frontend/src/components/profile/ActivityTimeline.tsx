@@ -22,7 +22,7 @@ export default function ActivityTimeline({
         subject: h.subject,
         date: new Date(h.accessed_at || h.created_at),
         icon: Eye,
-        color: "text-blue-500 bg-blue-500/10",
+        color: "text-primary bg-primary/10",
         actionText: "Studied",
       })
     );
@@ -33,11 +33,9 @@ export default function ActivityTimeline({
         type: "bookmark",
         title: b.title,
         subject: b.subject,
-        // For local storage we might only have created_at of the doc,
-        // but if we have the join table date, use that.
         date: new Date(b.bookmarked_at || b.created_at),
         icon: BookOpen,
-        color: "text-amber-500 bg-amber-500/10",
+        color: "text-warning bg-warning/10",
         actionText: "Bookmarked",
       })
     );
@@ -50,7 +48,7 @@ export default function ActivityTimeline({
         subject: u.subject,
         date: new Date(u.created_at),
         icon: Upload,
-        color: "text-emerald-500 bg-emerald-500/10",
+        color: "text-success bg-success/10",
         actionText: "Uploaded",
       })
     );
@@ -61,14 +59,14 @@ export default function ActivityTimeline({
 
   if (timeline.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted">
+      <p className="py-8 text-center text-sm font-medium text-muted">
         No recent activity found.
       </p>
     );
   }
 
   return (
-    <div className="relative ml-3 space-y-6 border-l-2 border-border pb-4 md:ml-4">
+    <div className="relative ml-3 space-y-6 border-l-2 border-border pb-4 md:ml-4 animate-fade-up">
       {timeline.slice(0, 20).map((item, idx) => {
         const Icon = item.icon;
 
@@ -76,20 +74,20 @@ export default function ActivityTimeline({
           <div key={idx} className="relative pl-6 sm:pl-8">
             {/* Timeline Node */}
             <div
-              className={`absolute -left-[17px] top-1 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white ${item.color}`}
+              className={`absolute -left-[17px] top-1 flex h-8 w-8 items-center justify-center rounded-full border-4 border-background ${item.color}`}
             >
               <Icon size={12} />
             </div>
 
             {/* Content */}
-            <div className="rounded-2xl border border-border bg-surface p-4">
+            <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
               <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                <p className="text-xs font-bold text-muted">
+                <p className="text-sm font-bold text-muted">
                   {item.actionText}{" "}
                   <span className="text-foreground">{item.title}</span>
                 </p>
 
-                <time className="shrink-0 text-xs font-medium text-gray-400">
+                <time className="shrink-0 text-sm font-medium tabular-nums text-muted">
                   {item.date.toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
@@ -98,7 +96,7 @@ export default function ActivityTimeline({
                 </time>
               </div>
 
-              <p className="text-xs capitalize text-muted">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
                 {item.subject}
               </p>
             </div>

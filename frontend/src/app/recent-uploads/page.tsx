@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef} from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase, trackDocumentStat, searchDocuments } from "../lib/api";
 import { Upload, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
@@ -16,7 +16,6 @@ export default function RecentUploadsPage() {
   useEffect(() => {
     const fetchRecent = async () => {
       setLoading(true);
-      // Uses the new API without a search query just to get the latest sorted items
       const response = await searchDocuments({ limit: 24, sortBy: "created_at", sortOrder: "desc" });
       setDocuments(response.data);
       setLoading(false);
@@ -27,7 +26,6 @@ export default function RecentUploadsPage() {
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
 
-    // NEW: Lock check
     if (downloadingRef.current.has(doc.id)) return;
     downloadingRef.current.add(doc.id);
 
@@ -39,7 +37,6 @@ export default function RecentUploadsPage() {
       link.click();
       document.body.removeChild(link);
     } finally {
-      // NEW: Unlock after 2 seconds
       setTimeout(() => {
         downloadingRef.current.delete(doc.id);
       }, 2000);
@@ -47,51 +44,51 @@ export default function RecentUploadsPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
-      <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-6 shadow-sm flex items-center gap-4">
-        <div className="h-12 w-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
+    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto w-full">
+      <div className="rounded-3xl border border-success/20 bg-success/5 p-6 shadow-sm flex items-center gap-4">
+        <div className="h-12 w-12 rounded-xl bg-success text-white flex items-center justify-center shrink-0">
           <Upload size={24} />
         </div>
         <div>
-          <h1 className="text-xl font-extrabold sm:text-3xl">Recent Uploads</h1>
-          <p className="text-xs text-emerald-700 mt-1">The newest resources added to the portal</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Recent Uploads</h1>
+          <p className="text-sm font-semibold tracking-wider text-success mt-1">The newest resources added to the portal</p>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
           <div className="col-span-full flex justify-center py-12">
-            <Loader2 className="animate-spin text-emerald-500" />
+            <Loader2 className="animate-spin text-success" />
           </div>
         ) : (
           documents.map((doc) => {
             const Icon = CATEGORY_ICONS[doc.category] || FileText;
             return (
-              <article className="group flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-500" key={doc.id}>
+              <article className="group flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm motion-hover hover:-translate-y-0.5 hover:border-success" key={doc.id}>
                 <div className="flex items-start justify-between">
-                  <div className="h-9 w-9 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center">
+                  <div className="h-9 w-9 bg-success/10 text-success rounded-xl flex items-center justify-center shrink-0">
                     <Icon size={16} />
                   </div>
-                  <span className="text-xs font-extrabold uppercase bg-slate-100 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold uppercase tracking-[0.06em] bg-surface-hover px-2 py-0.5 rounded-full text-muted">
                     {doc.subject}
                   </span>
                 </div>
 
-                <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">
+                <h3 className="text-sm font-bold mt-3 line-clamp-2 min-h-[2rem] text-foreground tracking-tight">
                   {doc.title}
                 </h3>
 
-                <div className="mt-4 flex gap-2 border-t pt-3">
+                <div className="mt-4 flex gap-2 border-t border-border pt-3">
                   <button
                     onClick={(e) => handleDownload(e, doc)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border hover:bg-surface-hover"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-surface py-2 rounded-xl border border-border motion-hover motion-active hover:bg-surface-hover text-foreground"
                   >
                     <Download size={12} /> Download
                   </button>
 
                   <Link
                     href={`/subject/${doc.subject.toLowerCase().replace(/ /g, "-")}/module-${doc.module_id || 1}/${doc.id}`}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-emerald-500 text-white py-2 rounded-xl"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-success text-white py-2 rounded-xl motion-hover motion-active hover:opacity-90"
                   >
                     <Eye size={12} /> View
                   </Link>
