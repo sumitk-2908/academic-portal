@@ -64,8 +64,8 @@ export default function ResetPasswordPage() {
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <KeyRound size={28} aria-hidden="true" />
             </div>
-            <h1 className="text-2xl font-extrabold text-foreground">Secure Reset</h1>
-            <p className="mt-2 text-sm text-muted">
+            <h1 className="mb-1.5 text-3xl font-extrabold tracking-tight text-foreground">Secure Reset</h1>
+            <p className="mt-2 text-base text-muted">
               Enter a new password for your student account.
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="newPassword"
-                className="mb-1.5 block text-xs font-bold uppercase text-muted"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-[0.06em] text-muted"
               >
                 New Password
               </label>
@@ -86,7 +86,7 @@ export default function ResetPasswordPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="h-12 w-full rounded-xl border border-border bg-gray-50 px-4 text-sm outline-none transition-colors focus:border-[#4F46E5] focus:bg-surface"
+                className="h-12 w-full rounded-xl border border-border bg-background px-4 text-base text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
               />
             </div>
 
@@ -94,7 +94,7 @@ export default function ResetPasswordPage() {
               <p
                 aria-live="polite"
                 role="alert"
-                className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-500"
+                className="rounded-xl bg-destructive/10 p-3 text-xs font-semibold text-destructive"
               >
                 {error}
               </p>
@@ -103,7 +103,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#4F46E5] text-sm font-bold text-white transition-colors hover:bg-[#6366F1]"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground motion-hover motion-active hover:opacity-90 disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -128,7 +128,7 @@ export default function ResetPasswordPage() {
         onOpenChange={(open) => setToast((prev) => ({ ...prev, open }))}
         className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full"
       >
-        <Toast.Title className="text-sm font-bold text-emerald-500">
+        <Toast.Title className="text-sm font-bold text-success">
           Success
         </Toast.Title>
 

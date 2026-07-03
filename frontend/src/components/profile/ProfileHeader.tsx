@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
 import { Edit, GraduationCap, BookOpen, X, Flame, Loader2 } from "lucide-react";
 import { getProfilePreferences, updateProfilePreferences } from "@/app/lib/api";
@@ -107,24 +108,24 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
           {avatarUrl ? (
             <img src={avatarUrl} alt={name} className="h-20 w-20 sm:h-14 sm:w-14 shrink-0 rounded-full object-cover shadow-sm" />
           ) : (
-            <div className="flex h-20 w-20 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-[#4F46E5] text-2xl sm:text-xl font-bold text-white shadow-sm">
+            <div className="flex h-20 w-20 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground shadow-sm">
               {getInitials(name)}
             </div>
           )}
 
           <div className="flex-1 min-w-0 w-full flex flex-col items-center sm:items-start">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mb-1 sm:mb-0.5">
-              <h1 className="text-xl sm:text-lg font-black text-foreground dark:text-white">{name}</h1>
+              <h1 className="text-xl font-extrabold tracking-tight text-foreground">{name}</h1>
               {currentStreak > 0 && (
-                <div className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-600 dark:bg-orange-500/10 dark:text-orange-500">
+                <div className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-bold tabular-nums text-orange-500">
                   <Flame size={12} fill="currentColor" aria-hidden="true"/>
                   {currentStreak} Day{currentStreak !== 1 ? 's' : ''}
                 </div>
               )}
             </div>
             
-            <p className="text-sm sm:text-xs text-muted dark:text-gray-400 mb-3">{email}</p>
-            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-xs font-medium text-muted">
+            <p className="text-sm font-medium text-muted mb-3">{email}</p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-sm font-medium text-muted">
               <span className="flex items-center gap-1.5"><GraduationCap size={14} aria-hidden="true"/> {branch || "Academic Portal"}</span>
               <span className="flex items-center gap-1.5"><BookOpen size={14} aria-hidden="true"/> Student Account</span>
             </div>
@@ -132,7 +133,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
           <button 
             ref={editButtonRef}
             onClick={() => setIsEditModalOpen(true)}
-            className="mt-3 flex w-full sm:mt-0 sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 sm:py-2 text-sm sm:text-xs font-bold text-muted transition-colors hover:bg-gray-50 dark:hover:bg-[#1F2A44]"
+            className="mt-3 flex w-full sm:mt-0 sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
           >
             <Edit size={14} aria-hidden="true"/> Edit Profile
           </button>
@@ -140,20 +141,20 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
       </div>
 
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm motion-modal animate-in fade-in">
           <div 
             ref={modalRef}
             role="dialog" 
             aria-modal="true" 
             aria-labelledby="edit-profile-title"
-            className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl dark:border"
+            className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl border border-border motion-modal"
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 id="edit-profile-title" className="text-lg font-bold text-foreground dark:text-white">Personalize Profile</h2>
+              <h2 id="edit-profile-title" className="text-xl font-bold tracking-tight text-foreground">Personalize Profile</h2>
               <button 
                 aria-label="Close modal"
                 onClick={() => setIsEditModalOpen(false)} 
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                className="text-muted hover:text-foreground motion-hover"
               >
                 <X size={20} aria-hidden="true" />
               </button>
@@ -161,41 +162,40 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
             
             <div className="space-y-4 mb-6">
               <div>
-                <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Preferred Branch / Course</label>
+                <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Preferred Branch / Course</label>
                 <input 
                   id="branchInput"
                   type="text" 
                   placeholder="e.g. B.Tech Computer Science"
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-gray-50 p-3 text-sm text-foreground outline-none focus:border-[#4F46E5] dark:text-white"
+                  className="w-full rounded-xl border border-border bg-background p-3 text-base text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
                 />
               </div>
               <div>
-                <label htmlFor="subjectsInput" className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Favorite Subjects</label>
+                <label htmlFor="subjectsInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Favorite Subjects</label>
                 <input 
                   id="subjectsInput"
                   type="text" 
                   placeholder="Maths, Physics, BEE (Comma separated)"
                   value={subjectsStr}
                   onChange={(e) => setSubjectsStr(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-gray-50 p-3 text-sm text-foreground outline-none focus:border-[#4F46E5] dark:text-white"
+                  className="w-full rounded-xl border border-border bg-background p-3 text-base text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
                 />
                 <p className="mt-1.5 text-xs text-muted">We will use this to recommend resources in the future.</p>
               </div>
             </div>
 
             <div className="flex justify-end gap-3">
-              <button onClick={() => setIsEditModalOpen(false)} className="rounded-xl px-4 py-2.5 text-sm font-bold text-muted hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#1F2A44]">Cancel</button>
+              <button onClick={() => setIsEditModalOpen(false)} className="rounded-xl px-4 py-2 text-sm font-bold text-muted bg-surface-hover motion-hover motion-active">Cancel</button>
               <button 
                 onClick={handleSave} 
                 disabled={isSaving}
-                className="flex items-center gap-2 rounded-xl bg-[#4F46E5] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#6366F1] disabled:opacity-70"
+                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90 disabled:opacity-50"
               >
                 {isSaving ? (
                   <>
                     <Loader2 size={16} className="animate-spin" aria-hidden="true" /> 
-                    {/* Screen readers will announce this when the state changes */}
                     <span aria-live="polite">Saving preferences...</span>
                   </>
                 ) : (

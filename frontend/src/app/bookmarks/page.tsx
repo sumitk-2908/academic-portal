@@ -133,7 +133,7 @@ export default function BookmarksPage() {
               </div>
               <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
               <div className="mt-4 flex gap-2 border-t pt-3">
-                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border hover:bg-[#E5E7EB] ">
+                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border hover:bg-surface-hover">
                   <Download size={12} /> Download
                 </button>
                 <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-amber-500 text-white py-2 rounded-xl">

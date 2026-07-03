@@ -95,40 +95,40 @@ export default function AdminInboxAuditingRoute() {
   return (
     <Toast.Provider swipeDirection="right">
       <main className="mx-auto w-full max-w-6xl space-y-6 animate-fade-up pb-12">
-        <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary">
+        <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary motion-hover">
           <ArrowLeft size={14} /> Back to Hub
         </Link>
 
-        <section className={`rounded-3xl border p-6 flex items-center gap-4 transition-colors ${activeTab === 'pending' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-          <div className={`h-12 w-12 rounded-xl text-white flex items-center justify-center shrink-0 transition-colors ${activeTab === 'pending' ? 'bg-amber-500' : 'bg-red-500'}`}>
+        <section className={`rounded-3xl border p-6 flex items-center gap-4 premium-transition ${activeTab === 'pending' ? 'bg-warning/5 border-warning/20' : 'bg-destructive/5 border-destructive/20'}`}>
+          <div className={`h-12 w-12 rounded-xl text-primary-foreground flex items-center justify-center shrink-0 premium-transition ${activeTab === 'pending' ? 'bg-warning' : 'bg-destructive'}`}>
             {activeTab === 'pending' ? <Inbox size={24} /> : <ShieldAlert size={24} />}
           </div>
           <div>
-            <h1 className="text-xl font-extrabold sm:text-2xl">Admin Moderation Hub</h1>
-            <p className={`text-xs mt-0.5 ${activeTab === 'pending' ? 'text-amber-700 dark:text-amber-500' : 'text-red-700 dark:text-red-500'}`}>
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Admin Moderation Hub</h1>
+            <p className={`text-xs mt-0.5 font-semibold tracking-wider ${activeTab === 'pending' ? 'text-warning' : 'text-destructive'}`}>
               {activeTab === 'pending' ? 'Audit crowdsourced assets before deployment.' : 'Review community-flagged content for quality control.'}
             </p>
           </div>
         </section>
 
         {/* TABS */}
-        <div className="flex gap-2 border-b border-border dark:border-gray-800 pb-2">
+        <div className="flex gap-2 border-b border-border pb-2">
           <button 
             onClick={() => setActiveTab('pending')}
-            className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${activeTab === 'pending' ? 'bg-gray-900 text-white dark:bg-surface dark:text-black' : 'text-muted hover:bg-surface-hover dark:hover:bg-gray-800'}`}
+            className={`px-4 py-2 text-sm font-bold rounded-xl motion-hover motion-active ${activeTab === 'pending' ? 'bg-foreground text-background' : 'text-muted hover:bg-surface-hover'}`}
           >
             Pending Audits ({pendingDocs.length})
           </button>
           <button 
             onClick={() => setActiveTab('flagged')}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl transition-colors ${activeTab === 'flagged' ? 'bg-red-500 text-white' : 'text-muted hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20'}`}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl motion-hover motion-active ${activeTab === 'flagged' ? 'bg-destructive text-destructive-foreground' : 'text-muted hover:bg-destructive/10 hover:text-destructive'}`}
           >
             <Flag size={16} /> Flagged Content ({flaggedDocs.length})
           </button>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" /></div>
+          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             
@@ -136,37 +136,37 @@ export default function AdminInboxAuditingRoute() {
             {activeTab === 'pending' && pendingDocs.map(doc => {
               
               return (
-                <article key={doc.id} className="flex flex-col rounded-2xl border border-amber-500/20 bg-surface p-4 shadow-sm">
+                <article key={doc.id} className="flex flex-col rounded-2xl border border-warning/20 bg-surface p-4 shadow-sm">
                   <div className="flex justify-between items-start">
-                    <div className="h-9 w-9 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="h-9 w-9 bg-warning/10 text-warning rounded-xl flex items-center justify-center shrink-0">
                       <FileText size={16} />
                     </div>
-                    <span className="text-xs font-extrabold uppercase bg-amber-500/10 text-amber-600 px-2.5 py-1 rounded-full">PENDING</span>
+                    <span className="text-xs font-extrabold uppercase bg-warning/10 text-warning px-2.5 py-1 rounded-full tracking-wider">PENDING</span>
                   </div>
-                  <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
-                  <p className="text-xs text-muted mt-2 font-semibold">{doc.subject} • Module {doc.module_id || 1}</p>
+                  <h3 className="text-base font-bold mt-3 line-clamp-2 min-h-[2rem] text-foreground tracking-tight">{doc.title}</h3>
+                  <p className="text-sm text-muted mt-2 font-semibold">{doc.subject} • Module {doc.module_id || 1}</p>
                   <div className="mt-2 flex flex-col gap-2">
                     {doc.resubmission_count > 0 && (
-                      <span className="inline-flex items-center self-start rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      <span className="inline-flex items-center self-start rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-primary">
                         Resubmission (Attempt #{doc.resubmission_count})
                       </span>
                     )}
 
                     {doc.rejection_reason && (
-                      <div className="text-xs text-muted italic bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+                      <div className="text-xs text-muted italic bg-surface-hover p-2 rounded-lg border border-border">
                         <strong>Prior Rejection Note:</strong> "{doc.rejection_reason}"
                       </div>
                     )}
                   </div>
                   
                   <div className="mt-auto flex gap-2 border-t border-border pt-4">
-                    <a href={doc.file_url} target="_blank" className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#4F46E5] py-2 text-xs font-bold text-white hover:bg-[#6366F1]">
+                    <a href={doc.file_url} target="_blank" className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
                       <Eye size={12} /> View
                     </a>
-                    <button onClick={() => handleApprove(doc.id)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-xs font-bold text-white hover:bg-emerald-600">
+                    <button onClick={() => handleApprove(doc.id)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-success py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
                       <CheckCircle size={12} /> Apprv
                     </button>
-                    <button onClick={() => handleRejectClick(doc.id)} className="flex items-center justify-center rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/10">
+                    <button onClick={() => handleRejectClick(doc.id)} className="flex items-center justify-center rounded-xl border border-destructive/30 p-2 text-destructive motion-hover motion-active hover:bg-destructive/10">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -176,20 +176,20 @@ export default function AdminInboxAuditingRoute() {
 
             {/* FLAGGED TAB RENDER */}
             {activeTab === 'flagged' && flaggedDocs.map(doc => (
-               <article key={doc.id} className="flex flex-col rounded-2xl border border-red-500/20 bg-surface p-4 shadow-sm">
+               <article key={doc.id} className="flex flex-col rounded-2xl border border-destructive/20 bg-surface p-4 shadow-sm">
                  <div className="flex justify-between items-start">
-                   <div className="h-9 w-9 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center shrink-0">
+                   <div className="h-9 w-9 bg-destructive/10 text-destructive rounded-xl flex items-center justify-center shrink-0">
                      <ShieldAlert size={16} />
                    </div>
-                   <span className="text-xs font-extrabold uppercase bg-red-500/10 text-red-600 px-2.5 py-1 rounded-full flex items-center gap-1">
+                   <span className="text-xs font-extrabold uppercase bg-destructive/10 text-destructive px-2.5 py-1 rounded-full flex items-center gap-1 tracking-wider">
                      {doc.flags?.length} Flags
                    </span>
                  </div>
-                 <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
-                 <p className="text-xs text-muted mt-2 font-semibold">{doc.subject} • {doc.category}</p>
+                 <h3 className="text-base font-bold mt-3 line-clamp-2 min-h-[2rem] text-foreground tracking-tight">{doc.title}</h3>
+                 <p className="text-sm text-muted mt-2 font-semibold">{doc.subject} • {doc.category}</p>
                  
                  <div className="mt-auto flex gap-2 border-t border-border pt-4">
-                   <button onClick={() => setReviewingFlagsDoc(doc)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-50 text-red-600 py-2 text-xs font-bold hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400">
+                   <button onClick={() => setReviewingFlagsDoc(doc)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-destructive/10 text-destructive py-2 text-sm font-bold motion-hover motion-active hover:bg-destructive/20">
                      <MessageSquareWarning size={12} /> Review Flags
                    </button>
                  </div>
@@ -198,10 +198,10 @@ export default function AdminInboxAuditingRoute() {
 
             {/* EMPTY STATES */}
             {activeTab === 'pending' && pendingDocs.length === 0 && (
-              <p className="col-span-full text-center py-12 text-xs text-muted">Inbox clear! No outstanding crowdsourcing requests.</p>
+              <p className="col-span-full text-center py-12 text-base text-muted">Inbox clear! No outstanding crowdsourcing requests.</p>
             )}
             {activeTab === 'flagged' && flaggedDocs.length === 0 && (
-              <p className="col-span-full text-center py-12 text-xs text-muted">No flagged content! The community is happy.</p>
+              <p className="col-span-full text-center py-12 text-base text-muted">No flagged content! The community is happy.</p>
             )}
           </div>
         )}
@@ -209,26 +209,26 @@ export default function AdminInboxAuditingRoute() {
         {/* --- MODAL: REJECT DOCUMENT --- */}
         <Dialog.Root open={rejectingDocId !== null} onOpenChange={(open) => { if (!open) setRejectingDocId(null); }}>
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-surface p-6 shadow-2xl">
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm motion-modal" />
+            <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-surface p-6 shadow-2xl motion-modal">
               <div className="flex justify-between items-center mb-4">
-                <Dialog.Title className="text-lg font-bold">Reject Document</Dialog.Title>
+                <Dialog.Title className="text-xl font-bold text-foreground">Reject Document</Dialog.Title>
                 <Dialog.Close asChild>
-                  <button className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                  <button className="text-muted hover:text-foreground motion-hover"><X size={20} /></button>
                 </Dialog.Close>
               </div>
-              <Dialog.Description className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              <Dialog.Description className="text-sm text-muted mb-4">
                 Provide a reason for rejecting this document. It will be hidden from users.
               </Dialog.Description>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Reason for rejection..."
-                className="w-full h-32 p-3 text-sm rounded-xl border bg-transparent mb-6 outline-none"
+                className="w-full h-32 p-3 text-sm rounded-xl border bg-background text-foreground mb-6 outline-none motion-focus focus:border-primary"
               />
               <div className="flex gap-3 justify-end">
-                <Dialog.Close asChild><button className="px-4 py-2 text-sm font-bold rounded-xl">Cancel</button></Dialog.Close>
-                <button onClick={confirmReject} disabled={isRejecting || !rejectReason.trim()} className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-red-500 rounded-xl">
+                <Dialog.Close asChild><button className="px-4 py-2 text-sm font-bold rounded-xl bg-surface-hover motion-hover">Cancel</button></Dialog.Close>
+                <button onClick={confirmReject} disabled={isRejecting || !rejectReason.trim()} className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-destructive-foreground bg-destructive rounded-xl motion-hover motion-active hover:opacity-90 disabled:opacity-50">
                   {isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Confirm Rejection
                 </button>
               </div>
@@ -239,45 +239,45 @@ export default function AdminInboxAuditingRoute() {
         {/* --- MODAL: REVIEW FLAGS --- */}
         <Dialog.Root open={reviewingFlagsDoc !== null} onOpenChange={(open) => { if (!open) setReviewingFlagsDoc(null); }}>
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-[50%] top-[50%] z-50 flex flex-col w-full max-w-lg max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-surface p-6 shadow-2xl dark:border">
-              <div className="flex justify-between items-center border-b pb-4 dark:border-gray-800">
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm motion-modal" />
+            <Dialog.Content className="fixed left-[50%] top-[50%] z-50 flex flex-col w-full max-w-lg max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-surface p-6 shadow-2xl border border-border motion-modal">
+              <div className="flex justify-between items-center border-b pb-4 border-border">
                 <div>
-                  <Dialog.Title className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
-                    <ShieldAlert className="text-red-500" /> Review Flags
+                  <Dialog.Title className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <ShieldAlert className="text-destructive" /> Review Flags
                   </Dialog.Title>
                   <p className="text-xs text-muted mt-1 line-clamp-1">{reviewingFlagsDoc?.title[0]}</p>
                 </div>
                 <Dialog.Close asChild>
-                  <button className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                  <button className="text-muted hover:text-foreground motion-hover"><X size={20} /></button>
                 </Dialog.Close>
               </div>
               
               <div className="overflow-y-auto space-y-3 py-2 custom-scrollbar">
                 {reviewingFlagsDoc?.flags?.map((flag: any, index: number) => (
-                  <div key={index} className="bg-red-50 dark:bg-red-500/5 p-3 rounded-xl border border-red-100 dark:border-red-500/10">
-                    <span className="inline-block px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-red-200 text-red-800 dark:bg-red-900/30 dark:text-red-400 mb-2">
+                  <div key={index} className="bg-destructive/5 p-3 rounded-xl border border-destructive/10">
+                    <span className="inline-block px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-destructive/10 text-destructive mb-2">
                       {flag.reason.replace('_', ' ')}
                     </span>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      {flag.description || <span className="italic text-gray-400">No additional details provided.</span>}
+                    <p className="text-sm text-foreground">
+                      {flag.description || <span className="italic text-muted">No additional details provided.</span>}
                     </p>
-                    <p className="text-xs text-gray-400 mt-2 text-right">
+                    <p className="text-xs text-muted mt-2 text-right tabular-nums">
                       {new Date(flag.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-3 justify-end pt-4 border-t dark:border-gray-800 shrink-0">
-                <a href={reviewingFlagsDoc?.file_url} target="_blank" className="px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl mr-auto dark:bg-indigo-500/10 dark:text-indigo-400">
+              <div className="flex gap-3 justify-end pt-4 border-t border-border shrink-0">
+                <a href={reviewingFlagsDoc?.file_url} target="_blank" className="px-4 py-2 text-sm font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-xl mr-auto motion-hover">
                   Open PDF
                 </a>
                 
                 <button 
                   onClick={() => handleDismissFlags(reviewingFlagsDoc.id)}
                   disabled={isDismissing}
-                  className="px-4 py-2 text-sm font-bold text-gray-600 bg-surface-hover hover:bg-gray-200 rounded-xl dark:bg-gray-800 dark:text-gray-300"
+                  className="px-4 py-2 text-sm font-bold text-foreground bg-surface-hover hover:opacity-90 rounded-xl motion-hover disabled:opacity-50"
                 >
                   {isDismissing ? <Loader2 size={16} className="animate-spin" /> : "Dismiss Flags (False Alarm)"}
                 </button>
@@ -285,10 +285,9 @@ export default function AdminInboxAuditingRoute() {
                 <button 
                   onClick={() => {
                     setRejectingDocId(reviewingFlagsDoc.id);
-                    // Pass the first flag reason as the default rejection reason
                     setRejectReason(`Removed due to community reports: ${reviewingFlagsDoc.flags[0]?.reason}`);
                   }}
-                  className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl"
+                  className="px-4 py-2 text-sm font-bold text-destructive-foreground bg-destructive hover:opacity-90 rounded-xl motion-hover"
                 >
                   Reject & Remove Document
                 </button>
@@ -298,8 +297,8 @@ export default function AdminInboxAuditingRoute() {
         </Dialog.Root>
 
         {/* Global Toast Error Handler */}
-        <Toast.Root open={toast.open} onOpenChange={(open) => setToast(prev => ({...prev, open}))} className="bg-surface dark:bg-gray-900 p-4 rounded-xl shadow-lg border dark:border-gray-800">
-          <Toast.Title className={`text-sm font-bold ${toast.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>
+        <Toast.Root open={toast.open} onOpenChange={(open) => setToast(prev => ({...prev, open}))} className="bg-surface p-4 rounded-xl shadow-lg border border-border">
+          <Toast.Title className={`text-sm font-bold ${toast.type === 'error' ? 'text-destructive' : 'text-success'}`}>
             {toast.type === 'error' ? 'Error' : 'Success'}
           </Toast.Title>
           <Toast.Description className="text-xs text-muted mt-1">{toast.message}</Toast.Description>

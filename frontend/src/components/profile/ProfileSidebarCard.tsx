@@ -10,19 +10,19 @@ export default function ProfileSidebarCard({ userName, role }: ProfileSidebarCar
   const initials = userName.substring(0, 2).toUpperCase() || "ST";
 
   return (
-    <div className="mt-auto pt-4 pb-2">
+    <div className="mt-auto pt-4 pb-2 animate-fade-up">
       <Link 
         href="/profile"
-        className="flex items-center gap-3 rounded-xl border border-border bg-[#FAFAF9] p-2 transition-colors hover:bg-surface dark:hover:bg-[#1e2133]"
+        className="flex items-center gap-3 rounded-xl border border-border bg-surface-hover p-2 motion-hover motion-active hover:bg-surface"
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#4F46E5] text-xs font-bold text-white">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-foreground dark:text-white truncate">{userName}</p>
-          <p className="text-xs font-medium text-indigo-500 truncate">{role}</p>
+          <p className="text-sm font-bold text-foreground truncate">{userName}</p>
+          <p className="text-xs font-semibold text-primary truncate">{role}</p>
         </div>
-        <Settings size={14} className="shrink-0 text-gray-400 dark:text-muted" />
+        <Settings size={14} className="shrink-0 text-muted" />
       </Link>
     </div>
   );

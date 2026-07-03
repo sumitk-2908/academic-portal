@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { User, Settings, LogOut } from "lucide-react";
 
@@ -81,8 +82,8 @@ export default function ProfileDropdown({
         aria-expanded={isOpen}
         aria-label="User menu"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex h-9 w-9 items-center justify-center rounded-full bg-[#4F46E5] text-xs font-bold text-white transition-all ${
-          isOpen ? "ring-2 ring-[#4F46E5] ring-offset-2" : ""
+        className={`flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground motion-hover motion-active ${
+          isOpen ? "ring-2 ring-primary ring-offset-2" : ""
         }`}
       >
         {initials}
@@ -91,7 +92,7 @@ export default function ProfileDropdown({
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-12 z-50 w-56 rounded-2xl border border-border bg-surface p-2 shadow-2xl"
+          className="absolute right-0 top-12 z-50 w-56 rounded-2xl border border-border bg-surface p-2 shadow-2xl motion-dropdown animate-in fade-in zoom-in-95"
         >
           <div className="border-b border-border px-3 pb-3 pt-2">
             <p className="truncate text-sm font-bold text-foreground">
@@ -107,14 +108,14 @@ export default function ProfileDropdown({
               href="/profile"
               role="menuitem"
               onClick={() => setIsOpen(false)}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted hover:bg-gray-50 hover:text-indigo-500 focus:bg-gray-50 focus:text-indigo-500 focus:outline-none"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted motion-hover focus:outline-none hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary"
             >
               <User size={16} aria-hidden="true" /> My Profile
             </Link>
 
             <button
               role="menuitem"
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted motion-hover focus:outline-none hover:bg-surface-hover focus:bg-surface-hover"
             >
               <Settings size={16} aria-hidden="true" /> Settings
             </button>
@@ -127,7 +128,7 @@ export default function ProfileDropdown({
                 setIsOpen(false);
                 onLogout();
               }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-red-500 hover:bg-red-50 focus:bg-red-50 focus:outline-none"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-destructive motion-hover focus:outline-none hover:bg-destructive/10 focus:bg-destructive/10"
             >
               <LogOut size={16} aria-hidden="true" /> Sign out
             </button>
