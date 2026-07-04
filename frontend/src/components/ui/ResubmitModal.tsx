@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Loader2, UploadCloud, XCircle, AlertCircle, FileText } from "lucide-react";
-import { supabase, uploadWithProgress, UploadState } from "@/app/lib/api"; // Updated imports
-import UploadProgressBar from "./UploadProgressBar"; // Added import
+import { supabase, uploadWithProgress, UploadState } from "@/app/lib/api";
+import UploadProgressBar from "./UploadProgressBar";
 
 type DocumentData = {
   id: number;
@@ -22,7 +22,6 @@ interface ResubmitModalProps {
 }
 
 export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: ResubmitModalProps) {
-  // New Progress States
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +30,19 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
   const [category, setCategory] = useState(document.category);
   const [newFile, setNewFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Lock body scroll when the modal is open
+  useEffect(() => {
+    if (isOpen) {
+      window.document.body.style.overflow = "hidden";
+    } else {
+      window.document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      window.document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -56,7 +68,6 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
 
       const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${document.id}/resubmit`;
 
-      // REPLACED standard fetch with uploadWithProgress
       await uploadWithProgress(
         endpoint,
         formData,
@@ -65,7 +76,6 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
         (state) => setUploadState(state)
       );
 
-      // Give the user 1.5 seconds to see the green "Success" checkmark before closing
       setTimeout(() => {
         onSuccess();
         setUploadState("idle"); 
@@ -78,51 +88,78 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-2xl dark:border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl bg-surface border border-border p-6 shadow-2xl">
+        
+        {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-foreground dark:text-white">Edit & Resubmit</h2>
-          <button onClick={onClose} disabled={uploadState === "uploading" || uploadState === "processing"} className="text-muted hover:text-red-500 disabled:opacity-50">
+          <h2 className="text-xl font-bold text-foreground">Edit & Resubmit</h2>
+          <button 
+            onClick={onClose} 
+            disabled={uploadState === "uploading" || uploadState === "processing"} 
+            className="text-muted hover:text-destructive transition-colors disabled:opacity-50"
+          >
             <XCircle size={24} />
           </button>
         </div>
 
+        {/* Rejection Note */}
         {document.rejection_reason && (
-          <div className="mb-6 flex gap-3 rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-500/10 dark:text-red-400">
+          <div className="mb-6 flex gap-3 rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-destructive">
             <AlertCircle className="shrink-0" size={20} />
             <div className="text-sm">
-              <strong>Moderator Note:</strong>
-              <p className="mt-1">{document.rejection_reason}</p>
+              <strong className="font-semibold">Moderator Note:</strong>
+              <p className="mt-1 opacity-90">{document.rejection_reason}</p>
             </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* Title Input */}
           <div>
             <label className="mb-1 block text-sm font-medium text-muted">Document Title</label>
-            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} disabled={uploadState !== "idle" && uploadState !== "error"} className="w-full rounded-xl border border-border bg-transparent p-3 outline-none focus:border-amber-500 dark:text-white disabled:opacity-50" />
+            <input 
+              type="text" 
+              required 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              disabled={uploadState !== "idle" && uploadState !== "error"} 
+              className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50" 
+            />
           </div>
 
+          {/* Category Dropdown (Fixed for Dark Mode) */}
           <div>
             <label className="mb-1 block text-sm font-medium text-muted">Category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={uploadState !== "idle" && uploadState !== "error"} className="w-full rounded-xl border border-border bg-transparent p-3 outline-none focus:border-amber-500 dark:text-white disabled:opacity-50">
-              <option value="notes">Notes</option>
-              <option value="pyq">PYQ</option>
-              <option value="syllabus">Syllabus</option>
+            <select 
+              value={category} 
+              onChange={(e) => setCategory(e.target.value)} 
+              disabled={uploadState !== "idle" && uploadState !== "error"} 
+              className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+            >
+              <option value="notes" className="bg-surface text-foreground">Notes</option>
+              <option value="pyq" className="bg-surface text-foreground">PYQ</option>
+              <option value="syllabus" className="bg-surface text-foreground">Syllabus</option>
             </select>
           </div>
 
+          {/* File Dropzone */}
           <div>
             <label className="mb-1 block text-sm font-medium text-muted">Replace PDF (Optional)</label>
             <div 
               onClick={() => { if(uploadState === "idle" || uploadState === "error") fileInputRef.current?.click() }}
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background p-6 transition-colors ${(uploadState === "idle" || uploadState === "error") ? "hover:border-amber-500 hover:bg-amber-50 dark:hover:border-amber-500/50" : "opacity-50 cursor-not-allowed"}`}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background p-6 transition-colors ${
+                (uploadState === "idle" || uploadState === "error") 
+                  ? "hover:border-primary hover:bg-primary/5" 
+                  : "opacity-50 cursor-not-allowed"
+              }`}
             >
               {newFile ? (
-                <div className="flex flex-col items-center text-amber-600 dark:text-amber-500">
+                <div className="flex flex-col items-center text-primary">
                   <FileText size={32} className="mb-2" />
-                  <span className="text-sm font-medium">{newFile.name}</span>
-                  <span className="text-xs opacity-70">Click to change</span>
+                  <span className="text-sm font-medium text-foreground">{newFile.name}</span>
+                  <span className="text-xs text-muted mt-1">Click to change</span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center text-muted">
@@ -134,7 +171,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
             </div>
           </div>
 
-          {/* INJECTED PROGRESS BAR HERE */}
+          {/* Progress Bar */}
           <UploadProgressBar 
             state={uploadState} 
             progress={progress} 
@@ -142,10 +179,11 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
             errorMessage={error || undefined} 
           />
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={uploadState === "uploading" || uploadState === "processing" || uploadState === "success"}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 p-3 font-bold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground p-3 font-bold transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {(uploadState === "uploading" || uploadState === "processing") ? (
               <><Loader2 className="animate-spin" size={20} /> Processing...</>
