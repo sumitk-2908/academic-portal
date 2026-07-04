@@ -324,11 +324,19 @@ export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-border bg-surface/90 backdrop-blur-xl pb-safe lg:hidden">
-        <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/' ? 'text-primary' : 'text-muted'}`}><Home size={22} /><span className="text-xs font-bold">Home</span></Link>
-        <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/profile' ? 'text-primary' : 'text-muted'}`}><User size={22} /><span className="text-xs font-bold">Profile</span></Link>
-        <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/bookmarks' ? 'text-warning' : 'text-muted'}`}><Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span></Link>
-        <button onClick={() => ctx.setShowMobileMenu(true)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.showMobileMenu ? 'text-primary' : 'text-muted'}`}><Menu size={22} /><span className="text-xs font-bold">More</span></button>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-border bg-surface/90 backdrop-blur-xl pb-safe lg:hidden px-2">
+        <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/' ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
+          <Home size={22} /><span className="text-xs font-bold">Home</span>
+        </Link>
+        <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/profile' ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
+          <User size={22} /><span className="text-xs font-bold">Profile</span>
+        </Link>
+        <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/bookmarks' ? 'bg-warning/10 text-warning' : 'text-muted hover:bg-surface-hover'}`}>
+          <Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span>
+        </Link>
+        <button onClick={() => ctx.setShowMobileMenu(true)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.showMobileMenu ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
+          <Menu size={22} /><span className="text-xs font-bold">More</span>
+        </button>
       </nav>
       
       {ctx.showMobileMenu && (

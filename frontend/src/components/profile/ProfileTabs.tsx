@@ -98,10 +98,10 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold motion-hover ${
+            className={`whitespace-nowrap px-4 py-2.5 text-sm font-bold rounded-xl motion-hover transition-colors ${
               activeTab === tab.id
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted hover:text-foreground"
+                ? "bg-primary/10 text-primary"
+                : "text-muted hover:bg-surface-hover hover:text-foreground"
             }`}
           >
             {tab.label}

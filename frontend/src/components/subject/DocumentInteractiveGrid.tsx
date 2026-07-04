@@ -94,7 +94,7 @@ export default function DocumentInteractiveGrid({
   
   const virtualizer = useWindowVirtualizer({
     count: hasNextPage ? rowCount + 1 : rowCount,
-    estimateSize: () => 320, 
+    estimateSize: () => 380, 
     overscan: 2, 
   });
 
@@ -194,8 +194,8 @@ export default function DocumentInteractiveGrid({
                 transform: `translateY(${virtualRow.start}px)`,
                 display: 'grid',
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-                gap: '1rem',
-                paddingBottom: '1rem'
+                gap: '1.5rem',
+                paddingBottom: '1.5rem'
               }}
             >
               {isLoaderRow ? (
