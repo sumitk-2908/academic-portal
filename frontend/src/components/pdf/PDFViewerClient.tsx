@@ -168,26 +168,27 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
    <Toast.Provider swipeDirection="right">
     <div className="flex flex-col h-[calc(100vh-8rem)] w-full overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
       
-      {/* 1. Header: Made responsive with flex-col on mobile and flex-row on sm screens */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border bg-surface-hover p-3 sm:px-4 sm:py-0 min-h-[3.5rem] shrink-0">
+      {/* 1. Header: w-full ensures it takes full width for flex distributions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border bg-surface-hover p-3 sm:px-4 sm:py-2 min-h-[3.5rem] shrink-0 w-full">
         
         <button onClick={() => router.back()} className="self-start sm:self-auto flex items-center gap-1.5 sm:gap-2 rounded-xl px-2 sm:px-3 py-1.5 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover shrink-0">
           <ArrowLeft size={16} /> <span className="hidden sm:inline">Go Back</span><span className="sm:hidden">Back</span>
         </button>
         
-        {/* 2. Text Container: Swapped truncate for break-words to prevent cutoff on small screens */}
-        <div className="flex-1 flex flex-col sm:items-center justify-center w-full px-1 sm:px-4">
-          <p className="text-sm font-extrabold text-foreground break-words w-full text-left sm:text-center leading-tight">
+        {/* 2. Text Container: min-w-0 and whitespace-normal completely override truncation */}
+        <div className="flex-1 flex flex-col sm:items-center justify-center w-full min-w-0 px-1 sm:px-4">
+          <h1 className="text-base sm:text-sm font-extrabold text-foreground break-words whitespace-normal w-full text-left sm:text-center leading-tight">
             {documentMeta.title}
-          </p>
-          <p className="text-sm font-semibold text-primary break-words w-full text-left sm:text-center mt-0.5 leading-tight">
+          </h1>
+          <p className="text-sm font-semibold text-primary break-words whitespace-normal w-full text-left sm:text-center mt-1 leading-tight">
             Uploaded by {documentMeta.uploader_name || 'Anonymous'}
           </p>
         </div>
         
-        {/* 3. Action Icons: Added flex-wrap and self-start to neatly align below the title on mobile */}
-        <div className="flex items-center gap-1 sm:gap-2 self-start sm:self-auto flex-wrap shrink-0">
-          <div className="flex items-center gap-1 mr-2 border-r border-border pr-2 sm:pr-3">
+        {/* 3. Action Icons: justify-between spreads them across the empty space on mobile */}
+        <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-2 shrink-0 mt-2 sm:mt-0 text-muted">
+          
+          <div className="flex items-center gap-1 sm:mr-2 border-r border-border pr-2 sm:pr-3">
             <button onClick={() => handleRateDocument(true)} className={`p-1.5 rounded-lg motion-hover motion-active ${userRating === true ? 'bg-success/10 text-success' : 'text-muted hover:bg-surface-hover'}`}>
               <ThumbsUp size={16} className={userRating === true ? 'fill-current' : ''} />
             </button>
@@ -196,7 +197,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
             </button>
           </div>
 
-          <button onClick={() => setIsFlagModalOpen(true)} className="p-1.5 rounded-lg text-muted hover:bg-destructive/10 hover:text-destructive motion-hover motion-active mr-1">
+          <button onClick={() => setIsFlagModalOpen(true)} className="p-1.5 rounded-lg text-muted hover:bg-destructive/10 hover:text-destructive motion-hover motion-active sm:mr-1">
             <Flag size={16} />
           </button> 
 
