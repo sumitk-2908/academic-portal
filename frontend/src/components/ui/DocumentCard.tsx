@@ -45,7 +45,11 @@ export default function DocumentCard({
   const targetSubjectSlug = subjectSlug || doc.subject?.toLowerCase().replace(/ /g, '-');
 
   return (
-    <article className={`group flex flex-col rounded-2xl border border-border border-l-[3px] ${accentBorderColor} bg-surface p-5 shadow-sm motion-hover hover:-translate-y-1 hover:border-r-border hover:border-y-border hover:shadow-md`}>
+    <article className={`group flex flex-col rounded-2xl border border-l-[3px] ${accentBorderColor} p-5 shadow-sm motion-hover hover:-translate-y-1 hover:shadow-md ${
+      isBookmarked 
+        ? "bg-warning/5 border-warning/20 hover:border-warning/40 hover:border-y-warning/40" 
+        : "bg-surface border-border hover:border-r-border hover:border-y-border"
+    }`}>
       
       <div className="relative mb-4 h-32 w-full overflow-hidden rounded-xl bg-background flex items-center justify-center">
         {doc.thumbnail_url ? (
