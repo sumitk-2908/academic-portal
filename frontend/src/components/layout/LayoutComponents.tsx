@@ -1,5 +1,6 @@
 "use client";
 
+import { useState,useEffect } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Toast from "@radix-ui/react-toast";
@@ -306,30 +307,89 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
   </Dialog.Root>
 );
 
-export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => (
-  <>
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-border bg-surface/90 backdrop-blur-xl pb-safe lg:hidden">
-      <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/' ? 'text-primary' : 'text-muted'}`}><Home size={22} /><span className="text-xs font-bold">Home</span></Link>
-      <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/profile' ? 'text-primary' : 'text-muted'}`}><User size={22} /><span className="text-xs font-bold">Profile</span></Link>
-      <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/bookmarks' ? 'text-warning' : 'text-muted'}`}><Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span></Link>
-      <button onClick={() => ctx.setShowMobileMenu(true)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.showMobileMenu ? 'text-primary' : 'text-muted'}`}><Menu size={22} /><span className="text-xs font-bold">More</span></button>
-    </nav>
-    {ctx.showMobileMenu && (
-      <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden motion-modal" onClick={() => ctx.setShowMobileMenu(false)}>
-        <div className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-border bg-surface p-6 pb-28 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between mb-6"><h2 className="text-xl font-extrabold text-foreground">More Options</h2><button onClick={() => ctx.setShowMobileMenu(false)} className="rounded-full bg-surface-hover p-2 text-muted"><X size={20} /></button></div>
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-3">
-              <Link href="/recent-uploads" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Upload size={18} className="text-success" /> <span>Uploads</span></Link>
-              <Link href="/continue-studying" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Clock size={18} className="text-primary" /> <span>Continue</span></Link>
+export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
+  const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
+
+  // Lock body scroll when Sign Out Modal is open
+  useEffect(() => {
+    if (isSignOutModalOpen) {
+      window.document.body.style.overflow = "hidden";
+    } else {
+      window.document.body.style.overflow = "unset";
+    }
+    return () => {
+      window.document.body.style.overflow = "unset";
+    };
+  }, [isSignOutModalOpen]);
+
+  return (
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-border bg-surface/90 backdrop-blur-xl pb-safe lg:hidden">
+        <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/' ? 'text-primary' : 'text-muted'}`}><Home size={22} /><span className="text-xs font-bold">Home</span></Link>
+        <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/profile' ? 'text-primary' : 'text-muted'}`}><User size={22} /><span className="text-xs font-bold">Profile</span></Link>
+        <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.pathname === '/bookmarks' ? 'text-warning' : 'text-muted'}`}><Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span></Link>
+        <button onClick={() => ctx.setShowMobileMenu(true)} className={`flex min-w-[64px] flex-col items-center gap-1 ${ctx.showMobileMenu ? 'text-primary' : 'text-muted'}`}><Menu size={22} /><span className="text-xs font-bold">More</span></button>
+      </nav>
+      
+      {ctx.showMobileMenu && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden motion-modal" onClick={() => ctx.setShowMobileMenu(false)}>
+          <div className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-border bg-surface p-6 pb-28 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6"><h2 className="text-xl font-extrabold text-foreground">More Options</h2><button onClick={() => ctx.setShowMobileMenu(false)} className="rounded-full bg-surface-hover p-2 text-muted"><X size={20} /></button></div>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-3">
+                <Link href="/recent-uploads" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Upload size={18} className="text-success" /> <span>Uploads</span></Link>
+                <Link href="/continue-studying" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Clock size={18} className="text-primary" /> <span>Continue</span></Link>
+              </div>
+              {(ctx.isAdmin || ctx.isStudent) && (
+                <div className="border-t border-border pt-4">
+                  <button 
+                    onClick={() => { 
+                      ctx.setShowMobileMenu(false); 
+                      setIsSignOutModalOpen(true); 
+                    }} 
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 p-3 text-sm font-semibold text-destructive hover:bg-destructive/10 motion-hover motion-active"
+                  >
+                    <LogOut size={18} /> Sign Out
+                  </button>
+                </div>
+              )}
             </div>
-            {(ctx.isAdmin || ctx.isStudent) && <div className="border-t border-border pt-4"><button onClick={() => { ctx.setShowMobileMenu(false); ctx.handleLogout(); }} className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 p-3 text-sm font-semibold text-destructive hover:bg-destructive/10 motion-hover motion-active"><LogOut size={18} /> Sign Out</button></div>}
           </div>
         </div>
-      </div>
-    )}
-  </>
-);
+      )}
+
+      {/* Sign Out Confirmation Modal for Mobile */}
+      {isSignOutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-surface border border-border p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-foreground mb-2">Sign Out</h2>
+            <p className="text-sm text-muted mb-6">
+              Are you sure you want to sign out? You will need to log back in to access your study materials and contributions.
+            </p>
+            
+            <div className="flex items-center gap-3 w-full">
+              <button
+                onClick={() => setIsSignOutModalOpen(false)}
+                className="flex-1 rounded-xl bg-surface-hover border border-border py-2.5 text-sm font-bold text-foreground transition-colors hover:opacity-80"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  ctx.handleLogout();
+                  window.location.href = "/";
+                }}
+                className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-bold text-destructive-foreground transition-colors hover:opacity-90"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 export const BannersAndToasts = ({ ctx }: { ctx: ClientLayoutContext }) => (
   <>
