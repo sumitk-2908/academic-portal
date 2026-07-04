@@ -167,21 +167,26 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   return (
    <Toast.Provider swipeDirection="right">
     <div className="flex flex-col h-[calc(100vh-8rem)] w-full overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface-hover px-2 sm:px-4">
-        <button onClick={() => router.back()} className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-2 sm:px-3 py-1.5 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover">
+      
+      {/* 1. Header: Made responsive with flex-col on mobile and flex-row on sm screens */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border bg-surface-hover p-3 sm:px-4 sm:py-0 min-h-[3.5rem] shrink-0">
+        
+        <button onClick={() => router.back()} className="self-start sm:self-auto flex items-center gap-1.5 sm:gap-2 rounded-xl px-2 sm:px-3 py-1.5 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover shrink-0">
           <ArrowLeft size={16} /> <span className="hidden sm:inline">Go Back</span><span className="sm:hidden">Back</span>
         </button>
         
-        <div className="flex-1 flex flex-col items-center justify-center truncate px-4">
-          <p className="text-sm font-extrabold truncate w-full text-center text-foreground">
+        {/* 2. Text Container: Swapped truncate for break-words to prevent cutoff on small screens */}
+        <div className="flex-1 flex flex-col sm:items-center justify-center w-full px-1 sm:px-4">
+          <p className="text-sm font-extrabold text-foreground break-words w-full text-left sm:text-center leading-tight">
             {documentMeta.title}
           </p>
-          <p className="text-sm font-semibold text-primary truncate w-full text-center">
+          <p className="text-sm font-semibold text-primary break-words w-full text-left sm:text-center mt-0.5 leading-tight">
             Uploaded by {documentMeta.uploader_name || 'Anonymous'}
           </p>
         </div>
         
-        <div className="flex items-center gap-1 sm:gap-2">
+        {/* 3. Action Icons: Added flex-wrap and self-start to neatly align below the title on mobile */}
+        <div className="flex items-center gap-1 sm:gap-2 self-start sm:self-auto flex-wrap shrink-0">
           <div className="flex items-center gap-1 mr-2 border-r border-border pr-2 sm:pr-3">
             <button onClick={() => handleRateDocument(true)} className={`p-1.5 rounded-lg motion-hover motion-active ${userRating === true ? 'bg-success/10 text-success' : 'text-muted hover:bg-surface-hover'}`}>
               <ThumbsUp size={16} className={userRating === true ? 'fill-current' : ''} />
