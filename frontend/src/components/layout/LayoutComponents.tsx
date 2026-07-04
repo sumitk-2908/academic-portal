@@ -170,11 +170,28 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
   <div className="space-y-6 flex-1">
     <div>
       {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Navigation</p>}
-      <Link href="/" title={ctx.sidebarCollapsed ? "Back to Homepage" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface hover:text-primary motion-hover motion-active">
+      <Link 
+        href="/" 
+        title={ctx.sidebarCollapsed ? "Back to Homepage" : undefined} 
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+          ctx.pathname === '/' 
+            ? 'bg-primary/10 text-primary' 
+            : 'text-muted hover:bg-surface-hover hover:text-primary'
+        }`}
+      >
         <Home size={18} /> {!ctx.sidebarCollapsed && "Back to Homepage"}
       </Link>
+      
       {ctx.isAdmin && (
-        <Link href="/subject/admin/inbox" title={ctx.sidebarCollapsed ? "Approval Inbox" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-warning hover:bg-warning/10 motion-hover motion-active">
+        <Link 
+          href="/subject/admin/inbox" 
+          title={ctx.sidebarCollapsed ? "Approval Inbox" : undefined} 
+          className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+            ctx.pathname === '/subject/admin/inbox'
+              ? 'bg-warning/10 text-warning'
+              : 'text-warning hover:bg-warning/10'
+          }`}
+        >
           <Inbox size={18} /> {!ctx.sidebarCollapsed && <span className="flex-1">Approval Inbox</span>}
           {!ctx.sidebarCollapsed && ctx.pendingCount > 0 && <span className="rounded-full bg-warning/20 px-2 text-xs tracking-[0.06em]">{ctx.pendingCount}</span>}
         </Link>
@@ -183,13 +200,37 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
 
     <div>
       {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Student Workspace</p>}
-      <Link href="/continue-studying" title={ctx.sidebarCollapsed ? "Continue Studying" : undefined} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface hover:text-primary motion-hover motion-active">
+      <Link 
+        href="/continue-studying" 
+        title={ctx.sidebarCollapsed ? "Continue Studying" : undefined} 
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+          ctx.pathname === '/continue-studying'
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted hover:bg-surface-hover hover:text-primary'
+        }`}
+      >
         <Clock size={18} /> {!ctx.sidebarCollapsed && "Continue Studying"}
       </Link>
-      <Link href="/bookmarks" title={ctx.sidebarCollapsed ? "Bookmarks" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface hover:text-warning motion-hover motion-active">
+      <Link 
+        href="/bookmarks" 
+        title={ctx.sidebarCollapsed ? "Bookmarks" : undefined} 
+        className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+          ctx.pathname === '/bookmarks'
+            ? 'bg-warning/10 text-warning'
+            : 'text-muted hover:bg-surface-hover hover:text-warning'
+        }`}
+      >
         <Bookmark size={18} /> {!ctx.sidebarCollapsed && "Bookmarks"}
       </Link>
-      <Link href="/recent-uploads" title={ctx.sidebarCollapsed ? "Recent Uploads" : undefined} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface hover:text-success motion-hover motion-active">
+      <Link 
+        href="/recent-uploads" 
+        title={ctx.sidebarCollapsed ? "Recent Uploads" : undefined} 
+        className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+          ctx.pathname === '/recent-uploads'
+            ? 'bg-success/10 text-success'
+            : 'text-muted hover:bg-surface-hover hover:text-success'
+        }`}
+      >
         <Upload size={18} /> {!ctx.sidebarCollapsed && "Recent Uploads"}
       </Link>
     </div>
