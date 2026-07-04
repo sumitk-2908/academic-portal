@@ -175,20 +175,20 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
           <ArrowLeft size={16} /> <span className="hidden sm:inline">Go Back</span><span className="sm:hidden">Back</span>
         </button>
         
-        {/* 2. Text Container: min-w-0 and whitespace-normal completely override truncation */}
-        <div className="flex-1 flex flex-col sm:items-center justify-center w-full min-w-0 px-1 sm:px-4">
-          <h1 className="text-base sm:text-sm font-extrabold text-foreground break-words whitespace-normal w-full text-left sm:text-center leading-tight">
+       {/* 2. Text Container: items-center and text-center applied universally */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full min-w-0 px-1 sm:px-4">
+          <h1 className="text-base sm:text-sm font-extrabold text-foreground break-words whitespace-normal w-full text-center leading-tight">
             {documentMeta.title}
           </h1>
-          <p className="text-sm font-semibold text-primary break-words whitespace-normal w-full text-left sm:text-center mt-1 leading-tight">
+          <p className="text-sm font-semibold text-primary break-words whitespace-normal w-full text-center mt-1 leading-tight">
             Uploaded by {documentMeta.uploader_name || 'Anonymous'}
           </p>
         </div>
         
-        {/* 3. Action Icons: justify-between spreads them across the empty space on mobile */}
-        <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-2 shrink-0 mt-2 sm:mt-0 text-muted">
+        {/* 3. Action Icons: Labels added for Report and Share to fill space evenly */}
+        <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-1 sm:gap-2 shrink-0 mt-2 sm:mt-0 text-muted">
           
-          <div className="flex items-center gap-1 sm:mr-2 border-r border-border pr-2 sm:pr-3">
+          <div className="flex items-center gap-1 sm:mr-2 border-r border-border pr-2 sm:pr-3 shrink-0">
             <button onClick={() => handleRateDocument(true)} className={`p-1.5 rounded-lg motion-hover motion-active ${userRating === true ? 'bg-success/10 text-success' : 'text-muted hover:bg-surface-hover'}`}>
               <ThumbsUp size={16} className={userRating === true ? 'fill-current' : ''} />
             </button>
@@ -197,14 +197,14 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
             </button>
           </div>
 
-          <button onClick={() => setIsFlagModalOpen(true)} className="p-1.5 rounded-lg text-muted hover:bg-destructive/10 hover:text-destructive motion-hover motion-active sm:mr-1">
-            <Flag size={16} />
+          <button onClick={() => setIsFlagModalOpen(true)} className="flex items-center gap-1.5 p-1.5 rounded-lg text-muted hover:bg-destructive/10 hover:text-destructive motion-hover motion-active sm:mr-1 shrink-0">
+            <Flag size={16} /> <span className="text-sm font-bold">Report</span>
           </button> 
 
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button className="flex items-center gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover">
-                <Share2 size={14} /> <span className="hidden sm:inline">Share</span>
+              <button className="flex items-center gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover shrink-0">
+                <Share2 size={14} /> <span className="text-sm font-bold">Share</span>
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -221,7 +221,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
 
-          <a href={documentMeta.file_url} target="_blank" rel="noopener noreferrer" onClick={handleDownloadClick} className="flex items-center gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-sm font-bold text-primary motion-hover motion-active hover:bg-primary/10">
+          <a href={documentMeta.file_url} target="_blank" rel="noopener noreferrer" onClick={handleDownloadClick} className="flex items-center gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-sm font-bold text-primary motion-hover motion-active hover:bg-primary/10 shrink-0">
              <span className="hidden sm:inline">FullScreen</span> <Maximize size={14} />
           </a>
         </div>
