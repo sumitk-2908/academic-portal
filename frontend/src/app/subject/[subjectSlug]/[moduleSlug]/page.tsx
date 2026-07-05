@@ -39,7 +39,7 @@ export default async function ModulePage({
 
   const { data: documents, count } = await supabase
     .from("documents")
-    .select("*", { count: "exact" })
+    .select("*, document_analytics(upvotes, view_count, download_count)", { count: "exact" })
     .eq("subject", subjectDisplayName)
     .eq("module_id", moduleNumber)
     .eq("status", "approved")
