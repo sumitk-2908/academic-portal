@@ -6,6 +6,7 @@ import { Bookmark, Download, Eye, FileText, Loader2, NotebookPen, FileQuestion, 
 import Link from "next/link";
 import { manageOfflinePdf } from "../lib/offline-manager";
 import { requestAuthPrompt } from "../lib/auth-prompts";
+import { requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
@@ -14,6 +15,7 @@ export default function BookmarksPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
   const [isSignedOut, setIsSignedOut] = useState(false);
+  const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export default function BookmarksPage() {
       const userBookmarks = await getStudentBookmarks(currentUserId);
       if (isMounted) {
         setDocuments(userBookmarks);
+        setShowContributionPrompt(shouldShowContributionPrompt(userBookmarks.length));
         if (!silent) setLoading(false);
       }
     };
@@ -67,6 +70,7 @@ export default function BookmarksPage() {
     const docToRemove = documents.find(d => d.id === id);
     const nextDocs = documents.filter(d => d.id !== id);
     setDocuments(nextDocs);
+    setShowContributionPrompt(shouldShowContributionPrompt(nextDocs.length));
     const nextIds = nextDocs.map(d => d.id);
     localStorage.setItem("portal_bookmarks", JSON.stringify(nextIds));
 
@@ -112,6 +116,29 @@ export default function BookmarksPage() {
         </div>
       </div>
 
+      {showContributionPrompt && !isSignedOut && (
+        <div className="flex flex-col gap-4 rounded-2xl border border-warning/20 bg-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-extrabold tracking-tight text-foreground">Help others build their study library too.</p>
+            <p className="mt-1 text-sm font-medium leading-6 text-muted">Your bookmarks are useful. Upload notes that made a subject click for you.</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button onClick={requestUploadPrompt} className="rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+              Upload Notes
+            </button>
+            <button
+              onClick={() => {
+                dismissContributionPrompt();
+                setShowContributionPrompt(false);
+              }}
+              className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
           <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-warning" /></div>
@@ -148,7 +175,15 @@ export default function BookmarksPage() {
           );
         })}
         {documents.length === 0 && !loading && !isSignedOut && (
-          <p className="col-span-full text-center py-12 text-sm font-medium text-muted">You have not bookmarked any documents yet.</p>
+          <div className="col-span-full rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
+            <h2 className="text-lg font-extrabold tracking-tight text-foreground">Build your study library</h2>
+            <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">
+              Bookmark resources you want to revisit before exams.
+            </p>
+            <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+              Bookmark Resources
+            </Link>
+          </div>
         )}
       </div>
     </div>

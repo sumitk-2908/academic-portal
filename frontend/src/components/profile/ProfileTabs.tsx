@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Eye, Download, BookOpen, Clock, Sparkles } from "lucide-react";
+import { Eye, Download, BookOpen, Clock, Sparkles, Upload } from "lucide-react";
 import Link from "next/link";
 import { 
   trackDocumentStat, 
@@ -14,10 +14,12 @@ import ActivityHeatmap from "./ActivityHeatmap";
 import AchievementsList from "./AchievementsList";
 import ActivityTimeline from "./ActivityTimeline";
 import UserDocumentCard from "./UserDocumentCard";
+import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "@/app/lib/student-prompts";
 
 export default function ProfileTabs({ user, history, bookmarks, uploads, achievements }: any) {
   const [activeTab, setActiveTab] = useState("overview");
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const downloadingRef = useRef<Set<number>>(new Set());
   
   const tabs = [
@@ -38,6 +40,10 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
       }
     }
   }, []);
+
+  useEffect(() => {
+    setShowContributionPrompt(shouldShowContributionPrompt(bookmarks.length));
+  }, [bookmarks.length]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -79,6 +85,8 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
     try {
       await trackDocumentStat(doc.id, 'download');
+      const downloadCount = recordStudentDownload();
+      if (downloadCount >= 3) setShowContributionPrompt(shouldShowContributionPrompt(bookmarks.length));
       const link = document.createElement("a");
       link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
       document.body.appendChild(link);
@@ -138,7 +146,34 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
               </div>
             )) : (
               <div className="py-8 text-center rounded-2xl border border-dashed border-border bg-surface-hover/50">
-                 <p className="text-sm font-medium text-muted">No recent study activity.</p>
+                 <h3 className="text-base font-extrabold tracking-tight text-foreground">Start studying from your dashboard</h3>
+                 <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Open a resource and your recent study activity will appear here.</p>
+                 <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                   Start Studying
+                 </Link>
+              </div>
+            )}
+
+            {showContributionPrompt && (
+              <div className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-extrabold tracking-tight text-foreground">These resources helped you.</p>
+                  <p className="mt-1 text-sm font-medium leading-6 text-muted">Consider uploading your own notes to help future students.</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                    <Upload size={15} /> Upload Notes
+                  </button>
+                  <button
+                    onClick={() => {
+                      dismissContributionPrompt();
+                      setShowContributionPrompt(false);
+                    }}
+                    className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+                  >
+                    Later
+                  </button>
+                </div>
               </div>
             )}
 
@@ -201,7 +236,15 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
                  </button>
                </div>
              </div>
-           )) : <p className="text-sm font-medium text-muted">No bookmarks yet.</p>}
+           )) : (
+             <div className="rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
+               <h3 className="text-base font-extrabold tracking-tight text-foreground">Build your study library</h3>
+               <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Bookmark resources you want to revisit before exams.</p>
+               <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+                 Bookmark Resources
+               </Link>
+             </div>
+           )}
         </div>
       )}
 
@@ -227,7 +270,15 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
                item={item} 
                onRefresh={() => window.dispatchEvent(new Event("sidebar_update"))} 
              />
-           )) : <p className="text-sm font-medium text-muted">You haven't uploaded any resources yet.</p>}
+           )) : (
+             <div className="rounded-2xl border border-dashed border-success/30 bg-success/5 p-8 text-center">
+               <h3 className="text-base font-extrabold tracking-tight text-foreground">Share the notes you wish you had earlier</h3>
+               <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Upload notes, PYQs, or syllabus PDFs so the next student has a better starting point.</p>
+               <button onClick={requestUploadPrompt} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-success px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+                 <Upload size={15} /> Upload Notes
+               </button>
+             </div>
+           )}
         </div>
       )}
 

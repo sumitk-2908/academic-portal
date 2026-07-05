@@ -163,6 +163,16 @@ export function useClientLayout() {
   }, [openAuthPrompt]);
 
   useEffect(() => {
+    const handleUploadPrompt = () => {
+      if (isAdmin || isStudent) setShowUploadForm(true);
+      else openAuthPrompt("upload");
+    };
+
+    window.addEventListener("portal_upload_prompt", handleUploadPrompt);
+    return () => window.removeEventListener("portal_upload_prompt", handleUploadPrompt);
+  }, [isAdmin, isStudent, openAuthPrompt]);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => syncUserFromSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => syncUserFromSession(session));
     return () => subscription.unsubscribe();

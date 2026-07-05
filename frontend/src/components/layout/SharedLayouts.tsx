@@ -55,10 +55,22 @@ export const CardGrid = ({ children, cols = "auto" }: { children: React.ReactNod
  * 4. Empty State Wrapper 
  * Enforces the 13px (text-base) Medium rule.
  */
-export const EmptyState = ({ message, icon: Icon }: { message: string; icon?: any; }) => (
+export const EmptyState = ({
+  title,
+  message,
+  icon: Icon,
+  action,
+}: {
+  title?: string;
+  message: string;
+  icon?: any;
+  action?: React.ReactNode;
+}) => (
   <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-hover/50 p-12 text-center">
     {Icon && <Icon className="mb-4 h-8 w-8 text-muted opacity-50" />}
-    <p className="text-base font-medium text-muted">{message}</p>
+    {title && <h3 className="text-lg font-extrabold tracking-tight text-foreground">{title}</h3>}
+    <p className={`${title ? "mt-1" : ""} max-w-md text-base font-medium text-muted`}>{message}</p>
+    {action && <div className="mt-5 flex flex-wrap items-center justify-center gap-3">{action}</div>}
   </div>
 );
 

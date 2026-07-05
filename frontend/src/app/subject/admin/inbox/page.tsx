@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { supabase, updateDocumentStatus, deleteDocument, getFlaggedDocuments, dismissDocumentFlags } from "../../../lib/api";
-import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, Loader2, X, Flag, ShieldAlert, MessageSquareWarning } from "lucide-react";
+import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, Loader2, X, Flag, ShieldAlert, MessageSquareWarning, Upload } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Toast from "@radix-ui/react-toast";
+import { requestUploadPrompt } from "@/app/lib/student-prompts";
 
 export default function AdminInboxAuditingRoute() {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged'>('pending');
@@ -198,10 +199,22 @@ export default function AdminInboxAuditingRoute() {
 
             {/* EMPTY STATES */}
             {activeTab === 'pending' && pendingDocs.length === 0 && (
-              <p className="col-span-full text-center py-12 text-base text-muted">Inbox clear! No outstanding crowdsourcing requests.</p>
+              <div className="col-span-full rounded-2xl border border-dashed border-border bg-surface-hover/50 p-8 text-center">
+                <h2 className="text-lg font-extrabold tracking-tight text-foreground">Approval queue is clear</h2>
+                <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Invite fresh notes when a subject needs another perspective.</p>
+                <button onClick={requestUploadPrompt} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                  <Upload size={15} /> Upload Notes
+                </button>
+              </div>
             )}
             {activeTab === 'flagged' && flaggedDocs.length === 0 && (
-              <p className="col-span-full text-center py-12 text-base text-muted">No flagged content! The community is happy.</p>
+              <div className="col-span-full rounded-2xl border border-dashed border-border bg-surface-hover/50 p-8 text-center">
+                <h2 className="text-lg font-extrabold tracking-tight text-foreground">Flag review is clear</h2>
+                <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Keep studying the latest uploads or review new submissions as they arrive.</p>
+                <Link href="/recent-uploads" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                  <Eye size={15} /> Start Studying
+                </Link>
+              </div>
             )}
           </div>
         )}

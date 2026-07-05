@@ -1,6 +1,8 @@
 "use client";
 import { useMemo } from "react";
 import { Eye, BookOpen, Upload } from "lucide-react";
+import Link from "next/link";
+import { requestUploadPrompt } from "@/app/lib/student-prompts";
 
 export default function ActivityTimeline({
   history,
@@ -59,9 +61,20 @@ export default function ActivityTimeline({
 
   if (timeline.length === 0) {
     return (
-      <p className="py-8 text-center text-sm font-medium text-muted">
-        No recent activity found.
-      </p>
+      <div className="rounded-2xl border border-dashed border-border bg-surface-hover/50 p-8 text-center">
+        <h3 className="text-base font-extrabold tracking-tight text-foreground">Start your activity timeline</h3>
+        <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">
+          Study, bookmark, or upload a resource and your progress will collect here.
+        </p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Link href="/recent-uploads" className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+            Start Studying
+          </Link>
+          <button onClick={requestUploadPrompt} className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover">
+            Upload Notes
+          </button>
+        </div>
+      </div>
     );
   }
 

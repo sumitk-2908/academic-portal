@@ -2,28 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
+import { Eye, FileQuestion, Upload } from "lucide-react";
 import { trackDocumentStat, deleteDocument, supabase, getPaginatedDocumentsByModule } from "@/app/lib/api";
 import { manageOfflinePdf } from "@/app/lib/offline-manager";
 import { requestAuthPrompt } from "@/app/lib/auth-prompts";
+import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "@/app/lib/student-prompts";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { LoadingGrid, EmptyState, CenteredSpinner } from "@/components/layout/SharedLayouts";
 import DocumentCard from "@/components/ui/DocumentCard";
-
-const CATEGORY_ICONS: Record<string, any> = { 
-  notes: NotebookPen, 
-  pyq: FileQuestion, 
-  syllabus: ListChecks 
-};
-
-const getTimeAgo = (dateStr: string) => {
-  const days = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / (1000 * 3600 * 24));
-  if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
-  return `${days} days ago`;
-};
 
 export interface PaginationConfig {
   queryKey: string[];
@@ -48,6 +36,7 @@ export default function DocumentInteractiveGrid({
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [cols, setCols] = useState(1);
+  const [showContributionPrompt, setShowContributionPrompt] = useState(false);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: paginationConfig ? paginationConfig.queryKey : ['static-grid'],
@@ -69,7 +58,9 @@ export default function DocumentInteractiveGrid({
   useEffect(() => {
     const initClientState = async () => {
       const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
-      setBookmarks(rawBookmarks.map((b: any) => typeof b === 'object' ? b.id : b));
+      const bookmarkIds = rawBookmarks.map((b: any) => typeof b === 'object' ? b.id : b);
+      setBookmarks(bookmarkIds);
+      setShowContributionPrompt(shouldShowContributionPrompt(bookmarkIds.length));
 
       const { data: sess } = await supabase.auth.getSession();
       if (sess?.session?.user) {
@@ -118,6 +109,7 @@ export default function DocumentInteractiveGrid({
     const isBookmarked = bookmarks.includes(id);
     const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
     setBookmarks(nextB);
+    if (!isBookmarked) setShowContributionPrompt(shouldShowContributionPrompt(nextB.length));
     
     const targetDoc = displayDocuments.find(d => d.id === id);
     const currentStorage = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
@@ -140,6 +132,8 @@ export default function DocumentInteractiveGrid({
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
     trackDocumentStat(doc.id, 'download');
+    const downloadCount = recordStudentDownload();
+    if (downloadCount >= 3) setShowContributionPrompt(shouldShowContributionPrompt(bookmarks.length));
     try {
       const response = await fetch(doc.file_url);
       if (!response.ok) throw new Error("Network response was not ok");
@@ -180,10 +174,52 @@ export default function DocumentInteractiveGrid({
   };
 
   if (loading) return <LoadingGrid count={6} />;
-  if (displayDocuments.length === 0 && !hasNextPage) return <EmptyState message="No items indexed for this selection." icon={FileQuestion} />;
+  if (displayDocuments.length === 0 && !hasNextPage) {
+    const uploadCopy = getUploadPromptCopy(displayDocuments.length);
+
+    return (
+      <EmptyState
+        title={uploadCopy.title}
+        message={uploadCopy.message}
+        icon={FileQuestion}
+        action={
+          <>
+            <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+              <Upload size={15} /> Upload Notes
+            </button>
+            <Link href="/recent-uploads" className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover">
+              <Eye size={15} /> Start Studying
+            </Link>
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <>
+      {showContributionPrompt && (
+        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-extrabold tracking-tight text-foreground">These resources helped you.</p>
+            <p className="mt-1 text-sm font-medium leading-6 text-muted">Consider uploading your own notes to help future students.</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+              <Upload size={15} /> Upload Notes
+            </button>
+            <button
+              onClick={() => {
+                dismissContributionPrompt();
+                setShowContributionPrompt(false);
+              }}
+              className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      )}
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const isLoaderRow = virtualRow.index > rowCount - 1;

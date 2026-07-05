@@ -12,6 +12,7 @@ import {
 import { FcGoogle } from "react-icons/fc";
 import { ClientLayoutContext, SUBJECTS_LIST, isNonModuleSubject } from "@/app/hooks/useClientLayout";
 import { AUTH_PROMPT_COPY } from "@/app/lib/auth-prompts";
+import { requestUploadPrompt } from "@/app/lib/student-prompts";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 import UploadProgressBar from "@/components/ui/UploadProgressBar";
@@ -83,7 +84,19 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
                       </div>
                     </Link>
                   ))}
-                  {ctx.globalSearchResults.length === 0 && <p className="p-4 text-xs text-center text-muted">No matching documents found.</p>}
+                  {ctx.globalSearchResults.length === 0 && (
+                    <div className="p-4 text-center">
+                      <p className="text-xs font-semibold text-muted">Try a subject name, or help classmates by uploading the resource you were looking for.</p>
+                      <div className="mt-3 flex justify-center gap-2">
+                        <Link href="/recent-uploads" onClick={() => ctx.setSearchQuery("")} className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-surface-hover">
+                          Start Studying
+                        </Link>
+                        <button onClick={() => { ctx.setSearchQuery(""); requestUploadPrompt(); }} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90">
+                          Upload Notes
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>

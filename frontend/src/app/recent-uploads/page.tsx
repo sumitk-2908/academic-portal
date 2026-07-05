@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { supabase, trackDocumentStat, searchDocuments } from "../lib/api";
+import { trackDocumentStat, searchDocuments } from "../lib/api";
 import { Upload, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
+import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
 export default function RecentUploadsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showContributionPrompt, setShowContributionPrompt] = useState(false);
 
   const downloadingRef = useRef<Set<number>>(new Set());
 
@@ -31,6 +33,8 @@ export default function RecentUploadsPage() {
 
     try {
       await trackDocumentStat(doc.id, "download");
+      const downloadCount = recordStudentDownload();
+      if (downloadCount >= 3) setShowContributionPrompt(shouldShowContributionPrompt(0));
       const link = document.createElement("a");
       link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
       document.body.appendChild(link);
@@ -55,10 +59,41 @@ export default function RecentUploadsPage() {
         </div>
       </div>
 
+      {showContributionPrompt && (
+        <div className="flex flex-col gap-4 rounded-2xl border border-success/20 bg-success/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-extrabold tracking-tight text-foreground">These resources helped you.</p>
+            <p className="mt-1 text-sm font-medium leading-6 text-muted">Consider uploading your own notes to help future students.</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button onClick={requestUploadPrompt} className="rounded-xl bg-success px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+              Upload Notes
+            </button>
+            <button
+              onClick={() => {
+                dismissContributionPrompt();
+                setShowContributionPrompt(false);
+              }}
+              className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
           <div className="col-span-full flex justify-center py-12">
             <Loader2 className="animate-spin text-success" />
+          </div>
+        ) : documents.length === 0 ? (
+          <div className="col-span-full rounded-2xl border border-dashed border-success/30 bg-success/5 p-8 text-center">
+            <h2 className="text-lg font-extrabold tracking-tight text-foreground">{getUploadPromptCopy(0).title}</h2>
+            <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">{getUploadPromptCopy(0).message}</p>
+            <button onClick={requestUploadPrompt} className="mt-4 inline-flex rounded-xl bg-success px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+              Upload Notes
+            </button>
           </div>
         ) : (
           documents.map((doc) => {

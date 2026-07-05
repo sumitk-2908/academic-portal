@@ -10,6 +10,7 @@ import {
   getProfilePreferences 
 } from "../lib/api";
 import { requestAuthPrompt } from "../lib/auth-prompts";
+import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 import { Clock, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -26,6 +27,7 @@ export default function ContinueStudyingPage() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSignedOut, setIsSignedOut] = useState(false);
+  const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function ContinueStudyingPage() {
       const history = await getRecentStudyActivity(currentUserId);
       const safeHistory = Array.isArray(history) ? history : [];
       setDocuments(safeHistory);
+      setShowContributionPrompt(shouldShowContributionPrompt(0));
       const historyIds = new Set(safeHistory.map((d: any) => d.id));
 
       // 2. Fetch User Profile Preferences (Favorites & Branch)
@@ -153,6 +156,8 @@ export default function ContinueStudyingPage() {
 
     try {
       await trackDocumentStat(doc.id, 'download');
+      const downloadCount = recordStudentDownload();
+      if (downloadCount >= 3) setShowContributionPrompt(shouldShowContributionPrompt(0));
       const link = document.createElement("a");
       link.href = `${doc.file_url}?download=${encodeURIComponent(doc.title)}.pdf`;
       document.body.appendChild(link);
@@ -235,12 +240,41 @@ export default function ContinueStudyingPage() {
           ))}
           
           {safeDocuments.length === 0 && !loading && !isSignedOut && (
-            <div className="col-span-full rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-              <p className="text-sm text-muted">Your history is empty. Time to start studying!</p>
+            <div className="col-span-full rounded-2xl border border-dashed border-indigo-500/30 bg-indigo-500/5 p-8 text-center">
+              <h2 className="text-lg font-extrabold tracking-tight text-foreground">Start your study trail</h2>
+              <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">
+                Open any resource and it will show up here when you return.
+              </p>
+              <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-indigo-500 px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+                Start Studying
+              </Link>
             </div>
           )}
         </div>
       </section>
+
+      {showContributionPrompt && !isSignedOut && (
+        <section className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-extrabold tracking-tight text-foreground">These resources helped you.</p>
+            <p className="mt-1 text-sm font-medium leading-6 text-muted">Consider uploading your own notes to help future students.</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button onClick={requestUploadPrompt} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+              Upload Notes
+            </button>
+            <button
+              onClick={() => {
+                dismissContributionPrompt();
+                setShowContributionPrompt(false);
+              }}
+              className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+            >
+              Later
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* SUGGESTIONS SECTION */}
       {!loading && suggestions.length > 0 && (

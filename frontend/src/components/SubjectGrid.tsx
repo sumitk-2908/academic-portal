@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Subject } from "@/app/lib/api"; 
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { CardGrid, EmptyState } from "@/components/layout/SharedLayouts";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Upload } from "lucide-react";
+import { requestUploadPrompt } from "@/app/lib/student-prompts";
 
 interface SubjectGridProps {
   subjects: Subject[];
@@ -55,7 +56,21 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
       </div>
 
       {filteredSubjects.length === 0 ? (
-        <EmptyState message="No subjects found." icon={BookOpen} />
+        <EmptyState
+          title="No subjects match this filter"
+          message="Start with all subjects, or upload notes for a class your batch needs."
+          icon={BookOpen}
+          action={
+            <>
+              <button onClick={() => setSelectedSubject("All")} className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover">
+                Start Studying
+              </button>
+              <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                <Upload size={15} /> Upload Notes
+              </button>
+            </>
+          }
+        />
       ) : (
         <CardGrid cols="5">
           {filteredSubjects.map((sub, index) => {
