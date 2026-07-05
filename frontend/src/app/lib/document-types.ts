@@ -14,7 +14,7 @@ export type DocumentWithAnalytics = DocumentRecord & {
 };
 
 export type DocumentsPage = {
-  data: DocumentRecord[];
+  data: DocumentWithAnalytics[];
   nextCursor: number | null;
   total: number;
 };

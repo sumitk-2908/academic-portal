@@ -6,8 +6,8 @@ import {
   Share2, Link as LinkIcon, Check, Maximize,
   ThumbsUp, ThumbsDown, Flag, X 
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { supabase, trackDocumentStat, logStudySession, triggerStreakUpdate } from "@/app/lib/api"; 
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase, trackDocumentStat, logStudySession, triggerStreakUpdate, toggleUpvote, getUserUpvotes } from "@/app/lib/api"; 
 import { useStudyHistory } from "@/app/context/StudyHistoryContext";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -41,10 +41,32 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   };
 
   const [userRating, setUserRating] = useState<boolean | null>(null);
+  const [upvotesCount, setUpvotesCount] = useState(() => {
+    const analyticsObj = Array.isArray(documentMeta?.document_analytics) ? documentMeta?.document_analytics[0] : documentMeta?.document_analytics;
+    return analyticsObj?.upvotes || 0;
+  });
   const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
   const [flagReason, setFlagReason] = useState('incorrect');
   const [flagDescription, setFlagDescription] = useState('');
   const [isSubmittingQuality, setIsSubmittingQuality] = useState(false);
+
+  useEffect(() => {
+    const analyticsObj = Array.isArray(documentMeta?.document_analytics) ? documentMeta?.document_analytics[0] : documentMeta?.document_analytics;
+    setUpvotesCount(analyticsObj?.upvotes || 0);
+  }, [documentMeta?.document_analytics]);
+
+  useEffect(() => {
+    const fetchUserRating = async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess?.session?.user?.id && documentMeta?.id) {
+        const upvotes = await getUserUpvotes(sess.session.user.id);
+        if (upvotes.includes(documentMeta.id)) {
+          setUserRating(true);
+        }
+      }
+    };
+    fetchUserRating();
+  }, [documentMeta?.id]);
 
   useEffect(() => {
     const trackAnalytics = async () => {
@@ -119,21 +141,24 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
     }
   };
 
-  const handleRateDocument = async (isUseful: boolean) => {
-    setUserRating(isUseful);
+  const handleToggleUpvote = async () => {
+    if (!documentMeta) return;
+    
+    const isUpvoted = userRating === true;
     try {
       const { data: sess } = await supabase.auth.getSession();
-      if (!sess?.session?.user?.id) return showToast("Action Required", "Please log in to rate.", "error");
+      if (!sess?.session?.user?.id) return showToast("Action Required", "Please log in to upvote.", "error");
 
-      const { error } = await supabase
-        .from('document_ratings')
-        .upsert(
-          { document_id: documentMeta.id, user_id: sess.session.user.id, is_useful: isUseful },
-          { onConflict: 'document_id,user_id' } 
-        );
-      if (error) throw error;
+      setUserRating(!isUpvoted); // optimistic
+      setUpvotesCount((prev: number) => isUpvoted ? Math.max(0, prev - 1) : prev + 1);
+      
+      const result = await toggleUpvote(documentMeta.id);
+      if (result === null) throw new Error("Failed to toggle upvote");
+      
     } catch (error) {
-      setUserRating(null);
+      setUserRating(isUpvoted); // revert
+      setUpvotesCount(isUpvoted ? upvotesCount + 1 : Math.max(0, upvotesCount - 1)); // revert
+      showToast("Error", "Failed to upvote document.", "error");
     }
   };
 
@@ -191,11 +216,9 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
         <div className="mt-2 flex w-full shrink-0 items-center justify-between gap-1 text-muted sm:mt-0 sm:w-auto sm:justify-end sm:gap-2">
           
           <div className="flex shrink-0 items-center gap-1 border-r border-border pr-2 sm:mr-2 sm:pr-3">
-            <button onClick={() => handleRateDocument(true)} className={`motion-hover motion-active rounded-lg p-1.5 ${userRating === true ? 'bg-success/10 text-success' : 'text-muted hover:bg-surface-hover'}`}>
+            <button onClick={handleToggleUpvote} className={`motion-hover motion-active flex items-center gap-1.5 rounded-lg p-1.5 font-bold ${userRating === true ? 'bg-success/10 text-success' : 'text-muted hover:bg-success/10 hover:text-success'}`}>
               <ThumbsUp size={16} className={userRating === true ? 'fill-current' : ''} />
-            </button>
-            <button onClick={() => handleRateDocument(false)} className={`motion-hover motion-active rounded-lg p-1.5 ${userRating === false ? 'bg-destructive/10 text-destructive' : 'text-muted hover:bg-surface-hover'}`}>
-              <ThumbsDown size={16} className={userRating === false ? 'fill-current' : ''} />
+              <span className="text-sm">{upvotesCount}</span>
             </button>
           </div>
 

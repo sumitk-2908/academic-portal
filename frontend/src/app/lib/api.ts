@@ -35,7 +35,7 @@ api.interceptors.request.use(async (config) => {
 export const getDocumentsByModule = async (moduleId: number) => {
   const { data, error } = await supabase
     .from('documents')
-    .select('*')
+    .select('*, document_analytics(upvotes)')
     .eq('module_id', moduleId)
     .eq('status', 'approved')
     .order('created_at', { ascending: false });
@@ -53,7 +53,7 @@ export const getPaginatedDocumentsByModule = async (moduleId: number, page = 1, 
 
   const { data, count, error } = await supabase
     .from('documents')
-    .select('*', { count: 'exact' })
+    .select('*, document_analytics(upvotes)', { count: 'exact' })
     .eq('module_id', moduleId)
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
@@ -391,8 +391,39 @@ export const trackDocumentStat = async (docId: number, type: 'view' | 'download'
   try {
     await supabase.rpc('increment_doc_stat', { doc_id: docId, stat_type: type });
   } catch (error) {
-    console.error("Failed to track analytics:", error);
+    console.error("Analytics Error:", error);
   }
+};
+
+export const getUserUpvotes = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('document_ratings')
+    .select('document_id')
+    .eq('user_id', userId)
+    .eq('is_useful', true);
+    
+  if (error) {
+    console.error("Error fetching upvotes:", error);
+    return [];
+  }
+  return data.map(r => r.document_id);
+};
+
+export const toggleUpvote = async (docId: number) => {
+  const { data: sess } = await supabase.auth.getSession();
+  const user_id = sess?.session?.user?.id;
+  if (!user_id) return false;
+
+  const { data, error } = await supabase.rpc('toggle_upvote', { 
+    p_document_id: docId, 
+    p_user_id: user_id 
+  });
+  
+  if (error) {
+    console.error("Toggle upvote error:", error);
+    return null;
+  }
+  return data; // returns true if added, false if removed
 };
 
 export const getTrendingDocuments = async () => {

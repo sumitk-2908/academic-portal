@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks, type LucideIcon } from "lucide-react";
+import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks, ThumbsUp, type LucideIcon } from "lucide-react";
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
-import type { DocumentRecord } from "@/app/lib/document-types";
+import type { DocumentWithAnalytics } from "@/app/lib/document-types";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = { 
   notes: NotebookPen, 
@@ -21,12 +21,14 @@ const getTimeAgo = (dateStr: string | null) => {
 };
 
 export interface DocumentCardProps {
-  doc: DocumentRecord;
+  doc: DocumentWithAnalytics;
   subjectSlug?: string;
   isBookmarked: boolean;
+  isUpvoted?: boolean;
   isAdmin: boolean;
-  onDownload: (e: React.MouseEvent, doc: DocumentRecord) => void;
+  onDownload: (e: React.MouseEvent, doc: DocumentWithAnalytics) => void;
   onToggleBookmark: (id: number) => void;
+  onToggleUpvote?: (id: number) => void;
   onDelete?: (id: number) => void;
   isDownloading?: boolean;
 }
@@ -35,9 +37,11 @@ export default function DocumentCard({
   doc, 
   subjectSlug, 
   isBookmarked, 
+  isUpvoted = false,
   isAdmin, 
   onDownload, 
   onToggleBookmark, 
+  onToggleUpvote,
   onDelete,
   isDownloading = false
 }: DocumentCardProps) {
@@ -102,6 +106,16 @@ export default function DocumentCard({
           <Eye size={13} /> View
         </Link>
         
+        {onToggleUpvote && (() => {
+          const analyticsObj = Array.isArray(doc.document_analytics) ? doc.document_analytics[0] : doc.document_analytics;
+          return (
+            <button onClick={() => onToggleUpvote(doc.id)} className={`motion-hover motion-active flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-bold ${isUpvoted ? "border-success bg-success/10 text-success hover:bg-success/20" : "border-border text-muted hover:border-success/50 hover:text-success"}`}>
+              <ThumbsUp size={14} className={isUpvoted ? "fill-success" : ""} />
+              {analyticsObj?.upvotes || 0}
+            </button>
+          );
+        })()}
+
         <button onClick={() => onToggleBookmark(doc.id)} className={`motion-hover motion-active rounded-xl border p-2 ${isBookmarked ? "border-warning bg-warning text-white" : "border-warning text-warning hover:bg-warning/10"}`}>
           <Bookmark size={14} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
         </button>

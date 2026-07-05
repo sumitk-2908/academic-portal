@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Eye, FileQuestion, Upload } from "lucide-react";
-import { trackDocumentStat, deleteDocument, supabase, getPaginatedDocumentsByModule } from "@/app/lib/api";
+import { trackDocumentStat, deleteDocument, supabase, getPaginatedDocumentsByModule, toggleUpvote, getUserUpvotes } from "@/app/lib/api";
 import { manageOfflinePdf } from "@/app/lib/offline-manager";
 import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "@/app/lib/student-prompts";
@@ -14,7 +14,7 @@ import { dispatchToast } from "@/app/lib/toast";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { DocumentGridSkeleton, EmptyState, CenteredSpinner } from "@/components/layout/SharedLayouts";
 import DocumentCard from "@/components/ui/DocumentCard";
-import type { DocumentRecord, InfiniteDocumentsData, StoredBookmark } from "@/app/lib/document-types";
+import type { DocumentWithAnalytics, InfiniteDocumentsData, StoredBookmark } from "@/app/lib/document-types";
 
 export interface PaginationConfig {
   queryKey: string[];
@@ -27,7 +27,7 @@ export default function DocumentInteractiveGrid({
   loading = false,
   paginationConfig 
 }: { 
-  initialDocuments: DocumentRecord[]; 
+  initialDocuments: DocumentWithAnalytics[]; 
   subjectSlug: string;
   loading?: boolean;
   paginationConfig?: PaginationConfig;
@@ -35,6 +35,7 @@ export default function DocumentInteractiveGrid({
   const queryClient = useQueryClient();
   const [deletedIds, setDeletedIds] = useState<number[]>([]);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
+  const [upvotes, setUpvotes] = useState<number[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -73,6 +74,9 @@ export default function DocumentInteractiveGrid({
         const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', sess.session.user.id).single();
         const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
         if (roleData?.role === 'admin' && aalData?.currentLevel === 'aal2') setIsAdmin(true);
+
+        const userUpvotes = await getUserUpvotes(sess.session.user.id);
+        setUpvotes(userUpvotes);
       }
     };
     initClientState();
@@ -164,7 +168,83 @@ export default function DocumentInteractiveGrid({
     );
   };
 
-  const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord) => {
+  const handleToggleUpvote = async (id: number) => {
+    if (!userId) {
+      requestAuthPrompt("profile");
+      return;
+    }
+
+    const isUpvoted = upvotes.includes(id);
+    const snapshotUpvotes = [...upvotes];
+    let snapshotDocAnalytics: any = null;
+
+    if (paginationConfig) {
+      const currentData = queryClient.getQueryData<InfiniteDocumentsData>(paginationConfig.queryKey);
+      if (currentData) {
+        const docPage = currentData.pages.find(p => p.data.find(d => d.id === id));
+        const doc = docPage?.data.find(d => d.id === id);
+        if (doc) {
+          snapshotDocAnalytics = doc.document_analytics;
+        }
+      }
+    }
+
+    const applyOptimistic = () => {
+      setUpvotes(prev => isUpvoted ? prev.filter(u => u !== id) : [...prev, id]);
+      
+      if (paginationConfig) {
+        queryClient.setQueryData<InfiniteDocumentsData>(paginationConfig.queryKey, (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              data: page.data.map((d) => {
+                if (d.id === id) {
+                  const analyticsObj = Array.isArray(d.document_analytics) ? d.document_analytics[0] : d.document_analytics;
+                  const currentCount = analyticsObj?.upvotes || 0;
+                  return {
+                    ...d,
+                    document_analytics: {
+                      ...analyticsObj,
+                      upvotes: isUpvoted ? Math.max(0, currentCount - 1) : currentCount + 1
+                    }
+                  };
+                }
+                return d;
+              })
+            }))
+          };
+        });
+      }
+    };
+
+    const revertOptimistic = () => {
+      setUpvotes(snapshotUpvotes);
+      if (paginationConfig && snapshotDocAnalytics) {
+        queryClient.setQueryData<InfiniteDocumentsData>(paginationConfig.queryKey, (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              data: page.data.map((d) => d.id === id ? { ...d, document_analytics: snapshotDocAnalytics } : d)
+            }))
+          };
+        });
+      }
+      dispatchToast("Error", "Failed to update upvote", "error");
+    };
+
+    const serverMutation = async () => {
+      const result = await toggleUpvote(id);
+      if (result === null) throw new Error("Failed to toggle upvote");
+    };
+
+    await withOptimisticUpdate(applyOptimistic, null, serverMutation, revertOptimistic);
+  };
+
+  const handleDownload = async (e: React.MouseEvent, doc: DocumentWithAnalytics) => {
     e.preventDefault();
     if (downloadingIds.includes(doc.id)) return;
     setDownloadingIds((prev) => [...prev, doc.id]);
@@ -296,9 +376,11 @@ export default function DocumentInteractiveGrid({
                       doc={doc}
                       subjectSlug={subjectSlug}
                       isBookmarked={bookmarks.includes(doc.id)}
+                      isUpvoted={upvotes.includes(doc.id)}
                       isAdmin={isAdmin}
                       onDownload={handleDownload}
                       onToggleBookmark={toggleBookmark}
+                      onToggleUpvote={handleToggleUpvote}
                       onDelete={setDocumentToDelete}
                       isDownloading={downloadingIds.includes(doc.id)}
                     />
