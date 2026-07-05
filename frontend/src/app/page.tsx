@@ -13,16 +13,20 @@ export default async function SubjectDirectory() {
   } = await supabase.auth.getSession();
 
   let userFavs: string[] = [];
+  let firstName = "";
 
   if (session?.user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("favorite_subjects")
+      .select("favorite_subjects, full_name")
       .eq("id", session.user.id)
       .single();
 
     if (profile?.favorite_subjects) {
       userFavs = profile.favorite_subjects;
+    }
+    if (profile?.full_name) {
+      firstName = profile.full_name.split(" ")[0];
     }
   }
 
@@ -60,6 +64,14 @@ export default async function SubjectDirectory() {
   return (
     <div className="animate-fade-up mx-auto w-full max-w-6xl">
       <section className="mb-10 pt-8 text-center">
+        {firstName && (
+          <div className="mb-3 flex justify-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-surface/50 px-3 py-1 text-sm font-semibold tracking-wide text-muted shadow-sm backdrop-blur-sm">
+              <span className="animate-pulse text-xl leading-none">👋</span>
+              Welcome back, {firstName}
+            </span>
+          </div>
+        )}
         <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-foreground">
           Academic <span className="text-primary">Resource Hub</span>
         </h1>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Subject } from "@/app/lib/api"; 
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { CardGrid, EmptyState } from "@/components/layout/SharedLayouts";
-import { BookOpen, Upload, FileText } from "lucide-react";
+import { BookOpen, Upload, FileText, Filter, ChevronDown } from "lucide-react";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
 
 interface SubjectGridProps {
@@ -40,19 +40,25 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
 
   return (
     <>
-      <div className="mb-4 flex justify-center px-4">
-        <select
-          value={selectedSubject}
-          onChange={(e) => setSelectedSubject(e.target.value)}
-          className="motion-hover motion-focus h-11 w-full max-w-xs cursor-pointer rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground shadow-sm outline-none focus:border-primary sm:max-w-sm"
-        >
-          <option value="All">All Subjects</option>
-          {subjects.map((sub) => (
-            <option key={`filter-${sub.slug}`} value={sub.name}>
-              {sub.name}
-            </option>
-          ))}
-        </select>
+      <div className="mb-6 flex">
+        <div className="relative w-full sm:w-64">
+          <Filter className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <select
+            value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)}
+            className="motion-hover motion-focus h-11 w-full appearance-none cursor-pointer rounded-xl border border-border/60 bg-surface pl-10 pr-10 text-sm font-semibold text-foreground shadow-sm outline-none transition-colors hover:border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+          >
+            <option value="All">All Subjects</option>
+            {subjects.map((sub) => (
+              <option key={`filter-${sub.slug}`} value={sub.name}>
+                {sub.name}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+            <ChevronDown className="size-4 text-muted-foreground opacity-50" />
+          </div>
+        </div>
       </div>
 
       {filteredSubjects.length === 0 ? (
