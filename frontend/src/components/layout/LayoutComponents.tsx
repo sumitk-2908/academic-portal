@@ -682,10 +682,18 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
             </div>
           </div>
           <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Title</label><input required type="text" value={ctx.uploadTitle} onChange={(e) => ctx.setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Category</label><select value={ctx.uploadCategory} onChange={(e) => ctx.setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
+          <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Category</label><select value={ctx.uploadCategory} onChange={(e) => ctx.setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
+          <div>
+            <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">File Upload</label>
+            <div className="relative flex items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-hover px-6 py-6 hover:bg-surface hover:border-primary/50 transition-colors">
+              <div className="text-center">
+                <Upload className="mx-auto h-6 w-6 text-muted mb-2" />
+                <p className="text-sm font-semibold text-foreground">{ctx.file ? ctx.file.name : "Choose a PDF file or drag & drop it here"}</p>
+                <p className="text-xs text-muted mt-1">PDFs only (Max 10MB)</p>
+              </div>
+              <input required type="file" accept="application/pdf" onChange={(e) => ctx.setFile(e.target.files?.[0] || null)} className="absolute inset-0 h-full w-full opacity-0 cursor-pointer disabled:cursor-not-allowed" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing"} />
+            </div>
           </div>
-          <div><input required type="file" accept="application/pdf" onChange={(e) => ctx.setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs text-foreground disabled:opacity-50" /></div>
           <UploadProgressBar state={ctx.uploadState} progress={ctx.uploadProgress} fileName={ctx.file?.name} errorMessage={ctx.uploadErrorMsg} />
           <button type="submit" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing" || ctx.uploadState === "success"} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50 motion-hover motion-active">{(ctx.uploadState === "uploading" || ctx.uploadState === "processing") ? <><InlineSpinner label="Processing upload" size={16} /> Processing</> : "Publish Resource"}</button>
         </form>

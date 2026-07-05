@@ -25,13 +25,13 @@ export default function AchievementsList({ achievements }: { achievements: any[]
             key={badge.id}
             className={`flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 rounded-2xl border p-3 sm:p-4 transition-all ${
               isEarned
-                ? "border-border bg-surface"
-                : "border-dashed border-border bg-gray-50/50 opacity-60 grayscale"
+                ? "border-border bg-surface shadow-sm"
+                : "border-dashed border-border bg-surface-hover opacity-75 grayscale"
             }`}
           >
             <div
               className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl ${
-                isEarned ? badge.bg : "bg-gray-200"
+                isEarned ? badge.bg : "bg-background"
               }`}
             >
               <Icon
