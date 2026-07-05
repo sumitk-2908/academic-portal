@@ -88,7 +88,7 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 className="group motion-hover motion-active relative flex flex-col items-start justify-between overflow-hidden rounded-2xl border border-border bg-surface p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
               >
-                <div className={`absolute left-0 top-0 h-1 w-full ${ui.color.replace('text-', 'bg-')}`} />
+                <div className={`absolute left-0 top-0 h-1 w-full ${ui.topBar || ui.color.replace('text-', 'bg-')}`} />
                 <div className="w-full">
                   <div className={`mb-4 flex size-12 items-center justify-center rounded-xl ${ui.bg} ${ui.color} transition-transform group-hover:scale-110`}>
                     <Icon size={24} />
