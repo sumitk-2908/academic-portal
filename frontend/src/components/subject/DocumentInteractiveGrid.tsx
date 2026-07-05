@@ -233,7 +233,7 @@ export default function DocumentInteractiveGrid({
       }
     };
 
-    const revertOptimistic = () => {
+    const revertOptimistic = (snap: any, error?: unknown) => {
       setUpvotes(snapshotUpvotes);
       setUpvoteCounts(snapshotUpvoteCounts);
       if (paginationConfig && snapshotDocAnalytics) {
@@ -248,12 +248,12 @@ export default function DocumentInteractiveGrid({
           };
         });
       }
-      dispatchToast("Error", "Failed to update upvote", "error");
+      const msg = error instanceof Error ? error.message : "Failed to update upvote";
+      dispatchToast("Error", msg, "error");
     };
 
     const serverMutation = async () => {
-      const result = await toggleUpvote(id);
-      if (result === null) throw new Error("Failed to toggle upvote");
+      await toggleUpvote(id);
     };
 
     await withOptimisticUpdate(applyOptimistic, null, serverMutation, revertOptimistic);

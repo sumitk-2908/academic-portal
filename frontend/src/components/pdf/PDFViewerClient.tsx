@@ -158,7 +158,8 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
     } catch (error) {
       setUserRating(isUpvoted); // revert
       setUpvotesCount(isUpvoted ? upvotesCount + 1 : Math.max(0, upvotesCount - 1)); // revert
-      showToast("Error", "Failed to upvote document.", "error");
+      const msg = error instanceof Error ? error.message : "Failed to upvote document.";
+      showToast("Error", msg, "error");
     }
   };
 

@@ -421,9 +421,9 @@ export const toggleUpvote = async (docId: number) => {
   
   if (error) {
     console.error("Toggle upvote error:", error);
-    return null;
+    throw new Error(`Supabase Error: ${error.message} (Code: ${error.code})`);
   }
-  return data; // returns true if added, false if removed
+  return data;
 };
 
 export const getTrendingDocuments = async () => {

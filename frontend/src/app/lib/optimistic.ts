@@ -2,7 +2,7 @@ export async function withOptimisticUpdate<T>(
   setter: (prev: T) => T,
   current: T,
   mutate: () => Promise<void>,
-  onError: (snapshot: T) => void
+  onError: (snapshot: T, error?: unknown) => void
 ): Promise<void> {
   // Apply the optimistic change immediately
   setter(current);
@@ -13,6 +13,6 @@ export async function withOptimisticUpdate<T>(
   } catch (error) {
     console.error("Optimistic update failed, rolling back:", error);
     // Revert state to the snapshot if it fails
-    onError(current);
+    onError(current, error);
   }
 }
