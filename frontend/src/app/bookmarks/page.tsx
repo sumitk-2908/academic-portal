@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef } from "react";
 import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
-import { Bookmark, Download, Eye, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
+import { Bookmark, Download, Eye, FileText, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { manageOfflinePdf } from "../lib/offline-manager";
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
+import { BookmarksSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
@@ -16,6 +17,7 @@ export default function BookmarksPage() {
   const [userId, setUserId] = useState("");
   const [isSignedOut, setIsSignedOut] = useState(false);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
+  const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
@@ -89,6 +91,7 @@ export default function BookmarksPage() {
     
     if (downloadingRef.current.has(doc.id)) return;
     downloadingRef.current.add(doc.id);
+    setDownloadingIds((prev) => [...prev, doc.id]);
 
     try {
       await trackDocumentStat(doc.id, 'download');
@@ -100,9 +103,12 @@ export default function BookmarksPage() {
     } finally {
       setTimeout(() => {
         downloadingRef.current.delete(doc.id);
+        setDownloadingIds((prev) => prev.filter((id) => id !== doc.id));
       }, 2000);
     }
   };
+
+  if (loading) return <BookmarksSkeleton />;
 
   return (
     <div className="space-y-6 animate-fade-up max-w-6xl mx-auto w-full">
@@ -140,9 +146,7 @@ export default function BookmarksPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
-        {loading ? (
-          <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-warning" /></div>
-        ) : isSignedOut ? (
+        {isSignedOut ? (
           <div className="col-span-full rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
             <p className="mx-auto max-w-md text-sm font-medium leading-6 text-muted">
               Sign in to sync your bookmarks and continue studying across all your devices.
@@ -162,7 +166,7 @@ export default function BookmarksPage() {
               <h3 className="text-sm font-bold mt-3 line-clamp-2 min-h-[2rem] text-foreground tracking-tight">{doc.title}</h3>
               <div className="mt-4 flex gap-2 border-t border-border pt-3">
                 <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-surface py-2 rounded-xl border border-border motion-hover motion-active hover:bg-surface-hover text-foreground">
-                  <Download size={12} /> Download
+                  {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
                 </button>
                 <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-warning text-white py-2 rounded-xl motion-hover motion-active hover:opacity-90">
                   <Eye size={12} /> View
@@ -174,7 +178,7 @@ export default function BookmarksPage() {
             </article>
           );
         })}
-        {documents.length === 0 && !loading && !isSignedOut && (
+        {documents.length === 0 && !isSignedOut && (
           <div className="col-span-full rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
             <h2 className="text-lg font-extrabold tracking-tight text-foreground">Build your study library</h2>
             <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">

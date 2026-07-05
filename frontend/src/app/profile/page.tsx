@@ -14,7 +14,8 @@ import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileStats from "@/components/profile/ProfileStats";
 import ProfileTabs from "@/components/profile/ProfileTabs";
-import { Activity, Flame, Loader2, Upload, User } from "lucide-react";
+import { Activity, Flame, Upload, User } from "lucide-react";
+import { ProfileSkeleton } from "@/components/layout/SharedLayouts";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -109,11 +110,7 @@ export default function ProfilePage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="mx-auto flex h-64 w-full max-w-4xl items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!user) {

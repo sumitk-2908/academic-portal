@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/api";
 import { useRouter } from "next/navigation";
-import { Shield, Loader2, KeyRound, QrCode } from "lucide-react";
+import { Shield, KeyRound, QrCode } from "lucide-react";
 import * as Toast from "@radix-ui/react-toast";
+import { InlineSpinner } from "@/components/layout/SharedLayouts";
 
 type AuthStep = "MFA_SETUP" | "MFA_VERIFY";
 
@@ -116,7 +117,7 @@ export default function AdminPortalLogin() {
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-500 font-bold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
                 >
                   {loading ? (
-                    <Loader2 className="animate-spin" size={18} />
+                    <InlineSpinner label="Verifying MFA" size={18} />
                   ) : (
                     <>
                       <QrCode size={18} /> Verify & Activate MFA
@@ -143,9 +144,9 @@ export default function AdminPortalLogin() {
                 type="submit"
                 disabled={loading}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-500 font-bold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
-              >
+                >
                 {loading ? (
-                  <Loader2 className="animate-spin" size={18} />
+                  <InlineSpinner label="Verifying access" size={18} />
                 ) : (
                   <>
                     <KeyRound size={18} /> Verify Access

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Loader2, UploadCloud, XCircle, AlertCircle, FileText } from "lucide-react";
+import { UploadCloud, XCircle, AlertCircle, FileText } from "lucide-react";
 import { supabase, uploadWithProgress, UploadState } from "@/app/lib/api";
 import UploadProgressBar from "./UploadProgressBar";
+import { InlineSpinner } from "@/components/layout/SharedLayouts";
 
 type DocumentData = {
   id: number;
@@ -186,7 +187,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground p-3 font-bold transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {(uploadState === "uploading" || uploadState === "processing") ? (
-              <><Loader2 className="animate-spin" size={20} /> Processing...</>
+              <><InlineSpinner label="Processing resubmission" size={20} /> Processing...</>
             ) : "Submit Changes"}
           </button>
         </form>

@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef } from "react";
 import { trackDocumentStat, searchDocuments, supabase } from "../lib/api";
-import { Upload, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks, Bookmark } from "lucide-react";
+import { Upload, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { manageOfflinePdf } from "../lib/offline-manager";
+import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
@@ -16,6 +17,7 @@ export default function RecentUploadsPage() {
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
 
   const downloadingRef = useRef<Set<number>>(new Set());
 
@@ -71,6 +73,7 @@ export default function RecentUploadsPage() {
 
     if (downloadingRef.current.has(doc.id)) return;
     downloadingRef.current.add(doc.id);
+    setDownloadingIds((prev) => [...prev, doc.id]);
 
     try {
       await trackDocumentStat(doc.id, "download");
@@ -84,6 +87,7 @@ export default function RecentUploadsPage() {
     } finally {
       setTimeout(() => {
         downloadingRef.current.delete(doc.id);
+        setDownloadingIds((prev) => prev.filter((id) => id !== doc.id));
       }, 2000);
     }
   };
@@ -125,9 +129,7 @@ export default function RecentUploadsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
-          <div className="col-span-full flex justify-center py-12">
-            <Loader2 className="animate-spin text-success" />
-          </div>
+          <div className="col-span-full"><DocumentGridSkeleton count={6} /></div>
         ) : documents.length === 0 ? (
           <div className="col-span-full rounded-2xl border border-dashed border-success/30 bg-success/5 p-8 text-center">
             <h2 className="text-lg font-extrabold tracking-tight text-foreground">{getUploadPromptCopy(0).title}</h2>
@@ -159,7 +161,7 @@ export default function RecentUploadsPage() {
                     onClick={(e) => handleDownload(e, doc)}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-surface py-2 rounded-xl border border-border motion-hover motion-active hover:bg-surface-hover text-foreground"
                   >
-                    <Download size={12} /> Download
+                    {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
                   </button>
 
                   <Link

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { supabase, updateDocumentStatus, deleteDocument, getFlaggedDocuments, dismissDocumentFlags } from "../../../lib/api";
-import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, Loader2, X, Flag, ShieldAlert, MessageSquareWarning, Upload } from "lucide-react";
+import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, X, Flag, ShieldAlert, MessageSquareWarning, Upload } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Toast from "@radix-ui/react-toast";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
+import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 
 export default function AdminInboxAuditingRoute() {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged'>('pending');
@@ -129,7 +130,7 @@ export default function AdminInboxAuditingRoute() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
+          <DocumentGridSkeleton count={6} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             
@@ -242,7 +243,7 @@ export default function AdminInboxAuditingRoute() {
               <div className="flex gap-3 justify-end">
                 <Dialog.Close asChild><button className="px-4 py-2 text-sm font-bold rounded-xl bg-surface-hover motion-hover">Cancel</button></Dialog.Close>
                 <button onClick={confirmReject} disabled={isRejecting || !rejectReason.trim()} className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-destructive-foreground bg-destructive rounded-xl motion-hover motion-active hover:opacity-90 disabled:opacity-50">
-                  {isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Confirm Rejection
+                  {isRejecting ? <InlineSpinner label="Rejecting document" size={16} /> : <Trash2 className="w-4 h-4" />} Confirm Rejection
                 </button>
               </div>
             </Dialog.Content>
@@ -292,7 +293,7 @@ export default function AdminInboxAuditingRoute() {
                   disabled={isDismissing}
                   className="px-4 py-2 text-sm font-bold text-foreground bg-surface-hover hover:opacity-90 rounded-xl motion-hover disabled:opacity-50"
                 >
-                  {isDismissing ? <Loader2 size={16} className="animate-spin" /> : "Dismiss Flags (False Alarm)"}
+                  {isDismissing ? <InlineSpinner label="Dismissing flags" size={16} /> : "Dismiss Flags (False Alarm)"}
                 </button>
                 
                 <button 

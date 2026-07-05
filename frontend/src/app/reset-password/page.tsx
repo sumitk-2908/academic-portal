@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/api";
-import { KeyRound, Loader2, ArrowRight } from "lucide-react";
+import { KeyRound, ArrowRight } from "lucide-react";
 import * as Toast from "@radix-ui/react-toast";
+import { InlineSpinner } from "@/components/layout/SharedLayouts";
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
@@ -107,7 +108,7 @@ export default function ResetPasswordPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="animate-spin" size={18} aria-hidden="true" />
+                  <InlineSpinner label="Updating password" size={18} />
                   <span aria-live="polite" className="sr-only">
                     Updating password...
                   </span>

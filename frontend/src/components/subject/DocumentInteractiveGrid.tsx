@@ -37,6 +37,7 @@ export default function DocumentInteractiveGrid({
   const [userId, setUserId] = useState<string | null>(null);
   const [cols, setCols] = useState(1);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
+  const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: paginationConfig ? paginationConfig.queryKey : ['static-grid'],
@@ -131,6 +132,8 @@ export default function DocumentInteractiveGrid({
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
+    if (downloadingIds.includes(doc.id)) return;
+    setDownloadingIds((prev) => [...prev, doc.id]);
     trackDocumentStat(doc.id, 'download');
     const downloadCount = recordStudentDownload();
     if (downloadCount >= 3) setShowContributionPrompt(shouldShowContributionPrompt(bookmarks.length));
@@ -149,6 +152,10 @@ export default function DocumentInteractiveGrid({
     } catch (error) {
       console.error("Download failed:", error);
       alert("Failed to download document. Ensure CORS is configured.");
+    } finally {
+      setTimeout(() => {
+        setDownloadingIds((prev) => prev.filter((id) => id !== doc.id));
+      }, 800);
     }
   };
 
@@ -259,6 +266,7 @@ export default function DocumentInteractiveGrid({
                       onDownload={handleDownload}
                       onToggleBookmark={toggleBookmark}
                       onDelete={setDocumentToDelete}
+                      isDownloading={downloadingIds.includes(doc.id)}
                     />
                   );
                 })

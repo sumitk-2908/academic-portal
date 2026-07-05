@@ -6,8 +6,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as Toast from "@radix-ui/react-toast";
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, PanelLeftClose, TrendingUp, X, 
-  BookOpen, Bookmark, Clock, Upload, Inbox, Plus, FileText, Home, Menu, Mail, Loader2, 
-  User, Settings, Info, Phone, AlertTriangle, Medal, Activity, Bell, CheckCheck, WifiOff
+  Bookmark, Clock, Upload, Inbox, Plus, FileText, Home, Menu, Mail,
+  User, Bell, CheckCheck, WifiOff
 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { ClientLayoutContext, SUBJECTS_LIST, isNonModuleSubject } from "@/app/hooks/useClientLayout";
@@ -17,6 +17,7 @@ import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 import UploadProgressBar from "@/components/ui/UploadProgressBar";
 import AchievementToast from "@/components/ui/AchievementToast";
+import { InlineSpinner, SidebarSkeleton } from "@/components/layout/SharedLayouts";
 import { supabase } from "@/app/lib/api";
 
 // 1. App Shell & Content Area
@@ -67,7 +68,9 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
             <div className="absolute top-12 left-0 w-full rounded-2xl border border-border bg-surface p-2 shadow-2xl z-50">
               <p className="px-3 py-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Global Search Results</p>
               {ctx.isSearching ? (
-                <p className="p-4 text-xs text-center text-muted">Searching...</p>
+                <div className="flex items-center justify-center gap-2 p-4 text-xs font-semibold text-muted">
+                  <InlineSpinner label="Searching" size={14} /> Searching
+                </div>
               ) : (
                 <>
                   {ctx.globalSearchResults.map(doc => (
@@ -182,6 +185,10 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
 // 3. Sidebar Components
 export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
   <div className="space-y-6 flex-1">
+    {ctx.sidebarLoading ? (
+      <SidebarSkeleton collapsed={ctx.sidebarCollapsed} />
+    ) : (
+    <>
     <div>
       {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Navigation</p>}
       <Link 
@@ -284,6 +291,8 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
         </div>
       </div>
     )}
+    </>
+    )}
   </div>
 );
 
@@ -332,7 +341,7 @@ export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
         {ctx.authMode !== "forgot" && (
           <>
             <button type="button" onClick={ctx.handleGoogleLogin} disabled={ctx.googleLoading || ctx.authLoading} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface font-bold text-foreground motion-hover motion-active hover:bg-surface-hover hover:shadow-sm">
-              {ctx.googleLoading ? <Loader2 className="animate-spin text-muted" size={20} /> : <><FcGoogle size={24} /> Continue with Google</>}
+              {ctx.googleLoading ? <InlineSpinner label="Signing in with Google" className="text-muted" size={20} /> : <><FcGoogle size={24} /> Continue with Google</>}
             </button>
             <div className="my-6 flex items-center"><div className="flex-grow border-t border-border"></div><span className="mx-4 text-xs tracking-[0.06em] font-extrabold uppercase text-muted">Or use email</span><div className="flex-grow border-t border-border"></div></div>
           </>
@@ -341,7 +350,7 @@ export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
           <input required type="email" value={ctx.authEmail} onChange={(e) => ctx.setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
           {ctx.authMode !== "forgot" && <input required type="password" value={ctx.authPassword} onChange={(e) => ctx.setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />}
           <button type="submit" disabled={ctx.authLoading || ctx.googleLoading} className="h-12 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
-            {ctx.authLoading ? <Loader2 className="mx-auto animate-spin" size={18} /> : ctx.authMode === "signin" ? "Login" : ctx.authMode === "signup" ? "Create Account" : "Send Reset Link"}
+            {ctx.authLoading ? <InlineSpinner label="Authenticating" className="mx-auto" size={18} /> : ctx.authMode === "signin" ? "Login" : ctx.authMode === "signup" ? "Create Account" : "Send Reset Link"}
           </button>
           {ctx.authMode === "signin" && (
             <div className="flex justify-between w-full mt-2 text-xs font-bold text-primary">
@@ -387,7 +396,7 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
           </div>
           <div><input required type="file" accept="application/pdf" onChange={(e) => ctx.setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs text-foreground disabled:opacity-50" /></div>
           <UploadProgressBar state={ctx.uploadState} progress={ctx.uploadProgress} fileName={ctx.file?.name} errorMessage={ctx.uploadErrorMsg} />
-          <button type="submit" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing" || ctx.uploadState === "success"} className="h-11 w-full rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50 motion-hover motion-active">{(ctx.uploadState === "uploading" || ctx.uploadState === "processing") ? "Processing..." : "Publish Resource"}</button>
+          <button type="submit" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing" || ctx.uploadState === "success"} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50 motion-hover motion-active">{(ctx.uploadState === "uploading" || ctx.uploadState === "processing") ? <><InlineSpinner label="Processing upload" size={16} /> Processing</> : "Publish Resource"}</button>
         </form>
       </Dialog.Content>
     </Dialog.Portal>

@@ -74,14 +74,137 @@ export const EmptyState = ({
   </div>
 );
 
-export const LoadingGrid = ({ count = 6 }: { count?: number }) => (
+export const SkeletonBlock = ({ className = "" }: { className?: string }) => (
+  <div className={`animate-pulse rounded-xl bg-surface-hover ${className}`} />
+);
+
+export const InlineSpinner = ({
+  label = "Loading",
+  size = 16,
+  className = "",
+}: {
+  label?: string;
+  size?: number;
+  className?: string;
+}) => (
+  <Loader2
+    aria-label={label}
+    className={`shrink-0 animate-spin ${className}`}
+    size={size}
+  />
+);
+
+export const DocumentGridSkeleton = ({ count = 6 }: { count?: number }) => (
   <CardGrid cols="auto">
-    {[...Array(count)].map((_, i) => <div key={i} className="h-64 w-full animate-pulse rounded-2xl bg-surface-hover" />)}
+    {Array.from({ length: count }).map((_, i) => (
+      <article key={i} className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <SkeletonBlock className="mb-4 h-32 w-full" />
+        <SkeletonBlock className="h-5 w-4/5" />
+        <SkeletonBlock className="mt-2 h-4 w-2/5" />
+        <div className="mt-4 flex gap-2 border-t border-border pt-4">
+          <SkeletonBlock className="h-9 flex-1" />
+          <SkeletonBlock className="h-9 flex-1" />
+          <SkeletonBlock className="h-9 w-9" />
+        </div>
+      </article>
+    ))}
   </CardGrid>
+);
+
+export const LoadingGrid = DocumentGridSkeleton;
+
+export const SidebarSkeleton = ({ collapsed = false }: { collapsed?: boolean }) => (
+  <div className="flex flex-1 flex-col gap-6" aria-label="Loading navigation">
+    <div className="space-y-2">
+      {!collapsed && <SkeletonBlock className="mx-3 h-3 w-24" />}
+      {Array.from({ length: 3 }).map((_, i) => (
+        <SkeletonBlock key={i} className={collapsed ? "h-10 w-10" : "h-10 w-full"} />
+      ))}
+    </div>
+    <div className="space-y-2">
+      {!collapsed && <SkeletonBlock className="mx-3 h-3 w-32" />}
+      {Array.from({ length: 4 }).map((_, i) => (
+        <SkeletonBlock key={i} className={collapsed ? "h-10 w-10" : "h-10 w-full"} />
+      ))}
+    </div>
+    {!collapsed && (
+      <div className="mt-auto space-y-3">
+        <SkeletonBlock className="h-20 w-full rounded-2xl" />
+        <SkeletonBlock className="h-8 w-3/4" />
+      </div>
+    )}
+  </div>
+);
+
+export const SubjectPageSkeleton = ({ moduleView = false }: { moduleView?: boolean }) => (
+  <div className="mx-auto w-full max-w-6xl space-y-6 animate-fade-up">
+    {moduleView && <SkeletonBlock className="h-4 w-36" />}
+    <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
+      <SkeletonBlock className={moduleView ? "h-7 w-1/2" : "h-8 w-2/5"} />
+      <SkeletonBlock className="mt-3 h-4 w-56" />
+    </div>
+    {!moduleView && <SkeletonBlock className="h-10 w-full rounded-none" />}
+    <DocumentGridSkeleton count={6} />
+  </div>
+);
+
+export const BookmarksSkeleton = () => (
+  <div className="mx-auto w-full max-w-6xl space-y-6 animate-fade-up">
+    <div className="rounded-3xl border border-warning/20 bg-warning/5 p-6 shadow-sm">
+      <div className="flex items-center gap-4">
+        <SkeletonBlock className="h-12 w-12" />
+        <div className="flex-1">
+          <SkeletonBlock className="h-8 w-48" />
+          <SkeletonBlock className="mt-3 h-4 w-64" />
+        </div>
+      </div>
+    </div>
+    <DocumentGridSkeleton count={6} />
+  </div>
+);
+
+export const HomeSkeleton = () => (
+  <div className="mx-auto w-full max-w-6xl space-y-8 animate-fade-up">
+    <div className="flex flex-col items-center gap-4 pt-2 text-center">
+      <SkeletonBlock className="h-12 w-3/4 max-w-md" />
+      <SkeletonBlock className="h-4 w-1/2 max-w-sm" />
+    </div>
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {Array.from({ length: 15 }).map((_, i) => (
+        <SkeletonBlock key={i} className="h-32 w-full rounded-2xl" />
+      ))}
+    </div>
+  </div>
+);
+
+export const ProfileSkeleton = () => (
+  <div className="mx-auto w-full max-w-4xl space-y-4 pb-12 animate-fade-up">
+    <SkeletonBlock className="hidden h-7 w-48 sm:block" />
+    <div className="rounded-2xl border border-border bg-surface p-5">
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+        <SkeletonBlock className="h-20 w-20 rounded-full sm:h-14 sm:w-14" />
+        <div className="w-full flex-1 space-y-3">
+          <SkeletonBlock className="mx-auto h-6 w-48 sm:mx-0" />
+          <SkeletonBlock className="mx-auto h-4 w-64 sm:mx-0" />
+          <SkeletonBlock className="mx-auto h-4 w-72 sm:mx-0" />
+        </div>
+        <SkeletonBlock className="h-9 w-full sm:w-28" />
+      </div>
+    </div>
+    <div className="grid gap-3 sm:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <SkeletonBlock key={i} className="h-24 rounded-2xl" />
+      ))}
+    </div>
+    <div className="rounded-2xl border border-border bg-surface p-4">
+      <SkeletonBlock className="h-9 w-full" />
+      <SkeletonBlock className="mt-4 h-56 w-full rounded-2xl" />
+    </div>
+  </div>
 );
 
 export const CenteredSpinner = () => (
   <div className="col-span-full flex justify-center py-12">
-    <Loader2 className="animate-spin text-primary" size={24} />
+    <InlineSpinner className="text-primary" size={24} />
   </div>
 );

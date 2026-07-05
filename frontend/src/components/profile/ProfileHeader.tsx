@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Edit, GraduationCap, BookOpen, X, Flame, Loader2 } from "lucide-react";
+import { Edit, GraduationCap, BookOpen, X, Flame } from "lucide-react";
 import { getProfilePreferences, updateProfilePreferences } from "@/app/lib/api";
+import { InlineSpinner } from "@/components/layout/SharedLayouts";
 
 export default function ProfileHeader({ user, streak }: { user: any, streak?: any }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -195,7 +196,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
               >
                 {isSaving ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden="true" /> 
+                    <InlineSpinner label="Saving preferences" size={16} /> 
                     <span aria-live="polite">Saving preferences...</span>
                   </>
                 ) : (

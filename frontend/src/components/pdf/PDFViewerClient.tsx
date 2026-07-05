@@ -14,6 +14,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import * as Toast from "@radix-ui/react-toast";
+import { InlineSpinner } from "@/components/layout/SharedLayouts";
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -282,7 +283,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setIsFlagModalOpen(false)} className="px-4 py-2 text-xs font-bold text-foreground bg-surface-hover rounded-xl motion-hover motion-active">Cancel</button>
                 <button type="submit" disabled={isSubmittingQuality} className="px-4 py-2 text-xs font-bold text-white bg-destructive hover:opacity-90 disabled:opacity-50 rounded-xl motion-hover motion-active flex items-center gap-2">
-                  {isSubmittingQuality ? <Loader2 size={14} className="animate-spin" /> : null} Submit Report
+                  {isSubmittingQuality ? <InlineSpinner label="Submitting report" size={14} /> : null} Submit Report
                 </button>
               </div>
             </form>

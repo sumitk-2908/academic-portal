@@ -11,8 +11,9 @@ import {
 } from "../lib/api";
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
-import { Clock, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
+import { Clock, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 
 // Added tutorial_sheet to match the doccategory ENUM in database.types.ts
 const CATEGORY_ICONS: Record<string, any> = { 
@@ -28,6 +29,7 @@ export default function ContinueStudyingPage() {
   const [loading, setLoading] = useState(true);
   const [isSignedOut, setIsSignedOut] = useState(false);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
+  const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
@@ -153,6 +155,7 @@ export default function ContinueStudyingPage() {
     e.preventDefault();
     if (downloadingRef.current.has(doc.id)) return;
     downloadingRef.current.add(doc.id);
+    setDownloadingIds((prev) => [...prev, doc.id]);
 
     try {
       await trackDocumentStat(doc.id, 'download');
@@ -166,6 +169,7 @@ export default function ContinueStudyingPage() {
     } finally {
       setTimeout(() => {
         downloadingRef.current.delete(doc.id);
+        setDownloadingIds((prev) => prev.filter((id) => id !== doc.id));
       }, 2000);
     }
   };
@@ -200,7 +204,7 @@ export default function ContinueStudyingPage() {
         <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
         <div className="mt-4 flex gap-2 border-t pt-3 ">
           <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border  hover:bg-surface-hover ">
-            <Download size={12} /> Download
+            {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
           </button>
           <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white py-2 rounded-xl ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
             <Eye size={12} /> View
@@ -225,7 +229,7 @@ export default function ContinueStudyingPage() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading ? (
-          <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" /></div>
+          <div className="col-span-full"><DocumentGridSkeleton count={6} /></div>
         ) : isSignedOut ? (
           <div className="col-span-full rounded-2xl border border-dashed border-indigo-500/30 bg-indigo-500/5 p-8 text-center">
             <p className="mx-auto max-w-md text-sm font-medium leading-6 text-muted">

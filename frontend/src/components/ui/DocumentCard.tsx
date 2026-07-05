@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
+import { InlineSpinner } from "@/components/layout/SharedLayouts";
 
 const CATEGORY_ICONS: Record<string, any> = { 
   notes: NotebookPen, 
@@ -25,6 +26,7 @@ export interface DocumentCardProps {
   onDownload: (e: React.MouseEvent, doc: any) => void;
   onToggleBookmark: (id: number) => void;
   onDelete?: (id: number) => void;
+  isDownloading?: boolean;
 }
 
 export default function DocumentCard({ 
@@ -34,7 +36,8 @@ export default function DocumentCard({
   isAdmin, 
   onDownload, 
   onToggleBookmark, 
-  onDelete 
+  onDelete,
+  isDownloading = false
 }: DocumentCardProps) {
   
   const slug = subjectSlug || doc.subject?.toLowerCase().replace(/ /g, '-') || "default";
@@ -90,7 +93,7 @@ export default function DocumentCard({
       
       <div className="mt-4 flex gap-2 border-t border-border pt-4">
         <button onClick={(e) => onDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-hover py-2 text-sm font-bold text-foreground motion-hover motion-active hover:border-primary/50">
-          <Download size={13} /> DL
+          {isDownloading ? <InlineSpinner label="Downloading" size={13} /> : <Download size={13} />} DL
         </button>
         
         <Link href={`/subject/${targetSubjectSlug}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-transparent bg-primary py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">

@@ -30,6 +30,7 @@ export function useClientLayout() {
   const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
   
   const { data: trendingDocs = [] } = useQuery({
     queryKey: ['trendingDocuments'],
@@ -173,7 +174,9 @@ export function useClientLayout() {
   }, [isAdmin, isStudent, openAuthPrompt]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => syncUserFromSession(session));
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => syncUserFromSession(session))
+      .finally(() => setSidebarLoading(false));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => syncUserFromSession(session));
     return () => subscription.unsubscribe();
   }, [syncUserFromSession]);
@@ -357,7 +360,7 @@ export function useClientLayout() {
   }, []);
 
   return {
-    pathname, mounted, isDarkMode, sidebarCollapsed, showMobileMenu, searchQuery, globalSearchResults, isSearching, 
+    pathname, mounted, isDarkMode, sidebarCollapsed, showMobileMenu, searchQuery, globalSearchResults, isSearching, sidebarLoading,
     pendingCount, trendingDocs, notifications, unreadCount, showNotifications, activeToast, isAdmin, isStudent, 
     emailConfirmed, currentUserEmail, showAuthModal, authPromptContext, authMode, authEmail, authPassword, authLoading, googleLoading,
     globalToast, isOffline, showUploadForm, uploading, file, uploadTitle, uploadCategory, uploadedBy, uploadSubject, 
