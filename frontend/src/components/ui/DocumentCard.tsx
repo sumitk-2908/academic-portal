@@ -62,6 +62,7 @@ export default function DocumentCard({
         : "border-border bg-surface hover:border-y-border hover:border-r-border"
     }`}>
       
+      {/* Thumbnail with category badge (top-left) and bookmark button (top-right) */}
       <div className="relative mb-4 flex h-32 w-full items-center justify-center overflow-hidden rounded-xl bg-background">
         {doc.thumbnail_url ? (
           <img src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} className="motion-hover size-full object-cover object-top opacity-90 group-hover:opacity-100" />
@@ -70,26 +71,37 @@ export default function DocumentCard({
             <Icon size={32} className="opacity-50" />
           </div>
         )}
-        {/* Helper Text / Badge: 11px, Extrabold, Wide Tracking */}
-        <span className="absolute top-2 right-2 rounded-md bg-foreground/80 px-2 py-1 text-xs font-extrabold tracking-wider text-background uppercase shadow-sm backdrop-blur-md">
+        {/* Category Badge: top-left */}
+        <span className="absolute top-2 left-2 rounded-md bg-foreground/80 px-2 py-1 text-xs font-extrabold tracking-wider text-background uppercase shadow-sm backdrop-blur-md">
           {doc.category}
         </span>
+        {/* Bookmark Button: top-right */}
+        <button
+          onClick={(e) => { e.preventDefault(); onToggleBookmark(doc.id); }}
+          className={`motion-hover motion-active absolute top-2 right-2 rounded-lg border p-1.5 shadow-sm backdrop-blur-md ${
+            isBookmarked
+              ? "border-warning bg-warning text-white"
+              : "border-border/60 bg-background/70 text-warning hover:bg-warning/10"
+          }`}
+          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
+        >
+          <Bookmark size={13} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
+        </button>
       </div>
 
       <div className="flex flex-1 flex-col">
-        {/* Card Title: 16px, Bold, Tight Tracking */}
+        {/* Card Title */}
         <h3 className="line-clamp-2 min-h-[2.5rem] text-xl leading-tight font-bold tracking-tight text-foreground">
           {doc.title}
         </h3>
         
         <div className="mt-1 flex items-center gap-1.5">
-          {/* Uploader Label: 11px, Bold, Wide Tracking */}
           <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
             {doc.uploader_name || 'Anonymous'}
           </span>
         </div>
         
-        {/* Metadata Layer: 12px, Medium, Tabular Numbers for perfect decimal/date alignment */}
+        {/* Metadata */}
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm font-medium text-muted tabular-nums">
           <span>{doc.page_count ? `${doc.page_count} pgs` : 'PDF'}</span>
           <span>·</span>
@@ -99,6 +111,7 @@ export default function DocumentCard({
         </div>
       </div>
       
+      {/* Bottom action row: DL · View · Upvote */}
       <div className="mt-4 flex gap-2 border-t border-border pt-4">
         <button onClick={(e) => onDownload(e, doc)} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-hover py-2 text-sm font-bold text-foreground hover:border-primary/50">
           {isDownloading ? <InlineSpinner label="Downloading" size={13} /> : <Download size={13} />} DL
@@ -119,10 +132,6 @@ export default function DocumentCard({
           );
         })()}
 
-        <button onClick={() => onToggleBookmark(doc.id)} className={`motion-hover motion-active rounded-xl border p-2 ${isBookmarked ? "border-warning bg-warning text-white" : "border-warning text-warning hover:bg-warning/10"}`}>
-          <Bookmark size={14} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
-        </button>
-        
         {isAdmin && onDelete && (
           <button onClick={() => onDelete(doc.id)} className="motion-hover motion-active rounded-xl border border-destructive/30 p-2 text-destructive hover:bg-destructive/10">
             <Trash2 size={14} />

@@ -35,7 +35,7 @@ export default async function PDFViewerPage({ params }: { params: Promise<{ pdfI
   // Fetch the data once on the server and pass it down
   const { data: documentMeta } = await supabase
     .from("documents")
-    .select("*")
+    .select("*, document_analytics(upvotes, view_count, download_count)")
     .eq("id", pdfId)
     .single();
 
