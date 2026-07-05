@@ -63,7 +63,7 @@ export default function SubjectTabs({
       {activeTab === "dashboard" && !subjectDetails?.is_non_module ? (
         <ErrorBoundary title="Course Modules could not load" message="The module grid hit an unexpected problem. Try refreshing.">
         <div className="space-y-4 pt-6">
-          <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+          <h2 className="text-xs font-extrabold tracking-wider text-muted uppercase">
             Course Modules
           </h2>
 

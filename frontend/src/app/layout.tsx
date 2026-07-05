@@ -51,7 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           `}
         </Script>
       </head>
-      <body suppressHydrationWarning className="min-h-screen flex flex-col font-sans antialiased">
+      <body suppressHydrationWarning className="flex min-h-screen flex-col font-sans antialiased">
         
        <QueryProvider> 
         <ClientLayout>

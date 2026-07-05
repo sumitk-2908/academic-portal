@@ -10,17 +10,17 @@ export default function ProfileSidebarCard({ userName, role }: ProfileSidebarCar
   const initials = userName === "Student" ? "ST" : (userName.substring(0, 2).toUpperCase() || "ST");
 
   return (
-    <div className="mt-auto pt-4 pb-2 animate-fade-up">
+    <div className="animate-fade-up mt-auto pt-4 pb-2">
       <Link 
         href="/profile"
-        className="flex items-center gap-3 rounded-xl border border-border bg-surface-hover p-2 motion-hover motion-active hover:bg-surface"
+        className="motion-hover motion-active flex items-center gap-3 rounded-xl border border-border bg-surface-hover p-2 hover:bg-surface"
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">
           {initials}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-foreground truncate">{userName}</p>
-          <p className="text-xs font-semibold text-primary truncate">{role}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-foreground">{userName}</p>
+          <p className="truncate text-xs font-semibold text-primary">{role}</p>
         </div>
 
       </Link>

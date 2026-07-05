@@ -65,7 +65,7 @@ function ResetPasswordContent() {
       <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center p-4">
         <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-2xl">
           <div className="mb-6 flex flex-col items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <KeyRound size={28} aria-hidden="true" />
             </div>
             <h1 className="mb-1.5 text-3xl font-extrabold tracking-tight text-foreground">Secure Reset</h1>
@@ -78,7 +78,7 @@ function ResetPasswordContent() {
             <div>
               <label
                 htmlFor="newPassword"
-                className="mb-1.5 block text-xs font-bold uppercase tracking-[0.06em] text-muted"
+                className="mb-1.5 block text-xs font-bold tracking-[0.06em] text-muted uppercase"
               >
                 New Password
               </label>
@@ -90,7 +90,7 @@ function ResetPasswordContent() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="h-12 w-full rounded-xl border border-border bg-background px-4 text-base text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
+                className="motion-focus h-12 w-full rounded-xl border border-border bg-background px-4 text-base text-foreground outline-none focus:border-primary focus:bg-surface"
               />
             </div>
 
@@ -107,7 +107,7 @@ function ResetPasswordContent() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground motion-hover motion-active hover:opacity-90 disabled:opacity-50"
+              className="motion-hover motion-active flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -130,7 +130,7 @@ function ResetPasswordContent() {
       <Toast.Root
         open={toast.open}
         onOpenChange={(open) => setToast((prev) => ({ ...prev, open }))}
-        className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full"
+        className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-xl"
       >
         <Toast.Title className="text-sm font-bold text-success">
           Success
@@ -141,7 +141,7 @@ function ResetPasswordContent() {
         </Toast.Description>
       </Toast.Root>
 
-      <Toast.Viewport className="fixed bottom-0 right-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
+      <Toast.Viewport className="fixed right-0 bottom-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
     </Toast.Provider>
   );
 }

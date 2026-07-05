@@ -63,14 +63,14 @@ export default function ActivityTimeline({
     return (
       <div className="rounded-2xl border border-dashed border-border bg-surface-hover/50 p-8 text-center">
         <h3 className="text-base font-extrabold tracking-tight text-foreground">Start your activity timeline</h3>
-        <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">
+        <p className="mx-auto mt-1 max-w-md text-sm leading-6 font-medium text-muted">
           Study, bookmark, or upload a resource and your progress will collect here.
         </p>
         <div className="mt-4 flex justify-center gap-2">
-          <Link href="/recent-uploads" className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+          <Link href="/recent-uploads" className="motion-hover motion-active rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
             Start Studying
           </Link>
-          <button onClick={requestUploadPrompt} className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover">
+          <button onClick={requestUploadPrompt} className="motion-hover motion-active rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-hover">
             Upload Notes
           </button>
         </div>
@@ -79,7 +79,7 @@ export default function ActivityTimeline({
   }
 
   return (
-    <div className="relative ml-3 space-y-6 border-l-2 border-border pb-4 md:ml-4 animate-fade-up">
+    <div className="animate-fade-up relative ml-3 space-y-6 border-l-2 border-border pb-4 md:ml-4">
       {timeline.slice(0, 20).map((item, idx) => {
         const Icon = item.icon;
 
@@ -87,7 +87,7 @@ export default function ActivityTimeline({
           <div key={idx} className="relative pl-6 sm:pl-8">
             {/* Timeline Node */}
             <div
-              className={`absolute -left-[17px] top-1 flex h-8 w-8 items-center justify-center rounded-full border-4 border-background ${item.color}`}
+              className={`absolute top-1 left-[-17px] flex size-8 items-center justify-center rounded-full border-4 border-background ${item.color}`}
             >
               <Icon size={12} />
             </div>
@@ -100,7 +100,7 @@ export default function ActivityTimeline({
                   <span className="text-foreground">{item.title}</span>
                 </p>
 
-                <time className="shrink-0 text-sm font-medium tabular-nums text-muted">
+                <time className="shrink-0 text-sm font-medium text-muted tabular-nums">
                   {item.date.toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
@@ -109,7 +109,7 @@ export default function ActivityTimeline({
                 </time>
               </div>
 
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+              <p className="text-xs font-semibold tracking-wider text-muted uppercase">
                 {item.subject}
               </p>
             </div>

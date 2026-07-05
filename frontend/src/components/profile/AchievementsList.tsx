@@ -23,35 +23,35 @@ export default function AchievementsList({ achievements }: { achievements: any[]
         return (
           <div
             key={badge.id}
-            className={`flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 rounded-2xl border p-3 sm:p-4 transition-all ${
+            className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-all sm:flex-row sm:items-start sm:gap-4 sm:p-4 sm:text-left ${
               isEarned
                 ? "border-border bg-surface shadow-sm"
                 : "border-dashed border-border bg-surface-hover opacity-75 grayscale"
             }`}
           >
             <div
-              className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl ${
+              className={`flex size-10 shrink-0 items-center justify-center rounded-xl sm:size-12 ${
                 isEarned ? badge.bg : "bg-background"
               }`}
             >
               <Icon
-                className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                className={`size-5 sm:size-6 ${
                   isEarned ? badge.color : "text-gray-400"
                 }`}
               />
             </div>
 
-            <div className="flex-1 min-w-0 w-full">
+            <div className="w-full min-w-0 flex-1">
               <h4 className="mb-0.5 truncate text-xs font-bold text-foreground sm:text-sm">
                 {badge.title}
               </h4>
 
-              <p className="line-clamp-2 text-xs text-muted leading-tight">
+              <p className="line-clamp-2 text-xs leading-tight text-muted">
                 {badge.description}
               </p>
 
               {isEarned && (
-                <div className="mt-2 inline-block rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-600 sm:px-2">
+                <div className="mt-2 inline-block rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-xs font-bold tracking-wider text-emerald-600 uppercase sm:px-2">
                   Unlocked
                 </div>
               )}

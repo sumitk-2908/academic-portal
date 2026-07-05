@@ -143,41 +143,41 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
   return (
     <>
       {(!fullName || fullName === "Student") && (
-        <div className="mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 animate-fade-in">
-          <p className="text-sm font-semibold text-foreground text-center sm:text-left">
+        <div className="animate-fade-in mb-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row">
+          <p className="text-center text-sm font-semibold text-foreground sm:text-left">
             Complete your profile to unlock personalized recommendations and community recognition.
           </p>
           <button 
             onClick={() => setIsEditModalOpen(true)}
-            className="shrink-0 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active"
+            className="motion-hover motion-active shrink-0 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
           >
             Complete Profile
           </button>
         </div>
       )}
       <div className="mb-4 rounded-2xl border border-border bg-surface p-5">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:gap-5 sm:text-left">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={fullName || "Student"} className="h-20 w-20 sm:h-14 sm:w-14 shrink-0 rounded-full object-cover shadow-sm" />
+            <img src={avatarUrl} alt={fullName || "Student"} className="size-20 shrink-0 rounded-full object-cover shadow-sm sm:size-14" />
           ) : (
-            <div className="flex h-20 w-20 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground shadow-sm">
+            <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground shadow-sm sm:size-14">
               {getInitials(fullName || "Student")}
             </div>
           )}
 
-          <div className="flex-1 min-w-0 w-full flex flex-col items-center sm:items-start">
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mb-1 sm:mb-0.5">
+          <div className="flex w-full min-w-0 flex-1 flex-col items-center sm:items-start">
+            <div className="mb-1 flex flex-col items-center gap-2 sm:mb-0.5 sm:flex-row sm:gap-3">
               <h1 className="text-xl font-extrabold tracking-tight text-foreground">{fullName || "Student"}</h1>
               {currentStreak > 0 && (
-                <div className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-bold tabular-nums text-orange-500">
+                <div className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-bold text-orange-500 tabular-nums">
                   <Flame size={12} fill="currentColor" aria-hidden="true"/>
                   {currentStreak} Day{currentStreak !== 1 ? 's' : ''}
                 </div>
               )}
             </div>
             
-            <p className="text-sm font-medium text-muted mb-3">{email}</p>
-            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-sm font-medium text-muted">
+            <p className="mb-3 text-sm font-medium text-muted">{email}</p>
+            <div className="flex flex-wrap justify-center gap-3 text-sm font-medium text-muted sm:justify-start sm:gap-4">
               <span className="flex items-center gap-1.5"><GraduationCap size={14} aria-hidden="true"/> {branch || "Academic Portal"}</span>
               <span className="flex items-center gap-1.5"><BookOpen size={14} aria-hidden="true"/> Student Account</span>
             </div>
@@ -185,7 +185,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
           <button 
             ref={editButtonRef}
             onClick={() => setIsEditModalOpen(true)}
-            className="mt-3 flex w-full sm:mt-0 sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+            className="motion-hover motion-active mt-3 flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-muted hover:bg-surface-hover sm:mt-0 sm:w-auto"
           >
             <Edit size={14} aria-hidden="true"/> Edit Profile
           </button>
@@ -193,29 +193,29 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
       </div>
 
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm motion-modal animate-in fade-in">
+        <div className="motion-modal animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div 
             ref={modalRef}
             role="dialog" 
             aria-modal="true" 
             aria-labelledby="edit-profile-title"
-            className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl border border-border motion-modal"
+            className="motion-modal w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
           >
-            <div className="flex justify-between items-center mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 id="edit-profile-title" className="text-xl font-bold tracking-tight text-foreground">Personalize Profile</h2>
               <button 
                 aria-label="Close modal"
                 onClick={() => setIsEditModalOpen(false)} 
-                className="text-muted hover:text-foreground motion-hover"
+                className="motion-hover text-muted hover:text-foreground"
               >
                 <X size={20} aria-hidden="true" />
               </button>
             </div>
             
             <form onSubmit={handleSave}>
-              <div className="space-y-4 mb-6">
+              <div className="mb-6 space-y-4">
                 <div>
-                  <label htmlFor="nameInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Display Name</label>
+                  <label htmlFor="nameInput" className="mb-2 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Display Name</label>
                   <input 
                     id="nameInput"
                     required
@@ -223,25 +223,25 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                     placeholder="e.g. John Doe"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
+                    className="motion-focus w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary focus:bg-surface"
                   />
                 </div>
                 {errorMsg && <p className="text-sm font-semibold text-destructive">{errorMsg}</p>}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Preferred Branch / Course</label>
+                    <label htmlFor="branchInput" className="mb-2 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Preferred Branch / Course</label>
                     <input 
                       id="branchInput"
                       type="text" 
                       placeholder="e.g. B.Tech Computer Science"
                       value={branch}
                       onChange={(e) => setBranch(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
+                      className="motion-focus w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary focus:bg-surface"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Year</label>
-                    <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary text-foreground motion-focus">
+                    <label className="mb-2 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Year</label>
+                    <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="motion-focus w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary">
                       <option value="">Select Year</option>
                       <option value="1st year">1st year</option>
                       <option value="2nd year">2nd year</option>
@@ -252,10 +252,10 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Favorite Subjects (Max 5)</label>
+                  <label className="mb-2 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Favorite Subjects (Max 5)</label>
                   <div className="relative">
-                    <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-2 motion-focus-within focus-within:border-primary focus-within:bg-surface">
-                      <Search size={16} className="text-muted ml-1" />
+                    <div className="motion-focus-within flex items-center gap-2 rounded-xl border border-border bg-background p-2 focus-within:border-primary focus-within:bg-surface">
+                      <Search size={16} className="ml-1 text-muted" />
                       <input 
                         type="text" 
                         placeholder={favoriteSubjects.length < 5 ? "Search subjects..." : "Maximum subjects reached"}
@@ -275,7 +275,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                               setFavoriteSubjects([...favoriteSubjects, subject]);
                               setSubjectQuery("");
                             }}
-                            className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-primary/10 hover:text-primary motion-hover"
+                            className="motion-hover w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-primary/10 hover:text-primary"
                           >
                             {subject}
                           </button>
@@ -289,9 +289,9 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                   {favoriteSubjects.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {favoriteSubjects.map(subject => (
-                        <span key={subject} className="flex items-center gap-1 rounded-full bg-primary/10 pl-3 pr-1 py-1 text-xs font-bold text-primary">
+                        <span key={subject} className="flex items-center gap-1 rounded-full bg-primary/10 py-1 pr-1 pl-3 text-xs font-bold text-primary">
                           {subject}
-                          <button type="button" onClick={() => setFavoriteSubjects(favoriteSubjects.filter(s => s !== subject))} className="rounded-full p-1 hover:bg-primary/20 text-primary motion-hover">
+                          <button type="button" onClick={() => setFavoriteSubjects(favoriteSubjects.filter(s => s !== subject))} className="motion-hover rounded-full p-1 text-primary hover:bg-primary/20">
                             <X size={12} />
                           </button>
                         </span>
@@ -303,11 +303,11 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
               </div>
 
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="rounded-xl px-4 py-2 text-sm font-bold text-muted bg-surface-hover motion-hover motion-active">Cancel</button>
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="motion-hover motion-active rounded-xl bg-surface-hover px-4 py-2 text-sm font-bold text-muted">Cancel</button>
                 <button 
                   type="submit"
                   disabled={isSaving}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90 disabled:opacity-50"
+                  className="motion-hover motion-active flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
                 >
                   {isSaving ? (
                     <>

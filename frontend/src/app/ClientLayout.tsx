@@ -33,7 +33,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         </AppShell>
         
-        <Toast.Viewport className="fixed bottom-0 right-0 z-[150] p-6 w-full md:max-w-[400px] outline-none flex flex-col gap-2" />
+        <Toast.Viewport className="fixed right-0 bottom-0 z-[150] flex w-full flex-col gap-2 p-6 outline-none md:max-w-[400px]" />
       </Toast.Provider>
     </StudyHistoryProvider>
   );

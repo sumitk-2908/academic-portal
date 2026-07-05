@@ -23,7 +23,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
     .single();
 
   let modules: any[] = [];
-  let moduleCounts: Record<number, number> = {};
+  const moduleCounts: Record<number, number> = {};
 
   if (dbSubject && !dbSubject.is_non_module) {
     modules = await getModulesBySubject(dbSubject.id);
@@ -44,10 +44,10 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   const displayTitle = dbSubject?.name || subjectSlug.replace(/-/g, " ").toUpperCase();
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto">
+    <div className="animate-fade-up mx-auto max-w-6xl space-y-6">
       <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
         <h1 className="text-xl font-extrabold sm:text-3xl">{displayTitle}</h1>
-        <p className="text-xs text-muted mt-1">
+        <p className="mt-1 text-xs text-muted">
           Core Subject Curricular Interface
         </p>
       </div>

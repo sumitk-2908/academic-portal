@@ -46,7 +46,7 @@ export default async function ModulePage({
     .order("created_at", { ascending: false });
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-up space-y-6">
+    <div className="animate-fade-up mx-auto max-w-6xl space-y-6">
       <Link
         href={`/subject/${subjectSlug}`}
         className="inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary"

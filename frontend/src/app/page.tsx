@@ -58,9 +58,9 @@ export default async function SubjectDirectory() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-6xl animate-fade-up">
+    <div className="animate-fade-up mx-auto w-full max-w-6xl">
       <section className="mb-10 pt-8 text-center">
-        <h1 className="mb-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+        <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-foreground">
           Academic <span className="text-primary">Resource Hub</span>
         </h1>
 

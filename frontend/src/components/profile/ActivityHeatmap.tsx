@@ -74,7 +74,7 @@ export default function ActivityHeatmap({ history }: { history: any[] }) {
   };
 
   return (
-    <div className="mb-6 rounded-xl border bg-surface border-border p-4">
+    <div className="mb-6 rounded-xl border border-border bg-surface p-4">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#24292f] dark:text-[#e6edf3]">
           {/* Added the dynamic year to the title so users know what year they are looking at */}
@@ -82,7 +82,7 @@ export default function ActivityHeatmap({ history }: { history: any[] }) {
         </h3>
       </div>
 
-      <div className="overflow-x-auto hide-scrollbar pb-2">
+      <div className="hide-scrollbar overflow-x-auto pb-2">
         <div className="flex min-w-max gap-1">
           <div className="mt-[15px] flex flex-col gap-[3px] pr-2 text-xs text-[#656d76] dark:text-[#8b949e]">
             <span className="h-[10px]"></span>
@@ -111,7 +111,7 @@ export default function ActivityHeatmap({ history }: { history: any[] }) {
               {Array.from({ length: startPadding }).map((_, i) => (
                 <div
                   key={`pad-${i}`}
-                  className="h-[10px] w-[10px] rounded-[2px] bg-transparent"
+                  className="size-[10px] rounded-[2px] bg-transparent"
                 />
               ))}
 
@@ -119,7 +119,7 @@ export default function ActivityHeatmap({ history }: { history: any[] }) {
                 <div
                   key={idx}
                   title={`${day.count} interactions on ${day.date}`}
-                  className={`h-[10px] w-[10px] rounded-[2px] ${getColor(day.count)} cursor-pointer transition-all hover:ring-1 hover:ring-black/50 dark:hover:ring-white/50`}
+                  className={`size-[10px] rounded-[2px] ${getColor(day.count)} cursor-pointer transition-all hover:ring-1 hover:ring-black/50 dark:hover:ring-white/50`}
                 />
               ))}
             </div>
@@ -129,11 +129,11 @@ export default function ActivityHeatmap({ history }: { history: any[] }) {
 
       <div className="mt-4 flex items-center justify-end gap-1 text-xs text-[#656d76] dark:text-[#8b949e]">
         <span className="mr-1">Less</span>
-        <div className="h-[10px] w-[10px] rounded-[2px] bg-[#ebedf0] dark:bg-[#161b22]" />
-        <div className="h-[10px] w-[10px] rounded-[2px] bg-[#9be9a8] dark:bg-[#0e4429]" />
-        <div className="h-[10px] w-[10px] rounded-[2px] bg-[#40c463] dark:bg-[#006d32]" />
-        <div className="h-[10px] w-[10px] rounded-[2px] bg-[#30a14e] dark:bg-[#26a641]" />
-        <div className="h-[10px] w-[10px] rounded-[2px] bg-[#216e39] dark:bg-[#39d353]" />
+        <div className="size-[10px] rounded-[2px] bg-[#ebedf0] dark:bg-[#161b22]" />
+        <div className="size-[10px] rounded-[2px] bg-[#9be9a8] dark:bg-[#0e4429]" />
+        <div className="size-[10px] rounded-[2px] bg-[#40c463] dark:bg-[#006d32]" />
+        <div className="size-[10px] rounded-[2px] bg-[#30a14e] dark:bg-[#26a641]" />
+        <div className="size-[10px] rounded-[2px] bg-[#216e39] dark:bg-[#39d353]" />
         <span className="ml-1">More</span>
       </div>
     </div>

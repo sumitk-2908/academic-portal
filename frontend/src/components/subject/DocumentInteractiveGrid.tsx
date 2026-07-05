@@ -225,10 +225,10 @@ export default function DocumentInteractiveGrid({
         icon={FileQuestion}
         action={
           <>
-            <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+            <button onClick={requestUploadPrompt} className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
               <Upload size={15} /> Upload Notes
             </button>
-            <Link href="/recent-uploads" className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover">
+            <Link href="/recent-uploads" className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-hover">
               <Eye size={15} /> Start Studying
             </Link>
           </>
@@ -243,10 +243,10 @@ export default function DocumentInteractiveGrid({
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-extrabold tracking-tight text-foreground">These resources helped you.</p>
-            <p className="mt-1 text-sm font-medium leading-6 text-muted">Consider uploading your own notes to help future students.</p>
+            <p className="mt-1 text-sm leading-6 font-medium text-muted">Consider uploading your own notes to help future students.</p>
           </div>
           <div className="flex shrink-0 gap-2">
-            <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+            <button onClick={requestUploadPrompt} className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
               <Upload size={15} /> Upload Notes
             </button>
             <button
@@ -254,7 +254,7 @@ export default function DocumentInteractiveGrid({
                 dismissContributionPrompt();
                 setShowContributionPrompt(false);
               }}
-              className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+              className="motion-hover motion-active rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-hover"
             >
               Later
             </button>
@@ -312,18 +312,18 @@ export default function DocumentInteractiveGrid({
 
       <AlertDialog.Root open={documentToDelete !== null} onOpenChange={(open) => !open && setDocumentToDelete(null)}>
         <AlertDialog.Portal>
-          <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <AlertDialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border border-border bg-surface p-6 shadow-lg motion-modal">
+          <AlertDialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+          <AlertDialog.Content className="motion-modal fixed top-[50%] left-[50%] z-50 grid w-full max-w-md translate-[-50%] gap-4 rounded-2xl border border-border bg-surface p-6 shadow-lg">
             <AlertDialog.Title className="text-lg font-bold text-foreground">Confirm Deletion</AlertDialog.Title>
             <AlertDialog.Description className="text-sm text-muted">
               Are you sure you want to delete this document? This action cannot be undone.
             </AlertDialog.Description>
             <div className="mt-4 flex justify-end gap-3">
               <AlertDialog.Cancel asChild>
-                <button className="rounded-xl px-4 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover">Cancel</button>
+                <button className="motion-hover motion-active rounded-xl px-4 py-2 text-sm font-bold text-muted hover:bg-surface-hover">Cancel</button>
               </AlertDialog.Cancel>
               <AlertDialog.Action asChild>
-                <button onClick={confirmDelete} className="rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground motion-hover motion-active hover:opacity-90">Delete Document</button>
+                <button onClick={confirmDelete} className="motion-hover motion-active rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:opacity-90">Delete Document</button>
               </AlertDialog.Action>
             </div>
           </AlertDialog.Content>

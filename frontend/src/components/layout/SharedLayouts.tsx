@@ -7,7 +7,7 @@ import { Loader2, type LucideIcon } from "lucide-react";
  */
 export const PageHeader = ({ title, description }: { title: string, description?: string }) => (
   <div className="mb-8">
-    <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-1.5">
+    <h1 className="mb-1.5 text-4xl font-extrabold tracking-tight text-foreground">
       {title}
     </h1>
     {description && (
@@ -22,7 +22,7 @@ export const PageHeader = ({ title, description }: { title: string, description?
  * 2. Page Container 
  */
 export const PageContainer = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
-  <div className={`space-y-8 animate-fade-up ${className}`}>
+  <div className={`animate-fade-up space-y-8 ${className}`}>
     {children}
   </div>
 );
@@ -33,7 +33,7 @@ export const PageContainer = ({ children, className = "" }: { children: React.Re
  */
 export const SectionHeading = ({ title, action }: { title: string; action?: React.ReactNode; }) => (
   <div className="mb-4 flex items-center justify-between gap-4">
-    <h2 className="text-xs font-bold uppercase tracking-[0.06em] text-muted">
+    <h2 className="text-xs font-bold tracking-[0.06em] text-muted uppercase">
       {title}
     </h2>
     {action && <div>{action}</div>}
@@ -67,7 +67,7 @@ export const EmptyState = ({
   action?: React.ReactNode;
 }) => (
   <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-hover/50 p-12 text-center">
-    {Icon && <Icon className="mb-4 h-8 w-8 text-muted opacity-50" />}
+    {Icon && <Icon className="mb-4 size-8 text-muted opacity-50" />}
     {title && <h3 className="text-lg font-extrabold tracking-tight text-foreground">{title}</h3>}
     <p className={`${title ? "mt-1" : ""} max-w-md text-base font-medium text-muted`}>{message}</p>
     {action && <div className="mt-5 flex flex-wrap items-center justify-center gap-3">{action}</div>}
@@ -97,14 +97,14 @@ export const InlineSpinner = ({
 export const DocumentGridSkeleton = ({ count = 6 }: { count?: number }) => (
   <CardGrid cols="auto">
     {Array.from({ length: count }).map((_, i) => (
-      <article key={i} className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+      <article key={i} className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <SkeletonBlock className="mb-4 h-32 w-full" />
         <SkeletonBlock className="h-5 w-4/5" />
         <SkeletonBlock className="mt-2 h-4 w-2/5" />
         <div className="mt-4 flex gap-2 border-t border-border pt-4">
           <SkeletonBlock className="h-9 flex-1" />
           <SkeletonBlock className="h-9 flex-1" />
-          <SkeletonBlock className="h-9 w-9" />
+          <SkeletonBlock className="size-9" />
         </div>
       </article>
     ))}
@@ -116,13 +116,13 @@ export const SidebarSkeleton = ({ collapsed = false }: { collapsed?: boolean }) 
     <div className="space-y-2">
       {!collapsed && <SkeletonBlock className="mx-3 h-3 w-24" />}
       {Array.from({ length: 3 }).map((_, i) => (
-        <SkeletonBlock key={i} className={collapsed ? "h-10 w-10" : "h-10 w-full"} />
+        <SkeletonBlock key={i} className={collapsed ? "size-10" : "h-10 w-full"} />
       ))}
     </div>
     <div className="space-y-2">
       {!collapsed && <SkeletonBlock className="mx-3 h-3 w-32" />}
       {Array.from({ length: 4 }).map((_, i) => (
-        <SkeletonBlock key={i} className={collapsed ? "h-10 w-10" : "h-10 w-full"} />
+        <SkeletonBlock key={i} className={collapsed ? "size-10" : "h-10 w-full"} />
       ))}
     </div>
     {!collapsed && (
@@ -135,7 +135,7 @@ export const SidebarSkeleton = ({ collapsed = false }: { collapsed?: boolean }) 
 );
 
 export const SubjectPageSkeleton = ({ moduleView = false }: { moduleView?: boolean }) => (
-  <div className="mx-auto w-full max-w-6xl space-y-6 animate-fade-up">
+  <div className="animate-fade-up mx-auto w-full max-w-6xl space-y-6">
     {moduleView && <SkeletonBlock className="h-4 w-36" />}
     <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
       <SkeletonBlock className={moduleView ? "h-7 w-1/2" : "h-8 w-2/5"} />
@@ -147,10 +147,10 @@ export const SubjectPageSkeleton = ({ moduleView = false }: { moduleView?: boole
 );
 
 export const BookmarksSkeleton = () => (
-  <div className="mx-auto w-full max-w-6xl space-y-6 animate-fade-up">
+  <div className="animate-fade-up mx-auto w-full max-w-6xl space-y-6">
     <div className="rounded-3xl border border-warning/20 bg-warning/5 p-6 shadow-sm">
       <div className="flex items-center gap-4">
-        <SkeletonBlock className="h-12 w-12" />
+        <SkeletonBlock className="size-12" />
         <div className="flex-1">
           <SkeletonBlock className="h-8 w-48" />
           <SkeletonBlock className="mt-3 h-4 w-64" />
@@ -162,7 +162,7 @@ export const BookmarksSkeleton = () => (
 );
 
 export const HomeSkeleton = () => (
-  <div className="mx-auto w-full max-w-6xl space-y-8 animate-fade-up">
+  <div className="animate-fade-up mx-auto w-full max-w-6xl space-y-8">
     <div className="flex flex-col items-center gap-4 pt-2 text-center">
       <SkeletonBlock className="h-12 w-3/4 max-w-md" />
       <SkeletonBlock className="h-4 w-1/2 max-w-sm" />
@@ -176,11 +176,11 @@ export const HomeSkeleton = () => (
 );
 
 export const ProfileSkeleton = () => (
-  <div className="mx-auto w-full max-w-4xl space-y-4 pb-12 animate-fade-up">
+  <div className="animate-fade-up mx-auto w-full max-w-4xl space-y-4 pb-12">
     <SkeletonBlock className="hidden h-7 w-48 sm:block" />
     <div className="rounded-2xl border border-border bg-surface p-5">
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <SkeletonBlock className="h-20 w-20 rounded-full sm:h-14 sm:w-14" />
+        <SkeletonBlock className="size-20 rounded-full sm:size-14" />
         <div className="w-full flex-1 space-y-3">
           <SkeletonBlock className="mx-auto h-6 w-48 sm:mx-0" />
           <SkeletonBlock className="mx-auto h-4 w-64 sm:mx-0" />
@@ -194,7 +194,7 @@ export const ProfileSkeleton = () => (
         <SkeletonBlock key={i} className="h-24 rounded-2xl" />
       ))}
     </div>
-    <div className="rounded-2xl border border-border bg-surface p-4">
+    <div className="rounded-2xl border border-border bg-surface p-5">
       <SkeletonBlock className="h-9 w-full" />
       <SkeletonBlock className="mt-4 h-56 w-full rounded-2xl" />
     </div>

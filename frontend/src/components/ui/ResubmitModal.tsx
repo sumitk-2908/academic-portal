@@ -100,7 +100,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-surface border border-border p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
         
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
@@ -108,7 +108,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
           <button 
             onClick={onClose} 
             disabled={uploadState === "uploading" || uploadState === "processing"} 
-            className="text-muted hover:text-destructive transition-colors disabled:opacity-50"
+            className="text-muted transition-colors hover:text-destructive disabled:opacity-50"
           >
             <XCircle size={24} />
           </button>
@@ -116,7 +116,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
 
         {/* Rejection Note */}
         {document.rejection_reason && (
-          <div className="mb-6 flex gap-3 rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-destructive">
+          <div className="mb-6 flex gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-destructive">
             <AlertCircle className="shrink-0" size={20} />
             <div className="text-sm">
               <strong className="font-semibold">Moderator Note:</strong>
@@ -140,7 +140,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
                 value={title} 
                 onChange={(e) => setTitle(e.target.value)} 
                 disabled={uploadState !== "idle" && uploadState !== "error"} 
-                className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50" 
+                className="w-full rounded-xl border border-border bg-surface p-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50" 
               />
             </div>
 
@@ -151,7 +151,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
                 value={category} 
                 onChange={(e) => setCategory(e.target.value)} 
                 disabled={uploadState !== "idle" && uploadState !== "error"} 
-                className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="w-full rounded-xl border border-border bg-surface p-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
               >
                 <option value="notes" className="bg-surface text-foreground">Notes</option>
                 <option value="pyq" className="bg-surface text-foreground">PYQ</option>
@@ -167,14 +167,14 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
                 className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background p-6 transition-colors ${
                   (uploadState === "idle" || uploadState === "error") 
                     ? "hover:border-primary hover:bg-primary/5" 
-                    : "opacity-50 cursor-not-allowed"
+                    : "cursor-not-allowed opacity-50"
                 }`}
               >
                 {newFile ? (
                   <div className="flex flex-col items-center text-primary">
                     <FileText size={32} className="mb-2" />
                     <span className="text-sm font-medium text-foreground">{newFile.name}</span>
-                    <span className="text-xs text-muted mt-1">Click to change</span>
+                    <span className="mt-1 text-xs text-muted">Click to change</span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center text-muted">
@@ -198,7 +198,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
             <button
               type="submit"
               disabled={uploadState === "uploading" || uploadState === "processing" || uploadState === "success"}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground p-3 font-bold transition-colors hover:opacity-90 disabled:opacity-50"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary p-3 font-bold text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
             >
               {(uploadState === "uploading" || uploadState === "processing") ? (
                 <><InlineSpinner label="Processing resubmission" size={20} /> Processing...</>

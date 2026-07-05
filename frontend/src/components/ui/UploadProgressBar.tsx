@@ -24,7 +24,7 @@ export default function UploadProgressBar({
         <div className="flex items-center gap-3">
           {/* Dynamic Icon based on state */}
           <div
-            className={`flex h-10 w-10 items-center justify-center rounded-xl text-white transition-colors
+            className={`flex size-10 items-center justify-center rounded-xl text-white transition-colors
             ${
               state === "uploading"
                 ? "bg-blue-500"

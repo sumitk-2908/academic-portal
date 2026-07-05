@@ -102,12 +102,12 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
   return (
     <div>
-      <div className="mb-6 flex overflow-x-auto border-b border-border hide-scrollbar sticky top-16 z-30 bg-background pt-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pt-0 sm:static">
+      <div className="hide-scrollbar sticky top-16 z-30 -mx-4 mb-6 flex overflow-x-auto border-b border-border bg-background px-4 pt-2 sm:static sm:mx-0 sm:px-0 sm:pt-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`whitespace-nowrap px-4 py-2.5 text-sm font-bold rounded-xl motion-hover transition-colors ${
+            className={`motion-hover rounded-xl px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-colors ${
               activeTab === tab.id
                 ? "bg-primary/10 text-primary"
                 : "text-muted hover:bg-surface-hover hover:text-foreground"
@@ -128,32 +128,32 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-[0.06em] text-muted">Continue Studying</h3>
-              <Link href="/continue-studying" className="text-sm font-bold text-primary hover:opacity-80 motion-hover">View All</Link>
+              <h3 className="text-xs font-bold tracking-[0.06em] text-muted uppercase">Continue Studying</h3>
+              <Link href="/continue-studying" className="motion-hover text-sm font-bold text-primary hover:opacity-80">View All</Link>
             </div>
             
             {history.length > 0 ? history.slice(0, 3).map((item: any, idx: number) => (
               <div key={idx} className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-3 shadow-sm">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Clock size={18} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground truncate">{item.title}</p>
-                  <p className="text-xs text-muted truncate capitalize">{item.subject} • {item.category}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
+                  <p className="truncate text-xs text-muted capitalize">{item.subject} • {item.category}</p>
                 </div>
                 <Link 
                   href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
                   onClick={() => handleViewDocument(item.id)}
-                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold uppercase text-primary-foreground motion-hover motion-active hover:opacity-90"
+                  className="motion-hover motion-active flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground uppercase hover:opacity-90"
                 >
                   <Eye size={12} /> Resume
                 </Link>
               </div>
             )) : (
-              <div className="py-8 text-center rounded-2xl border border-dashed border-border bg-surface-hover/50">
+              <div className="rounded-2xl border border-dashed border-border bg-surface-hover/50 py-8 text-center">
                  <h3 className="text-base font-extrabold tracking-tight text-foreground">Start studying from your dashboard</h3>
-                 <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Open a resource and your recent study activity will appear here.</p>
-                 <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                 <p className="mx-auto mt-1 max-w-md text-sm leading-6 font-medium text-muted">Open a resource and your recent study activity will appear here.</p>
+                 <Link href="/recent-uploads" className="motion-hover motion-active mt-4 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
                    Start Studying
                  </Link>
               </div>
@@ -163,10 +163,10 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
               <div className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-extrabold tracking-tight text-foreground">These resources helped you.</p>
-                  <p className="mt-1 text-sm font-medium leading-6 text-muted">Consider uploading your own notes to help future students.</p>
+                  <p className="mt-1 text-sm leading-6 font-medium text-muted">Consider uploading your own notes to help future students.</p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                  <button onClick={requestUploadPrompt} className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
                     <Upload size={15} /> Upload Notes
                   </button>
                   <button
@@ -174,7 +174,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
                       dismissContributionPrompt();
                       setShowContributionPrompt(false);
                     }}
-                    className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+                    className="motion-hover motion-active rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-hover"
                   >
                     Later
                   </button>
@@ -183,27 +183,27 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
             )}
 
             {suggestions.length > 0 && (
-              <div className="mt-8 pt-4 border-t border-border space-y-4">
+              <div className="mt-8 space-y-4 border-t border-border pt-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.06em] text-warning flex items-center gap-2">
+                  <h3 className="flex items-center gap-2 text-xs font-bold tracking-[0.06em] text-warning uppercase">
                     <Sparkles size={14} />
                     {history.length === 0 ? "Trending Right Now" : "Suggested Next Steps"}
                   </h3>
                 </div>
                 
                 {suggestions.map((item: any, idx: number) => (
-                  <div key={`sugg-${idx}`} className="flex items-center gap-4 rounded-2xl border border-warning/20 bg-warning/5 p-3 hover:border-warning motion-hover shadow-sm">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
+                  <div key={`sugg-${idx}`} className="motion-hover flex items-center gap-4 rounded-2xl border border-warning/20 bg-warning/5 p-3 shadow-sm hover:border-warning">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
                       <Sparkles size={18} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{item.title}</p>
-                      <p className="text-xs text-muted truncate capitalize">{item.subject} • {item.category}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
+                      <p className="truncate text-xs text-muted capitalize">{item.subject} • {item.category}</p>
                     </div>
                     <Link 
                       href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
                       onClick={() => handleViewDocument(item.id)}
-                      className="shrink-0 flex items-center gap-1.5 rounded-lg bg-warning px-3 py-1.5 text-xs font-bold uppercase text-white motion-hover motion-active hover:opacity-90"
+                      className="motion-hover motion-active flex shrink-0 items-center gap-1.5 rounded-lg bg-warning px-3 py-1.5 text-xs font-bold text-white uppercase hover:opacity-90"
                     >
                       <Eye size={12} /> View
                     </Link>
@@ -216,26 +216,26 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
       )}
 
       {activeTab === "library" && (
-        <div className="space-y-4 animate-fade-up">
+        <div className="animate-fade-up space-y-4">
            {bookmarks.length > 0 ? bookmarks.map((item: any, idx: number) => (
              <div key={idx} className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-3 shadow-sm">
-               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning"><BookOpen size={18} /></div>
-               <div className="flex-1 min-w-0">
-                 <p className="text-sm font-bold text-foreground truncate">{item.title}</p>
-                 <p className="text-xs text-muted truncate capitalize">{item.subject}</p>
+               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning"><BookOpen size={18} /></div>
+               <div className="min-w-0 flex-1">
+                 <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
+                 <p className="truncate text-xs text-muted capitalize">{item.subject}</p>
                </div>
                
-               <div className="shrink-0 flex items-center gap-2">
+               <div className="flex shrink-0 items-center gap-2">
                  <Link 
                    href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
                    onClick={() => handleViewDocument(item.id)}
-                   className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold uppercase text-primary-foreground motion-hover motion-active hover:opacity-90"
+                   className="motion-hover motion-active flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground uppercase hover:opacity-90"
                  >
                    <Eye size={12} /> View
                  </Link>
                  <button 
                    onClick={(e) => handleDownload(e, item)} 
-                   className="flex items-center gap-1.5 rounded-lg bg-surface-hover px-3 py-1.5 text-xs font-bold uppercase text-foreground border border-border motion-hover motion-active hover:opacity-80"
+                   className="motion-hover motion-active flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-3 py-1.5 text-xs font-bold text-foreground uppercase hover:opacity-80"
                  >
                    <Download size={12} />
                  </button>
@@ -244,8 +244,8 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
            )) : (
              <div className="rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
                <h3 className="text-base font-extrabold tracking-tight text-foreground">Build your study library</h3>
-               <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Bookmark resources you want to revisit before exams.</p>
-               <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+               <p className="mx-auto mt-1 max-w-md text-sm leading-6 font-medium text-muted">Bookmark resources you want to revisit before exams.</p>
+               <Link href="/recent-uploads" className="motion-hover motion-active mt-4 inline-flex rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white hover:opacity-90">
                  Bookmark Resources
                </Link>
              </div>
@@ -254,21 +254,21 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
       )}
 
       {activeTab === "contributions" && (
-        <div className="space-y-4 animate-fade-up">
+        <div className="animate-fade-up space-y-4">
           <div className="mb-6 grid grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-               <div className="text-xs font-bold text-muted uppercase tracking-[0.06em] mb-1">Total Uploads</div>
+               <div className="mb-1 text-xs font-bold tracking-[0.06em] text-muted uppercase">Total Uploads</div>
                <div className="text-3xl font-extrabold tracking-tight text-foreground tabular-nums">{uploads.length}</div>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-               <div className="text-xs font-bold text-muted uppercase tracking-[0.06em] mb-1">Total Impact</div>
+               <div className="mb-1 text-xs font-bold tracking-[0.06em] text-muted uppercase">Total Impact</div>
                <div className="text-3xl font-extrabold tracking-tight text-success tabular-nums">
                  {uploads.reduce((acc: number, u: any) => acc + (u.document_analytics?.download_count || 0), 0)} DLs
                </div>
             </div>
           </div>
 
-          <h3 className="text-xs font-bold uppercase tracking-[0.06em] text-muted">Upload History</h3>
+          <h3 className="text-xs font-bold tracking-[0.06em] text-muted uppercase">Upload History</h3>
           {uploads.length > 0 ? uploads.map((item: any, idx: number) => (
              <UserDocumentCard 
                key={idx} 
@@ -278,8 +278,8 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
            )) : (
              <div className="rounded-2xl border border-dashed border-success/30 bg-success/5 p-8 text-center">
                <h3 className="text-base font-extrabold tracking-tight text-foreground">Share the notes you wish you had earlier</h3>
-               <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">Upload notes, PYQs, or syllabus PDFs so the next student has a better starting point.</p>
-               <button onClick={requestUploadPrompt} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-success px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+               <p className="mx-auto mt-1 max-w-md text-sm leading-6 font-medium text-muted">Upload notes, PYQs, or syllabus PDFs so the next student has a better starting point.</p>
+               <button onClick={requestUploadPrompt} className="motion-hover motion-active mt-4 inline-flex items-center gap-2 rounded-xl bg-success px-4 py-2 text-sm font-bold text-white hover:opacity-90">
                  <Upload size={15} /> Upload Notes
                </button>
              </div>

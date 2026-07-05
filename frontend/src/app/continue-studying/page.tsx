@@ -201,23 +201,23 @@ function ContinueStudyingContent() {
       <article className={`group flex flex-col rounded-2xl border ${isSuggestion ? 'border-amber-500/20 bg-amber-500/5 hover:border-amber-500' : 'border-border bg-surface hover:border-indigo-500'} p-4 shadow-sm transition-all hover:-translate-y-0.5   dark:hover:border-indigo-500`}>
         
         {isSuggestion && (
-          <span className="text-xs font-bold text-amber-600 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-2 py-0.5 rounded-full mb-3 self-start">
+          <span className="mb-3 self-start rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
             {badgeText}
           </span>
         )}
 
         <div className="flex items-start justify-between">
-          <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${isSuggestion ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-500'}`}>
+          <div className={`flex size-9 items-center justify-center rounded-xl ${isSuggestion ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-500'}`}>
             <Icon size={16} />
           </div>
-          <span className="text-xs font-extrabold uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.subject}</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-extrabold uppercase dark:bg-slate-800">{doc.subject}</span>
         </div>
-        <h3 className="text-xs font-bold mt-3 line-clamp-2 min-h-[2rem]">{doc.title}</h3>
+        <h3 className="mt-3 line-clamp-2 min-h-[2rem] text-xs font-bold">{doc.title}</h3>
         <div className="mt-4 flex gap-2 border-t pt-3 ">
-          <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-surface py-2 rounded-xl border  hover:bg-surface-hover ">
+          <button onClick={(e) => handleDownload(e, doc)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border bg-surface py-2 text-xs font-bold  hover:bg-surface-hover ">
             {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
           </button>
-          <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white py-2 rounded-xl ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
+          <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold text-white ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
             <Eye size={12} /> View
           </Link>
         </div>
@@ -226,15 +226,15 @@ function ContinueStudyingContent() {
   };
 
   return (
-    <div className="space-y-10 animate-fade-up max-w-6xl mx-auto">
+    <div className="animate-fade-up mx-auto max-w-6xl space-y-10">
       
       {/* HISTORY SECTION */}
       <section className="space-y-6">
-        <div className="rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-6 shadow-sm flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-indigo-500 text-white flex items-center justify-center"><Clock size={24} /></div>
+        <div className="flex items-center gap-4 rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-6 shadow-sm">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-indigo-500 text-white"><Clock size={24} /></div>
           <div>
             <h1 className="text-xl font-extrabold sm:text-3xl">Continue Studying</h1>
-            <p className="text-xs text-indigo-700 dark:text-indigo-400 mt-1">Jump back into your recent materials</p>
+            <p className="mt-1 text-xs text-indigo-700 dark:text-indigo-400">Jump back into your recent materials</p>
           </div>
         </div>
 
@@ -243,10 +243,10 @@ function ContinueStudyingContent() {
           <div className="col-span-full"><DocumentGridSkeleton count={6} /></div>
         ) : isSignedOut ? (
           <div className="col-span-full rounded-2xl border border-dashed border-indigo-500/30 bg-indigo-500/5 p-8 text-center">
-            <p className="mx-auto max-w-md text-sm font-medium leading-6 text-muted">
+            <p className="mx-auto max-w-md text-sm leading-6 font-medium text-muted">
               Sign in to pick up where you left off and get study suggestions based on your recent materials.
             </p>
-            <button onClick={() => requestAuthPrompt("continueStudying")} className="mt-4 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+            <button onClick={() => requestAuthPrompt("continueStudying")} className="motion-hover motion-active mt-4 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-bold text-white hover:opacity-90">
               Continue Studying
             </button>
           </div>
@@ -257,10 +257,10 @@ function ContinueStudyingContent() {
           {safeDocuments.length === 0 && !loading && !isSignedOut && (
             <div className="col-span-full rounded-2xl border border-dashed border-indigo-500/30 bg-indigo-500/5 p-8 text-center">
               <h2 className="text-lg font-extrabold tracking-tight text-foreground">Start your study trail</h2>
-              <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">
+              <p className="mx-auto mt-1 max-w-md text-sm leading-6 font-medium text-muted">
                 Open any resource and it will show up here when you return.
               </p>
-              <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-indigo-500 px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+              <Link href="/recent-uploads" className="motion-hover motion-active mt-4 inline-flex rounded-xl bg-indigo-500 px-4 py-2 text-sm font-bold text-white hover:opacity-90">
                 Start Studying
               </Link>
             </div>
@@ -272,10 +272,10 @@ function ContinueStudyingContent() {
         <section className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-extrabold tracking-tight text-foreground">These resources helped you.</p>
-            <p className="mt-1 text-sm font-medium leading-6 text-muted">Consider uploading your own notes to help future students.</p>
+            <p className="mt-1 text-sm leading-6 font-medium text-muted">Consider uploading your own notes to help future students.</p>
           </div>
           <div className="flex shrink-0 gap-2">
-            <button onClick={requestUploadPrompt} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+            <button onClick={requestUploadPrompt} className="motion-hover motion-active rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
               Upload Notes
             </button>
             <button
@@ -283,7 +283,7 @@ function ContinueStudyingContent() {
                 dismissContributionPrompt();
                 setShowContributionPrompt(false);
               }}
-              className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+              className="motion-hover motion-active rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-hover"
             >
               Later
             </button>
@@ -293,9 +293,9 @@ function ContinueStudyingContent() {
 
       {/* SUGGESTIONS SECTION */}
       {!loading && suggestions.length > 0 && (
-        <section className="space-y-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <section className="space-y-6 border-t border-gray-100 pt-4 dark:border-gray-800">
            <div className="flex items-center gap-3 px-2">
-            <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
               <Sparkles size={18} />
             </div>
             <h2 className="text-lg font-bold text-foreground ">

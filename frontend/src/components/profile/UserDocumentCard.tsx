@@ -49,20 +49,20 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
   };
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-4 flex flex-col transition-colors">
+    <div className="flex flex-col rounded-xl border border-border bg-surface p-4 transition-colors">
       {/* Top Row: Document Info & Stats */}
       <div className="flex items-start justify-between gap-4">
         
         {/* Left Side: Icon + Title/Status */}
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5" />
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <FileText className="size-5" />
           </div>
           <div className="flex flex-col">
-            <h3 className="text-base font-semibold text-foreground line-clamp-1">
+            <h3 className="line-clamp-1 text-base font-semibold text-foreground">
               {title}
             </h3>
-            <div className="text-sm text-muted flex items-center gap-1">
+            <div className="flex items-center gap-1 text-sm text-muted">
               <span className="uppercase">{subject}</span>
               <span>•</span>
               <span className={`${getStatusColor(rawStatus)} font-medium`}>
@@ -73,13 +73,13 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
         </div>
 
         {/* Right Side: View & Download Counts */}
-        <div className="flex items-center gap-4 text-sm text-muted shrink-0 pt-1">
+        <div className="flex shrink-0 items-center gap-4 pt-1 text-sm text-muted">
           <div className="flex items-center gap-1.5">
-            <Eye className="w-4 h-4" />
+            <Eye className="size-4" />
             <span>{views}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Download className="w-4 h-4" />
+            <Download className="size-4" />
             <span>{downloads}</span>
           </div>
         </div>
@@ -87,9 +87,9 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
 
       {/* Rejected State UI (Inline Alert) */}
       {isRejected && (
-        <div className="mt-4 bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex flex-col gap-3">
+        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
           <div className="flex items-center gap-2 text-destructive">
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="size-4" />
             <span className="text-sm font-semibold">Upload Rejected</span>
           </div>
           
@@ -102,9 +102,9 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
               e.stopPropagation();
               setIsResubmitOpen(true);
             }}
-            className="mt-1 w-full flex items-center justify-center gap-2 py-2 rounded-md bg-destructive/20 hover:bg-destructive/30 text-destructive text-sm font-medium transition-colors"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-destructive/20 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/30"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="size-4" />
             Edit & Resubmit
           </button>
         </div>

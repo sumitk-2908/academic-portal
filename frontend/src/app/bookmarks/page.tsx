@@ -141,14 +141,14 @@ function BookmarksContent() {
   if (loading) return <BookmarksSkeleton />;
 
   return (
-    <div className="space-y-6 animate-fade-up max-w-6xl mx-auto w-full">
-      <div className="rounded-3xl border border-warning/20 bg-warning/5 p-6 shadow-sm flex items-center gap-4">
-        <div className="h-12 w-12 rounded-xl bg-warning text-primary-foreground flex items-center justify-center shrink-0">
+    <div className="animate-fade-up mx-auto w-full max-w-6xl space-y-6">
+      <div className="flex items-center gap-4 rounded-3xl border border-warning/20 bg-warning/5 p-6 shadow-sm">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-warning text-primary-foreground">
           <Bookmark size={24} />
         </div>
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">My Bookmarks</h1>
-          <p className="text-sm font-semibold tracking-wider text-warning mt-1">Your saved PDFs and study materials</p>
+          <p className="mt-1 text-sm font-semibold tracking-wider text-warning">Your saved PDFs and study materials</p>
         </div>
       </div>
 
@@ -156,10 +156,10 @@ function BookmarksContent() {
         <div className="flex flex-col gap-4 rounded-2xl border border-warning/20 bg-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-extrabold tracking-tight text-foreground">Help others build their study library too.</p>
-            <p className="mt-1 text-sm font-medium leading-6 text-muted">Your bookmarks are useful. Upload notes that made a subject click for you.</p>
+            <p className="mt-1 text-sm leading-6 font-medium text-muted">Your bookmarks are useful. Upload notes that made a subject click for you.</p>
           </div>
           <div className="flex shrink-0 gap-2">
-            <button onClick={requestUploadPrompt} className="rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+            <button onClick={requestUploadPrompt} className="motion-hover motion-active rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white hover:opacity-90">
               Upload Notes
             </button>
             <button
@@ -167,7 +167,7 @@ function BookmarksContent() {
                 dismissContributionPrompt();
                 setShowContributionPrompt(false);
               }}
-              className="rounded-xl px-3 py-2 text-sm font-bold text-muted motion-hover motion-active hover:bg-surface-hover"
+              className="motion-hover motion-active rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-hover"
             >
               Later
             </button>
@@ -175,33 +175,33 @@ function BookmarksContent() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {isSignedOut ? (
           <div className="col-span-full rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
-            <p className="mx-auto max-w-md text-sm font-medium leading-6 text-muted">
+            <p className="mx-auto max-w-md text-sm leading-6 font-medium text-muted">
               Sign in to sync your bookmarks and continue studying across all your devices.
             </p>
-            <button onClick={() => requestAuthPrompt("bookmark")} className="mt-4 rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+            <button onClick={() => requestAuthPrompt("bookmark")} className="motion-hover motion-active mt-4 rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white hover:opacity-90">
               Save Bookmarks
             </button>
           </div>
         ) : documents.map(doc => {
           const Icon = CATEGORY_ICONS[doc.category] || FileText;
           return (
-            <article key={doc.id} className="group flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm motion-hover hover:-translate-y-0.5 hover:border-warning">
+            <article key={doc.id} className="group motion-hover flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm hover:-translate-y-0.5 hover:border-warning">
               <div className="flex items-start justify-between">
-                <div className="h-9 w-9 bg-warning/10 text-warning rounded-xl flex items-center justify-center"><Icon size={16} /></div>
-                <span className="text-xs font-bold uppercase tracking-[0.06em] bg-surface-hover px-2 py-0.5 rounded-full text-muted">{doc.subject}</span>
+                <div className="flex size-9 items-center justify-center rounded-xl bg-warning/10 text-warning"><Icon size={16} /></div>
+                <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-bold tracking-[0.06em] text-muted uppercase">{doc.subject}</span>
               </div>
-              <h3 className="text-sm font-bold mt-3 line-clamp-2 min-h-[2rem] text-foreground tracking-tight">{doc.title}</h3>
+              <h3 className="mt-3 line-clamp-2 min-h-[2rem] text-sm font-bold tracking-tight text-foreground">{doc.title}</h3>
               <div className="mt-4 flex gap-2 border-t border-border pt-3">
-                <button onClick={(e) => handleDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-surface py-2 rounded-xl border border-border motion-hover motion-active hover:bg-surface-hover text-foreground">
+                <button onClick={(e) => handleDownload(e, doc)} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface py-2 text-sm font-bold text-foreground hover:bg-surface-hover">
                   {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
                 </button>
-                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold bg-warning text-white py-2 rounded-xl motion-hover motion-active hover:opacity-90">
+                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-warning py-2 text-sm font-bold text-white hover:opacity-90">
                   <Eye size={12} /> View
                 </Link>
-                <button onClick={() => toggleBookmark(doc.id)} className="p-2 rounded-xl border border-warning/30 bg-warning/10 text-warning shrink-0 motion-hover motion-active">
+                <button onClick={() => toggleBookmark(doc.id)} className="motion-hover motion-active shrink-0 rounded-xl border border-warning/30 bg-warning/10 p-2 text-warning">
                   <Bookmark size={14} className="fill-warning" />
                 </button>
               </div>
@@ -211,10 +211,10 @@ function BookmarksContent() {
         {documents.length === 0 && !isSignedOut && (
           <div className="col-span-full rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
             <h2 className="text-lg font-extrabold tracking-tight text-foreground">Build your study library</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-muted">
+            <p className="mx-auto mt-1 max-w-md text-sm leading-6 font-medium text-muted">
               Bookmark resources you want to revisit before exams.
             </p>
-            <Link href="/recent-uploads" className="mt-4 inline-flex rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+            <Link href="/recent-uploads" className="motion-hover motion-active mt-4 inline-flex rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white hover:opacity-90">
               Bookmark Resources
             </Link>
           </div>

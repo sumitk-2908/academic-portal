@@ -18,7 +18,7 @@ export default function GlobalError({
           <p className="mt-2 text-sm text-muted">The portal hit a critical error. Your work is safe.</p>
           <button
             onClick={reset}
-            className="mt-6 rounded-xl bg-primary px-6 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90"
+            className="motion-hover motion-active mt-6 rounded-xl bg-primary px-6 py-2 text-sm font-bold text-primary-foreground hover:opacity-90"
           >
             Reload Portal
           </button>

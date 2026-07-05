@@ -85,7 +85,7 @@ function AdminPortalLoginContent() {
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-2xl">
           <div className="mb-8 flex flex-col items-center text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+            <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
               <Shield size={32} />
             </div>
             <h1 className="text-2xl font-extrabold text-foreground">Elevate to Admin</h1>
@@ -162,7 +162,7 @@ function AdminPortalLoginContent() {
       <Toast.Root
         open={toast.open}
         onOpenChange={(open) => setToast((prev) => ({ ...prev, open }))}
-        className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full"
+        className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-xl"
       >
         <Toast.Title className={`text-sm font-bold ${toast.type === "error" ? "text-red-500" : "text-emerald-500"}`}>
           {toast.type === "error" ? "Authentication Error" : "Success"}
@@ -172,7 +172,7 @@ function AdminPortalLoginContent() {
         </Toast.Description>
       </Toast.Root>
 
-      <Toast.Viewport className="fixed bottom-0 right-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
+      <Toast.Viewport className="fixed right-0 bottom-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
     </Toast.Provider>
   );
 }

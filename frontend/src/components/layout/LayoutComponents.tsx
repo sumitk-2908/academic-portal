@@ -36,11 +36,11 @@ const documentHref = (doc: SearchDocument) => `/subject/${subjectSlug(doc.subjec
 
 // 1. App Shell & Content Area
 export const AppShell = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex min-h-[100dvh] flex-col transition-colors duration-300 ease-premium bg-background text-foreground">{children}</div>
+  <div className="ease-premium flex min-h-[100dvh] flex-col bg-background text-foreground transition-colors duration-300">{children}</div>
 );
 
 export const ContentArea = ({ children }: { children: React.ReactNode }) => (
-  <main className="flex-1 w-full min-w-0 p-4 md:p-6 lg:p-8 overflow-x-clip pb-24 lg:pb-8">{children}</main>
+  <main className="w-full min-w-0 flex-1 overflow-x-clip p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">{children}</main>
 );
 
 type CommandItem = {
@@ -57,7 +57,7 @@ const SearchTrigger = ({ onOpen, isMac }: { onOpen: () => void; isMac: boolean }
     type="button"
     onClick={onOpen}
     aria-haspopup="dialog"
-    className="flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-border bg-surface-hover px-3 text-left text-muted shadow-sm motion-hover motion-active hover:bg-surface hover:text-foreground md:max-w-md lg:max-w-xl"
+    className="motion-hover motion-active flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-border bg-surface-hover px-3 text-left text-muted shadow-sm hover:bg-surface hover:text-foreground md:max-w-md lg:max-w-xl"
   >
     <span className="flex min-w-0 items-center gap-2">
       <Search size={17} aria-hidden="true" />
@@ -231,10 +231,10 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/45 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/45 backdrop-blur-sm" />
         <Dialog.Content
           aria-describedby="command-palette-description"
-          className="fixed left-[50%] top-20 z-[100] w-[calc(100vw-1.5rem)] max-w-2xl translate-x-[-50%] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-top-4 data-[state=open]:slide-in-from-top-4 sm:top-[14vh]"
+          className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-top-4 data-[state=open]:slide-in-from-top-4 fixed top-20 left-[50%] z-[100] w-[calc(100vw-1.5rem)] max-w-2xl translate-x-[-50%] overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl sm:top-[14vh]"
         >
           <Dialog.Title className="sr-only">Command Palette</Dialog.Title>
           <p id="command-palette-description" className="sr-only">
@@ -267,7 +267,7 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
               {isMac ? "⌘K" : "Ctrl K"}
             </kbd>
             <Dialog.Close asChild>
-              <button type="button" aria-label="Close command palette" className="rounded-lg p-1.5 text-muted motion-hover motion-active hover:bg-surface-hover hover:text-foreground">
+              <button type="button" aria-label="Close command palette" className="motion-hover motion-active rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground">
                 <X size={18} />
               </button>
             </Dialog.Close>
@@ -275,17 +275,17 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
 
           <div id="command-palette-results" role="listbox" className="max-h-[68vh] overflow-y-auto p-2">
             {ctx.isSearching && normalizedQuery && (
-              <div className="flex items-center gap-2 px-3 py-3 text-xs font-bold text-muted">
+              <div className="flex items-center gap-2 p-3 text-xs font-bold text-muted">
                 <InlineSpinner label="Searching" size={14} /> Searching documents
               </div>
             )}
             {!ctx.isSearching && normalizedQuery && documentItems.length === 0 && (
-              <div className="px-3 py-3 text-xs font-semibold text-muted">No documents found. Try a subject, module, or quick action.</div>
+              <div className="p-3 text-xs font-semibold text-muted">No documents found. Try a subject, module, or quick action.</div>
             )}
 
             {Object.entries(groupedItems).map(([section, sectionItems]) => (
               <div key={section} className="py-1">
-                <p className="px-3 py-2 text-xs font-bold uppercase tracking-[0.06em] text-muted">{section}</p>
+                <p className="px-3 py-2 text-xs font-bold tracking-[0.06em] text-muted uppercase">{section}</p>
                 <div className="space-y-1">
                   {sectionItems.map((item) => {
                     const itemIndex = renderedIndex++;
@@ -299,9 +299,9 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
                         aria-selected={isActive}
                         onMouseEnter={() => setActiveIndex(itemIndex)}
                         onClick={item.action}
-                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left motion-hover ${isActive ? "bg-accent text-foreground" : "text-foreground hover:bg-surface-hover"}`}
+                        className={`motion-hover flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${isActive ? "bg-accent text-foreground" : "text-foreground hover:bg-surface-hover"}`}
                       >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background">{item.icon}</span>
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background">{item.icon}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-bold">{item.label}</span>
                           {item.description && <span className="block truncate text-xs font-semibold text-muted">{item.description}</span>}
@@ -360,7 +360,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
           {ctx.sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
         </button>
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <GraduationCap size={20} />
           </div>
           <div className="hidden leading-tight sm:block">
@@ -374,23 +374,23 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <button onClick={ctx.toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-foreground hover:bg-surface-hover motion-hover motion-active">
+        <button onClick={ctx.toggleTheme} className="motion-hover motion-active flex size-9 items-center justify-center rounded-xl border border-border text-foreground hover:bg-surface-hover">
           {ctx.mounted ? (ctx.isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : null}
         </button>
         
         {(ctx.isAdmin || ctx.isStudent) && (
           <div className="relative">
-            <button onClick={() => ctx.setShowNotifications(!ctx.showNotifications)} className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border hover:bg-surface-hover transition-colors">
+            <button onClick={() => ctx.setShowNotifications(!ctx.showNotifications)} className="relative flex size-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-surface-hover">
               <Bell size={18} className="text-muted" />
-              {ctx.unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white shadow-sm ring-2 ring-surface">{ctx.unreadCount > 9 ? "9+" : ctx.unreadCount}</span>}
+              {ctx.unreadCount > 0 && <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white shadow-sm ring-2 ring-surface">{ctx.unreadCount > 9 ? "9+" : ctx.unreadCount}</span>}
             </button>
             {ctx.showNotifications && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => ctx.setShowNotifications(false)} />
                 <ErrorBoundary title="Notifications could not load" className="m-2" message="Notifications panel hit an unexpected problem.">
-                <div className="absolute -right-2 sm:right-0 top-12 z-50 w-[320px] max-w-[calc(100vw-2rem)] sm:w-80 rounded-2xl border border-border bg-surface shadow-2xl animate-in slide-in-from-top-2 motion-dropdown">
+                <div className="animate-in slide-in-from-top-2 motion-dropdown absolute top-12 -right-2 z-50 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-surface shadow-2xl sm:right-0 sm:w-80">
                   <div className="flex items-center justify-between border-b border-border p-3">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Notifications</p>
+                    <p className="text-xs font-bold tracking-wider text-muted uppercase">Notifications</p>
                     <div className="flex items-center gap-2">
                       {ctx.notifications.some((n) => n.is_read) && (
                         <button 
@@ -403,13 +403,13 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
                               }
                             }
                           }}
-                          className="text-xs tracking-[0.06em] font-bold text-destructive hover:opacity-80 transition-opacity"
+                          className="text-xs font-bold tracking-[0.06em] text-destructive transition-opacity hover:opacity-80"
                         >Clear Read</button>
                       )}
-                      {ctx.unreadCount > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-xs tracking-[0.06em] font-bold text-primary">{ctx.unreadCount} New</span>}
+                      {ctx.unreadCount > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold tracking-[0.06em] text-primary">{ctx.unreadCount} New</span>}
                     </div>
                   </div>
-                  <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+                  <div className="max-h-80 space-y-1 overflow-y-auto p-2">
                     {ctx.notifications.length === 0 ? (
                       <p className="p-4 text-center text-xs text-muted">You&apos;re all caught up!</p>
                     ) : (
@@ -417,7 +417,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
                         <div key={notif.id} onClick={() => ctx.handleMarkAsRead(notif.id, notif.is_read)} className={`flex cursor-pointer flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-surface-hover ${!notif.is_read ? "bg-accent/50" : ""}`}>
                           <div className="flex items-start justify-between">
                             <p className={`text-xs ${!notif.is_read ? "font-bold text-foreground" : "font-semibold text-muted"}`}>{notif.title}</p>
-                            {!notif.is_read ? <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" /> : <CheckCheck size={12} className="mt-0.5 shrink-0 text-success" />}
+                            {!notif.is_read ? <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" /> : <CheckCheck size={12} className="mt-0.5 shrink-0 text-success" />}
                           </div>
                           <p className="text-xs leading-tight text-muted">{notif.message}</p>
                         </div>
@@ -439,7 +439,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
               } else {
                 ctx.setShowProfileGate(true);
               }
-            }} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-3 sm:px-4 text-xs font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+            }} className="motion-hover motion-active flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground hover:opacity-90 sm:px-4">
               <Plus size={14} /> <span>{ctx.isAdmin ? "Upload" : "Contribute"}</span>
             </button>
             <div className="hidden sm:block">
@@ -447,7 +447,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
             </div>
           </div>
         ) : (
-          <button onClick={() => ctx.openAuthPrompt("upload")} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-3 sm:px-4 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 motion-hover motion-active">
+          <button onClick={() => ctx.openAuthPrompt("upload")} className="motion-hover motion-active flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 sm:px-4">
             <Plus size={14} /> <span>Contribute</span>
           </button>
         )}
@@ -460,17 +460,17 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
 
 // 3. Sidebar Components
 export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
-  <div className="space-y-6 flex-1">
+  <div className="flex-1 space-y-6">
     {ctx.sidebarLoading ? (
       <SidebarSkeleton collapsed={ctx.sidebarCollapsed} />
     ) : (
     <>
     <div>
-      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Navigation</p>}
+      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs font-bold tracking-[0.06em] text-muted uppercase">Navigation</p>}
       <Link 
         href="/" 
         title={ctx.sidebarCollapsed ? "Back to Homepage" : undefined} 
-        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+        className={`motion-hover motion-active flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
           ctx.pathname === '/' 
             ? 'bg-primary/10 text-primary' 
             : 'text-muted hover:bg-surface-hover hover:text-primary'
@@ -483,7 +483,7 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
         <Link 
           href="/subject/admin/inbox" 
           title={ctx.sidebarCollapsed ? "Approval Inbox" : undefined} 
-          className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+          className={`motion-hover motion-active mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
             ctx.pathname === '/subject/admin/inbox'
               ? 'bg-warning/10 text-warning'
               : 'text-warning hover:bg-warning/10'
@@ -496,12 +496,12 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
     </div>
 
     <div>
-      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Student Workspace</p>}
+      {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs font-bold tracking-[0.06em] text-muted uppercase">Student Workspace</p>}
       {(ctx.isAdmin || ctx.isStudent) ? (
         <Link
           href="/continue-studying"
           title={ctx.sidebarCollapsed ? "Continue Studying" : undefined}
-          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+          className={`motion-hover motion-active flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
             ctx.pathname === '/continue-studying'
               ? 'bg-primary/10 text-primary'
               : 'text-muted hover:bg-surface-hover hover:text-primary'
@@ -514,7 +514,7 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
           type="button"
           title={ctx.sidebarCollapsed ? "Continue Studying" : undefined}
           onClick={() => ctx.openAuthPrompt("continueStudying")}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition-colors motion-hover motion-active hover:bg-surface-hover hover:text-primary"
+          className="motion-hover motion-active flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-primary"
         >
           <Clock size={18} /> {!ctx.sidebarCollapsed && "Continue Studying"}
         </button>
@@ -523,7 +523,7 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
         <Link
           href="/bookmarks"
           title={ctx.sidebarCollapsed ? "Bookmarks" : undefined}
-          className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+          className={`motion-hover motion-active mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
             ctx.pathname === '/bookmarks'
               ? 'bg-warning/10 text-warning'
               : 'text-muted hover:bg-surface-hover hover:text-warning'
@@ -536,7 +536,7 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
           type="button"
           title={ctx.sidebarCollapsed ? "Bookmarks" : undefined}
           onClick={() => ctx.openAuthPrompt("bookmark")}
-          className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition-colors motion-hover motion-active hover:bg-surface-hover hover:text-warning"
+          className="motion-hover motion-active mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-warning"
         >
           <Bookmark size={18} /> {!ctx.sidebarCollapsed && "Bookmarks"}
         </button>
@@ -544,7 +544,7 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
       <Link 
         href="/recent-uploads" 
         title={ctx.sidebarCollapsed ? "Recent Uploads" : undefined} 
-        className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+        className={`motion-hover motion-active mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
           ctx.pathname === '/recent-uploads'
             ? 'bg-success/10 text-success'
             : 'text-muted hover:bg-surface-hover hover:text-success'
@@ -557,12 +557,12 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
     <ErrorBoundary title="Trending section could not load" className="mt-2" message="Trending docs failed to load.">
       {!ctx.sidebarCollapsed && ctx.trendingDocs.length > 0 && (
         <div>
-          <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Discovery</p>
-          <div className="rounded-2xl border border-border bg-surface p-3 space-y-2.5">
-            <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-xs tracking-[0.06em] font-extrabold uppercase">Trending Now</h3></div>
+          <p className="px-3 pb-2 text-xs font-bold tracking-[0.06em] text-muted uppercase">Discovery</p>
+          <div className="space-y-2.5 rounded-2xl border border-border bg-surface p-3">
+            <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-xs font-extrabold tracking-[0.06em] uppercase">Trending Now</h3></div>
             {ctx.trendingDocs.slice(0, 5).map((doc: SearchDocument, idx: number) => (
-              <Link key={`tr-${doc.id}`} href={documentHref(doc)} className="block text-xs group">
-                <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">{idx + 1}. {doc.title}</p>
+              <Link key={`tr-${doc.id}`} href={documentHref(doc)} className="group block text-xs">
+                <p className="truncate font-bold text-foreground transition-colors group-hover:text-primary">{idx + 1}. {doc.title}</p>
               </Link>
             ))}
           </div>
@@ -595,7 +595,7 @@ export const SidebarFooter = ({ ctx }: { ctx: ClientLayoutContext }) => {
       {(ctx.isAdmin || ctx.isStudent) && (
         <ProfileSidebarCard userName={ctx.uploadedBy || (ctx.isAdmin ? "Admin" : "Student")} role={roleDisplay} />
       )}
-      <div className="space-y-0.5 border-t border-border mt-3 px-3 pt-4 text-xs tracking-[0.06em] font-medium text-muted">
+      <div className="mt-3 space-y-0.5 border-t border-border px-3 pt-4 text-xs font-medium tracking-[0.06em] text-muted">
         <p>Academic Portal • Version 1.6</p>
         <p>© {new Date().getFullYear()} All Rights Reserved.</p>
       </div>
@@ -604,7 +604,7 @@ export const SidebarFooter = ({ ctx }: { ctx: ClientLayoutContext }) => {
 };
 
 export const Sidebar = ({ ctx }: { ctx: ClientLayoutContext }) => (
-  <aside aria-label="Main Desktop Navigation" className={`sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-border bg-background py-6 motion-sidebar lg:flex ${ctx.sidebarCollapsed ? 'w-16 px-2' : 'w-[220px] px-4'}`}>
+  <aside aria-label="Main Desktop Navigation" className={`motion-sidebar sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col overflow-y-auto border-r border-border bg-background py-6 lg:flex ${ctx.sidebarCollapsed ? 'w-16 px-2' : 'w-[220px] px-4'}`}>
     <SidebarNavigation ctx={ctx} />
     <SidebarFooter ctx={ctx} />
   </aside>
@@ -621,37 +621,37 @@ export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
   return (
   <Dialog.Root open={ctx.showAuthModal} onOpenChange={ctx.handleAuthModalOpenChange}>
     <Dialog.Portal>
-      <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-      <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-full max-w-md translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+      <Dialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" />
+      <Dialog.Content className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-[100] w-full max-w-md translate-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <Dialog.Title className="text-xl font-extrabold text-foreground">{title}</Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm font-medium leading-6 text-muted">{description}</Dialog.Description>
+            <Dialog.Description className="mt-2 text-sm leading-6 font-medium text-muted">{description}</Dialog.Description>
           </div>
           <Dialog.Close asChild><button aria-label="Close" className="shrink-0 text-muted hover:opacity-80"><X size={20} /></button></Dialog.Close>
         </div>
         {ctx.authMode !== "forgot" && (
           <>
-            <button type="button" onClick={ctx.handleGoogleLogin} disabled={ctx.googleLoading || ctx.authLoading} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface font-bold text-foreground motion-hover motion-active hover:bg-surface-hover hover:shadow-sm">
+            <button type="button" onClick={ctx.handleGoogleLogin} disabled={ctx.googleLoading || ctx.authLoading} className="motion-hover motion-active flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface font-bold text-foreground hover:bg-surface-hover hover:shadow-sm">
               {ctx.googleLoading ? <InlineSpinner label="Signing in with Google" className="text-muted" size={20} /> : <><FcGoogle size={24} /> Continue with Google</>}
             </button>
-            <div className="my-6 flex items-center"><div className="flex-grow border-t border-border"></div><span className="mx-4 text-xs tracking-[0.06em] font-extrabold uppercase text-muted">Or use email</span><div className="flex-grow border-t border-border"></div></div>
+            <div className="my-6 flex items-center"><div className="flex-grow border-t border-border"></div><span className="mx-4 text-xs font-extrabold tracking-[0.06em] text-muted uppercase">Or use email</span><div className="flex-grow border-t border-border"></div></div>
           </>
         )}
         <form onSubmit={ctx.handleAuthSubmit} className="space-y-4">
-          <input required type="email" value={ctx.authEmail} onChange={(e) => ctx.setAuthEmail(e.target.value)} placeholder="Email Address" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
-          {ctx.authMode !== "forgot" && <input required type="password" value={ctx.authPassword} onChange={(e) => ctx.setAuthPassword(e.target.value)} placeholder="Password" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />}
-          <button type="submit" disabled={ctx.authLoading || ctx.googleLoading} className="h-12 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+          <input required type="email" value={ctx.authEmail} onChange={(e) => ctx.setAuthEmail(e.target.value)} placeholder="Email Address" className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none focus:border-primary" />
+          {ctx.authMode !== "forgot" && <input required type="password" value={ctx.authPassword} onChange={(e) => ctx.setAuthPassword(e.target.value)} placeholder="Password" className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none focus:border-primary" />}
+          <button type="submit" disabled={ctx.authLoading || ctx.googleLoading} className="motion-hover motion-active h-11 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90">
             {ctx.authLoading ? <InlineSpinner label="Authenticating" className="mx-auto" size={18} /> : ctx.authMode === "signin" ? "Login" : ctx.authMode === "signup" ? "Create Account" : "Send Reset Link"}
           </button>
           {ctx.authMode === "signin" && (
-            <div className="flex justify-between w-full mt-2 text-xs font-bold text-primary">
+            <div className="mt-2 flex w-full justify-between text-xs font-bold text-primary">
               <button type="button" onClick={() => ctx.setAuthMode("forgot")} className="hover:underline">Forgot Password?</button>
               <button type="button" onClick={() => ctx.setAuthMode("signup")} className="hover:underline">New student? Sign Up</button>
             </div>
           )}
-          {ctx.authMode === "signup" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="w-full mt-2 text-xs font-bold text-primary hover:underline">Already have an account? Sign In</button>}
-          {ctx.authMode === "forgot" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="w-full mt-2 text-xs font-bold text-primary hover:underline">Back to Sign In</button>}
+          {ctx.authMode === "signup" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="mt-2 w-full text-xs font-bold text-primary hover:underline">Already have an account? Sign In</button>}
+          {ctx.authMode === "forgot" && <button type="button" onClick={() => ctx.setAuthMode("signin")} className="mt-2 w-full text-xs font-bold text-primary hover:underline">Back to Sign In</button>}
         </form>
       </Dialog.Content>
     </Dialog.Portal>
@@ -662,40 +662,40 @@ export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
 export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
   <Dialog.Root open={ctx.showUploadForm} onOpenChange={ctx.setShowUploadForm}>
     <Dialog.Portal>
-      <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-      <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
-        <div className="flex items-center justify-between mb-6">
+      <Dialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" />
+      <Dialog.Content className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-[100] w-full max-w-lg translate-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl">
+        <div className="mb-6 flex items-center justify-between">
           <Dialog.Title className="text-lg font-extrabold text-foreground">{ctx.isAdmin ? "Admin Database Upload" : "Student Contribution"}</Dialog.Title>
-          <Dialog.Close asChild><button className="text-muted hover:opacity-80 transition-opacity"><X size={20} /></button></Dialog.Close>
+          <Dialog.Close asChild><button className="text-muted transition-opacity hover:opacity-80"><X size={20} /></button></Dialog.Close>
         </div>
         <form onSubmit={ctx.handleUpload} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Subject</label>
-              <select value={ctx.uploadSubject} onChange={(e) => ctx.setUploadSubject(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus">{SUBJECTS_LIST.map(sub => <option key={sub} value={sub}>{sub}</option>)}</select>
+              <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Subject</label>
+              <select value={ctx.uploadSubject} onChange={(e) => ctx.setUploadSubject(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none">{SUBJECTS_LIST.map(sub => <option key={sub} value={sub}>{sub}</option>)}</select>
             </div>
             <div>
-              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Module</label>
-              <select value={ctx.uploadModule} onChange={(e) => ctx.setUploadModule(Number(e.target.value))} disabled={ctx.uploadCategory === "syllabus" || isNonModuleSubject(ctx.uploadSubject)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus disabled:opacity-50 disabled:cursor-not-allowed">
+              <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Module</label>
+              <select value={ctx.uploadModule} onChange={(e) => ctx.setUploadModule(Number(e.target.value))} disabled={ctx.uploadCategory === "syllabus" || isNonModuleSubject(ctx.uploadSubject)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none disabled:cursor-not-allowed disabled:opacity-50">
                 {[1, 2, 3, 4, 5].map(m => <option key={m} value={m}>Module {m}</option>)}
               </select>
             </div>
           </div>
-          <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Title</label><input required type="text" value={ctx.uploadTitle} onChange={(e) => ctx.setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
-          <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Category</label><select value={ctx.uploadCategory} onChange={(e) => ctx.setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
+          <div><label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Title</label><input required type="text" value={ctx.uploadTitle} onChange={(e) => ctx.setUploadTitle(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none" /></div>
+          <div><label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Category</label><select value={ctx.uploadCategory} onChange={(e) => ctx.setUploadCategory(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
           <div>
-            <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">File Upload</label>
-            <div className="relative flex items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-hover px-6 py-6 hover:bg-surface hover:border-primary/50 transition-colors">
+            <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">File Upload</label>
+            <div className="relative flex items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-hover p-6 transition-colors hover:border-primary/50 hover:bg-surface">
               <div className="text-center">
-                <Upload className="mx-auto h-6 w-6 text-muted mb-2" />
+                <Upload className="mx-auto mb-2 size-6 text-muted" />
                 <p className="text-sm font-semibold text-foreground">{ctx.file ? ctx.file.name : "Choose a PDF file or drag & drop it here"}</p>
-                <p className="text-xs text-muted mt-1">PDFs only (Max 10MB)</p>
+                <p className="mt-1 text-xs text-muted">PDFs only (Max 10MB)</p>
               </div>
-              <input required type="file" accept="application/pdf" onChange={(e) => ctx.setFile(e.target.files?.[0] || null)} className="absolute inset-0 h-full w-full opacity-0 cursor-pointer disabled:cursor-not-allowed" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing"} />
+              <input required type="file" accept="application/pdf" onChange={(e) => ctx.setFile(e.target.files?.[0] || null)} className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing"} />
             </div>
           </div>
           <UploadProgressBar state={ctx.uploadState} progress={ctx.uploadProgress} fileName={ctx.file?.name} errorMessage={ctx.uploadErrorMsg} />
-          <button type="submit" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing" || ctx.uploadState === "success"} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50 motion-hover motion-active">{(ctx.uploadState === "uploading" || ctx.uploadState === "processing") ? <><InlineSpinner label="Processing upload" size={16} /> Processing</> : "Publish Resource"}</button>
+          <button type="submit" disabled={ctx.uploadState === "uploading" || ctx.uploadState === "processing" || ctx.uploadState === "success"} className="motion-hover motion-active flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50">{(ctx.uploadState === "uploading" || ctx.uploadState === "processing") ? <><InlineSpinner label="Processing upload" size={16} /> Processing</> : "Publish Resource"}</button>
         </form>
       </Dialog.Content>
     </Dialog.Portal>
@@ -720,7 +720,7 @@ export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[68px] items-center justify-around border-t border-border bg-surface/90 backdrop-blur-xl pb-safe lg:hidden px-2">
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 flex h-[68px] items-center justify-around border-t border-border bg-surface/90 px-2 backdrop-blur-xl lg:hidden">
         <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/' ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
           <Home size={22} /><span className="text-xs font-bold">Home</span>
         </Link>
@@ -748,19 +748,19 @@ export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
       </nav>
       
       {ctx.showMobileMenu && (
-        <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden motion-modal" onClick={() => ctx.setShowMobileMenu(false)}>
-          <div className="w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-border bg-surface p-6 pb-28 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6"><h2 className="text-xl font-extrabold text-foreground">More Options</h2><button onClick={() => ctx.setShowMobileMenu(false)} className="rounded-full bg-surface-hover p-2 text-muted"><X size={20} /></button></div>
+        <div className="motion-modal fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => ctx.setShowMobileMenu(false)}>
+          <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border-t border-border bg-surface p-6 pb-28 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-6 flex items-center justify-between"><h2 className="text-xl font-extrabold text-foreground">More Options</h2><button onClick={() => ctx.setShowMobileMenu(false)} className="rounded-full bg-surface-hover p-2 text-muted"><X size={20} /></button></div>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-3">
-                <Link href="/recent-uploads" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Upload size={18} className="text-success" /> <span>Uploads</span></Link>
+                <Link href="/recent-uploads" onClick={() => ctx.setShowMobileMenu(false)} className="motion-hover motion-active flex items-center gap-3 rounded-xl bg-surface-hover p-3.5 text-xs font-bold text-foreground"><Upload size={18} className="text-success" /> <span>Uploads</span></Link>
                 {isSignedIn ? (
-                  <Link href="/continue-studying" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Clock size={18} className="text-primary" /> <span>Continue</span></Link>
+                  <Link href="/continue-studying" onClick={() => ctx.setShowMobileMenu(false)} className="motion-hover motion-active flex items-center gap-3 rounded-xl bg-surface-hover p-3.5 text-xs font-bold text-foreground"><Clock size={18} className="text-primary" /> <span>Continue</span></Link>
                 ) : (
-                  <button type="button" onClick={() => { ctx.setShowMobileMenu(false); ctx.openAuthPrompt("continueStudying"); }} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-left text-xs font-bold text-foreground motion-hover motion-active"><Clock size={18} className="text-primary" /> <span>Continue</span></button>
+                  <button type="button" onClick={() => { ctx.setShowMobileMenu(false); ctx.openAuthPrompt("continueStudying"); }} className="motion-hover motion-active flex items-center gap-3 rounded-xl bg-surface-hover p-3.5 text-left text-xs font-bold text-foreground"><Clock size={18} className="text-primary" /> <span>Continue</span></button>
                 )}
                 {!isSignedIn && (
-                  <button type="button" onClick={() => { ctx.setShowMobileMenu(false); ctx.openAuthPrompt("upload"); }} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-left text-xs font-bold text-foreground motion-hover motion-active"><Plus size={18} className="text-primary" /> <span>Contribute</span></button>
+                  <button type="button" onClick={() => { ctx.setShowMobileMenu(false); ctx.openAuthPrompt("upload"); }} className="motion-hover motion-active flex items-center gap-3 rounded-xl bg-surface-hover p-3.5 text-left text-xs font-bold text-foreground"><Plus size={18} className="text-primary" /> <span>Contribute</span></button>
                 )}
               </div>
               {isSignedIn && (
@@ -770,7 +770,7 @@ export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
                       ctx.setShowMobileMenu(false); 
                       setIsSignOutModalOpen(true); 
                     }} 
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 p-3 text-sm font-semibold text-destructive hover:bg-destructive/10 motion-hover motion-active"
+                    className="motion-hover motion-active flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 p-3 text-sm font-semibold text-destructive hover:bg-destructive/10"
                   >
                     <LogOut size={18} /> Sign Out
                   </button>
@@ -784,16 +784,16 @@ export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
       {/* Sign Out Confirmation Modal for Mobile */}
       {isSignOutModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-surface border border-border p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-foreground mb-2">Sign Out</h2>
-            <p className="text-sm text-muted mb-6">
+          <div className="w-full max-w-sm rounded-3xl border border-border bg-surface p-6 shadow-2xl">
+            <h2 className="mb-2 text-xl font-bold text-foreground">Sign Out</h2>
+            <p className="mb-6 text-sm text-muted">
               Are you sure you want to sign out? You will need to log back in to access your study materials and contributions.
             </p>
             
-            <div className="flex items-center gap-3 w-full">
+            <div className="flex w-full items-center gap-3">
               <button
                 onClick={() => setIsSignOutModalOpen(false)}
-                className="flex-1 rounded-xl bg-surface-hover border border-border py-2.5 text-sm font-bold text-foreground transition-colors hover:opacity-80"
+                className="flex-1 rounded-xl border border-border bg-surface-hover py-2.5 text-sm font-bold text-foreground transition-colors hover:opacity-80"
               >
                 Cancel
               </button>
@@ -828,7 +828,7 @@ export const BannersAndToasts = ({ ctx }: { ctx: ClientLayoutContext }) => (
       </div>
     )}
     {ctx.activeToast && <AchievementToast title={ctx.activeToast.title} description={ctx.activeToast.description} onClose={() => ctx.setActiveToast(null)} />}
-    <Toast.Root open={ctx.globalToast.open} onOpenChange={(open) => ctx.setGlobalToast(prev => ({...prev, open}))} className={`fixed z-[150] bottom-4 right-4 w-auto max-w-md rounded-xl p-4 shadow-xl border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${ctx.globalToast.type === 'error' ? 'bg-destructive/10 border-destructive/20' : ctx.globalToast.type === 'success' ? 'bg-success/10 border-success/20' : 'bg-surface border-border'}`}>
+    <Toast.Root open={ctx.globalToast.open} onOpenChange={(open) => ctx.setGlobalToast(prev => ({...prev, open}))} className={`fixed right-4 bottom-4 z-[150] w-auto max-w-md rounded-xl border p-4 shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${ctx.globalToast.type === 'error' ? 'border-destructive/20 bg-destructive/10' : ctx.globalToast.type === 'success' ? 'border-success/20 bg-success/10' : 'border-border bg-surface'}`}>
       <Toast.Title className={`text-sm font-bold ${ctx.globalToast.type === 'error' ? 'text-destructive' : ctx.globalToast.type === 'success' ? 'text-success' : 'text-foreground'}`}>{ctx.globalToast.title}</Toast.Title>
       <Toast.Description className={`mt-1 text-xs ${ctx.globalToast.type === 'error' ? 'text-destructive/80' : ctx.globalToast.type === 'success' ? 'text-success/80' : 'text-muted'}`}>{ctx.globalToast.message}</Toast.Description>
     </Toast.Root>
@@ -894,29 +894,29 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
       ctx.setShowOnboardingModal(open);
     }}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-full max-w-md translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <Dialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" />
+        <Dialog.Content className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-[100] w-full max-w-md translate-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl">
           <div className="mb-6">
             <Dialog.Title className="text-xl font-extrabold text-foreground">Welcome!</Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm font-medium leading-6 text-muted">
+            <Dialog.Description className="mt-2 text-sm leading-6 font-medium text-muted">
               Let&apos;s set up your profile so you can get the most out of the portal.
             </Dialog.Description>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             {errorMsg && <p className="text-sm font-semibold text-destructive">{errorMsg}</p>}
             <div>
-              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Display Name *</label>
-              <input required type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. John Doe" className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
+              <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Display Name *</label>
+              <input required type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. John Doe" className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none focus:border-primary" />
             </div>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Branch</label>
-                <input type="text" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="e.g. CSE" className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
+                <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Branch</label>
+                <input type="text" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="e.g. CSE" className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none focus:border-primary" />
               </div>
               <div>
-                <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Year</label>
-                <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary text-foreground motion-focus">
+                <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Year</label>
+                <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary">
                   <option value="">Select Year</option>
                   <option value="1st year">1st year</option>
                   <option value="2nd year">2nd year</option>
@@ -928,10 +928,10 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Favorite Subjects (Max 5)</label>
+              <label className="mb-2 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Favorite Subjects (Max 5)</label>
               <div className="relative">
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-2 motion-focus-within focus-within:border-primary focus-within:bg-surface">
-                  <Search size={16} className="text-muted ml-1" />
+                <div className="motion-focus-within flex items-center gap-2 rounded-xl border border-border bg-background p-2 focus-within:border-primary focus-within:bg-surface">
+                  <Search size={16} className="ml-1 text-muted" />
                   <input 
                     type="text" 
                     placeholder={favoriteSubjects.length < 5 ? "Search subjects..." : "Maximum subjects reached"}
@@ -951,7 +951,7 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
                           setFavoriteSubjects([...favoriteSubjects, subject]);
                           setSubjectQuery("");
                         }}
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-primary/10 hover:text-primary motion-hover"
+                        className="motion-hover w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-primary/10 hover:text-primary"
                       >
                         {subject}
                       </button>
@@ -965,9 +965,9 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
               {favoriteSubjects.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {favoriteSubjects.map(subject => (
-                    <span key={subject} className="flex items-center gap-1 rounded-full bg-primary/10 pl-3 pr-1 py-1 text-xs font-bold text-primary">
+                    <span key={subject} className="flex items-center gap-1 rounded-full bg-primary/10 py-1 pr-1 pl-3 text-xs font-bold text-primary">
                       {subject}
-                      <button type="button" onClick={() => setFavoriteSubjects(favoriteSubjects.filter(s => s !== subject))} className="rounded-full p-1 hover:bg-primary/20 text-primary motion-hover">
+                      <button type="button" onClick={() => setFavoriteSubjects(favoriteSubjects.filter(s => s !== subject))} className="motion-hover rounded-full p-1 text-primary hover:bg-primary/20">
                         <X size={12} />
                       </button>
                     </span>
@@ -977,10 +977,10 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
             </div>
 
             <div className="pt-2">
-              <button type="submit" disabled={loading} className="h-11 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+              <button type="submit" disabled={loading} className="motion-hover motion-active h-11 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90">
                 {loading ? "Saving..." : "Save & Continue"}
               </button>
-              <button type="button" onClick={handleSkip} disabled={loading} className="w-full mt-2 text-xs font-bold text-muted hover:text-foreground">
+              <button type="button" onClick={handleSkip} disabled={loading} className="mt-2 w-full text-xs font-bold text-muted hover:text-foreground">
                 Skip for now
               </button>
             </div>
@@ -1007,19 +1007,19 @@ export const ProfileGateModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
   return (
     <Dialog.Root open={ctx.showProfileGate} onOpenChange={ctx.setShowProfileGate}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-full max-w-sm translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <Dialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" />
+        <Dialog.Content className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-[100] w-full max-w-sm translate-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl">
           <div className="mb-6">
             <Dialog.Title className="text-lg font-extrabold text-foreground">Ready to set up your profile?</Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm font-medium leading-6 text-muted">
+            <Dialog.Description className="mt-2 text-sm leading-6 font-medium text-muted">
               Adding your real name gives you proper attribution for your contributions and builds trust in the community.
             </Dialog.Description>
           </div>
           <div className="flex flex-col gap-3">
-            <button onClick={handleSetup} className="h-11 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+            <button onClick={handleSetup} className="motion-hover motion-active h-11 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90">
               Set Up Profile
             </button>
-            <button onClick={handleLater} className="h-11 w-full rounded-xl bg-surface-hover font-bold text-foreground hover:opacity-80 motion-hover motion-active">
+            <button onClick={handleLater} className="motion-hover motion-active h-11 w-full rounded-xl bg-surface-hover font-bold text-foreground hover:opacity-80">
               Later
             </button>
           </div>

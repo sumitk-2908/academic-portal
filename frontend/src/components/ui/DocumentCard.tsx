@@ -50,41 +50,41 @@ export default function DocumentCard({
   const targetSubjectSlug = subjectSlug || doc.subject?.toLowerCase().replace(/ /g, '-');
 
   return (
-    <article className={`group flex flex-col rounded-2xl border border-l-[3px] ${accentBorderColor} p-5 shadow-sm motion-hover hover:-translate-y-1 hover:shadow-md ${
+    <article className={`group flex flex-col rounded-2xl border border-l-[3px] ${accentBorderColor} motion-hover p-5 shadow-sm hover:-translate-y-1 hover:shadow-md ${
       isBookmarked 
-        ? "bg-warning/5 border-warning/20 hover:border-warning/40 hover:border-y-warning/40" 
-        : "bg-surface border-border hover:border-r-border hover:border-y-border"
+        ? "border-warning/20 bg-warning/5 hover:border-warning/40 hover:border-y-warning/40" 
+        : "border-border bg-surface hover:border-y-border hover:border-r-border"
     }`}>
       
-      <div className="relative mb-4 h-32 w-full overflow-hidden rounded-xl bg-background flex items-center justify-center">
+      <div className="relative mb-4 flex h-32 w-full items-center justify-center overflow-hidden rounded-xl bg-background">
         {doc.thumbnail_url ? (
-          <img src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} className="object-cover object-top w-full h-full opacity-90 motion-hover group-hover:opacity-100" />
+          <img src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} className="motion-hover size-full object-cover object-top opacity-90 group-hover:opacity-100" />
         ) : (
           <div className="flex flex-col items-center gap-2 text-muted">
             <Icon size={32} className="opacity-50" />
           </div>
         )}
         {/* Helper Text / Badge: 11px, Extrabold, Wide Tracking */}
-        <span className="absolute top-2 right-2 rounded-md bg-foreground/80 backdrop-blur-md px-2 py-1 text-xs font-extrabold uppercase tracking-wider text-background shadow-sm">
+        <span className="absolute top-2 right-2 rounded-md bg-foreground/80 px-2 py-1 text-xs font-extrabold tracking-wider text-background uppercase shadow-sm backdrop-blur-md">
           {doc.category}
         </span>
       </div>
 
       <div className="flex flex-1 flex-col">
         {/* Card Title: 16px, Bold, Tight Tracking */}
-        <h3 className="text-xl font-bold tracking-tight leading-tight line-clamp-2 min-h-[2.5rem] text-foreground">
+        <h3 className="line-clamp-2 min-h-[2.5rem] text-xl leading-tight font-bold tracking-tight text-foreground">
           {doc.title}
         </h3>
         
         <div className="mt-1 flex items-center gap-1.5">
           {/* Uploader Label: 11px, Bold, Wide Tracking */}
-          <span className="text-xs font-bold uppercase tracking-wider text-primary truncate">
+          <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
             {doc.uploader_name || 'Anonymous'}
           </span>
         </div>
         
         {/* Metadata Layer: 12px, Medium, Tabular Numbers for perfect decimal/date alignment */}
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm font-medium tabular-nums text-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm font-medium text-muted tabular-nums">
           <span>{doc.page_count ? `${doc.page_count} pgs` : 'PDF'}</span>
           <span>·</span>
           <span>{doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'N/A'}</span>
@@ -94,20 +94,20 @@ export default function DocumentCard({
       </div>
       
       <div className="mt-4 flex gap-2 border-t border-border pt-4">
-        <button onClick={(e) => onDownload(e, doc)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-hover py-2 text-sm font-bold text-foreground motion-hover motion-active hover:border-primary/50">
+        <button onClick={(e) => onDownload(e, doc)} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-hover py-2 text-sm font-bold text-foreground hover:border-primary/50">
           {isDownloading ? <InlineSpinner label="Downloading" size={13} /> : <Download size={13} />} DL
         </button>
         
-        <Link href={`/subject/${targetSubjectSlug}/module-${doc.module_id || 1}/${doc.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-transparent bg-primary py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+        <Link href={`/subject/${targetSubjectSlug}/module-${doc.module_id || 1}/${doc.id}`} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent bg-primary py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
           <Eye size={13} /> View
         </Link>
         
-        <button onClick={() => onToggleBookmark(doc.id)} className={`rounded-xl border p-2 motion-hover motion-active ${isBookmarked ? "bg-warning border-warning text-white" : "border-warning text-warning hover:bg-warning/10"}`}>
+        <button onClick={() => onToggleBookmark(doc.id)} className={`motion-hover motion-active rounded-xl border p-2 ${isBookmarked ? "border-warning bg-warning text-white" : "border-warning text-warning hover:bg-warning/10"}`}>
           <Bookmark size={14} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
         </button>
         
         {isAdmin && onDelete && (
-          <button onClick={() => onDelete(doc.id)} className="rounded-xl border border-destructive/30 p-2 text-destructive motion-hover motion-active hover:bg-destructive/10">
+          <button onClick={() => onDelete(doc.id)} className="motion-hover motion-active rounded-xl border border-destructive/30 p-2 text-destructive hover:bg-destructive/10">
             <Trash2 size={14} />
           </button>
         )}

@@ -137,7 +137,7 @@ body {
   }
 
   /* 2. Active State: Satisfying 'press' detent effect */
-  .motion-active:active {
+  .motion-active:active:not(:disabled) {
     transform: scale(0.97);
     transition-duration: 150ms;
     transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);

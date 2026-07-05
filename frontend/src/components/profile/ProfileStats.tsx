@@ -29,7 +29,7 @@ export default function ProfileStats({
           <div className="text-2xl font-extrabold text-foreground">
             {stat.value}
           </div>
-          <div className="mt-1 text-xs font-bold uppercase tracking-wider text-muted">
+          <div className="mt-1 text-xs font-bold tracking-wider text-muted uppercase">
             {stat.label}
           </div>
         </div>

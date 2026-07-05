@@ -40,11 +40,11 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
 
   return (
     <>
-      <div className="flex justify-center px-4 mb-4">
+      <div className="mb-4 flex justify-center px-4">
         <select
           value={selectedSubject}
           onChange={(e) => setSelectedSubject(e.target.value)}
-          className="w-full max-w-xs cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-foreground shadow-sm outline-none motion-hover motion-focus focus:border-primary sm:max-w-sm"
+          className="motion-hover motion-focus h-11 w-full max-w-xs cursor-pointer rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground shadow-sm outline-none focus:border-primary sm:max-w-sm"
         >
           <option value="All">All Subjects</option>
           {subjects.map((sub) => (
@@ -62,10 +62,10 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
           icon={BookOpen}
           action={
             <>
-              <button onClick={() => setSelectedSubject("All")} className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground motion-hover motion-active hover:bg-surface-hover">
+              <button onClick={() => setSelectedSubject("All")} className="motion-hover motion-active rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-hover">
                 Start Studying
               </button>
-              <button onClick={requestUploadPrompt} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+              <button onClick={requestUploadPrompt} className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
                 <Upload size={15} /> Upload Notes
               </button>
             </>
@@ -85,13 +85,13 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
                 ref={(el) => { if (el) elementsRef.current[index] = el; }}
                 tabIndex={activeIndex === index ? 0 : -1}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className={`group flex flex-col items-center justify-center rounded-2xl border border-border bg-surface p-6 text-center motion-hover motion-active hover:-translate-y-1 hover:border-primary/60 hover:bg-surface-hover hover:shadow-md ${ui.border}`}
+                className={`group motion-hover motion-active flex flex-col items-center justify-center rounded-2xl border border-border bg-surface p-5 text-center shadow-sm hover:-translate-y-1 hover:border-primary/60 hover:bg-surface-hover hover:shadow-md ${ui.border}`}
               >
-                <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${ui.bg} ${ui.color} motion-hover group-hover:scale-110 ${ui.hoverBg} group-hover:text-white`}>
+                <div className={`mb-4 flex size-14 items-center justify-center rounded-2xl ${ui.bg} ${ui.color} motion-hover group-hover:scale-110 ${ui.hoverBg} group-hover:text-white`}>
                   <Icon size={24} />
                 </div>
                 <h2 className="text-xs font-bold tracking-tight text-foreground">{sub.name}</h2>
-                <span className="mt-2 rounded-full bg-surface-hover px-2 py-0.5 text-xs tabular-nums font-semibold text-muted">
+                <span className="mt-2 rounded-full bg-surface-hover px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">
                   {subjectCounts[sub.name.toUpperCase()] || 0} items
                 </span>
               </Link>
