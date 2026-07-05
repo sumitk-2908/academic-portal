@@ -1,36 +1,63 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Edit, GraduationCap, BookOpen, X, Flame } from "lucide-react";
+import { Edit, GraduationCap, BookOpen, X, Flame, Search } from "lucide-react";
 import { getProfilePreferences, updateProfilePreferences } from "@/app/lib/api";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
+import { SUBJECTS_LIST } from "@/app/hooks/useClientLayout";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ProfileHeader({ user, streak }: { user: any, streak?: any }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  const name = user?.user_metadata?.full_name || "Student User";
   const email = user?.email || "No email provided";
   const avatarUrl = user?.user_metadata?.avatar_url;
   
   // Preference States
+  const [fullName, setFullName] = useState("");
   const [branch, setBranch] = useState("");
-  const [subjectsStr, setSubjectsStr] = useState("");
+  const [favoriteSubjects, setFavoriteSubjects] = useState<string[]>([]);
+  const [subjectQuery, setSubjectQuery] = useState("");
 
   // Refs for Focus Management
   const modalRef = useRef<HTMLDivElement>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
 
-  const getInitials = (fullName: string) => fullName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+  const getInitials = (fName: string) => fName === "Student" ? "ST" : (fName.substring(0, 2).toUpperCase() || "ST");
   const currentStreak = streak?.current_streak || 0;
 
-  // Fetch existing preferences when modal opens
+  useEffect(() => {
+    if (searchParams?.get("edit") === "true") {
+      setIsEditModalOpen(true);
+      router.replace("/profile");
+    }
+  }, [searchParams, router]);
+
+  // Fetch existing preferences
+  useEffect(() => {
+    if (user?.id) {
+      getProfilePreferences(user.id).then(data => {
+        if (data) {
+          setBranch(data.preferred_branch || "");
+          setFavoriteSubjects(data.favorite_subjects || []);
+          setFullName(data.full_name || "Student");
+        } else {
+          setFullName("Student");
+        }
+      });
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (isEditModalOpen && user?.id) {
       getProfilePreferences(user.id).then(data => {
         if (data) {
           setBranch(data.preferred_branch || "");
-          setSubjectsStr(data.favorite_subjects?.join(", ") || "");
+          setFavoriteSubjects(data.favorite_subjects || []);
+          if (data.full_name) setFullName(data.full_name);
         }
       });
     }
@@ -39,7 +66,6 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
   // Focus Trap and Accessibility Keyboard Listeners
   useEffect(() => {
     if (!isEditModalOpen) {
-      // Restore focus to the trigger button when modal closes
       editButtonRef.current?.focus();
       return;
     }
@@ -47,7 +73,6 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
     const modalElement = modalRef.current;
     if (!modalElement) return;
 
-    // Select all focusable elements inside the modal
     const focusableElements = modalElement.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
@@ -55,24 +80,21 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
 
-    // Focus the first element (Close button) when modal opens
     firstElement?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Escape key to close
       if (e.key === 'Escape') {
         setIsEditModalOpen(false);
         return;
       }
 
-      // 2. Focus trapping on Tab
       if (e.key === 'Tab') {
-        if (e.shiftKey) { // Shift + Tab
+        if (e.shiftKey) {
           if (document.activeElement === firstElement) {
             lastElement?.focus();
             e.preventDefault();
           }
-        } else { // Tab
+        } else {
           if (document.activeElement === lastElement) {
             firstElement?.focus();
             e.preventDefault();
@@ -85,15 +107,21 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isEditModalOpen]);
 
-  const handleSave = async () => {
-    if (!user?.id) return;
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id || !fullName.trim()) return;
     setIsSaving(true);
     try {
-      const favorite_subjects = subjectsStr.split(",").map(s => s.trim()).filter(s => s !== "");
-      await updateProfilePreferences(user.id, {
+      const updates = {
+        full_name: fullName.trim(),
         preferred_branch: branch,
-        favorite_subjects
-      });
+        favorite_subjects: favoriteSubjects
+      };
+      await updateProfilePreferences(user.id, updates);
+      
+      // Dispatch event to update layout context
+      window.dispatchEvent(new CustomEvent("portal_profile_update", { detail: updates }));
+      
       setIsEditModalOpen(false);
     } catch (error) {
       alert("Failed to save preferences.");
@@ -104,19 +132,32 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
 
   return (
     <>
+      {(!fullName || fullName === "Student") && (
+        <div className="mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 animate-fade-in">
+          <p className="text-sm font-semibold text-foreground text-center sm:text-left">
+            Complete your profile to unlock personalized recommendations and community recognition.
+          </p>
+          <button 
+            onClick={() => setIsEditModalOpen(true)}
+            className="shrink-0 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active"
+          >
+            Complete Profile
+          </button>
+        </div>
+      )}
       <div className="mb-4 rounded-2xl border border-border bg-surface p-5">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={name} className="h-20 w-20 sm:h-14 sm:w-14 shrink-0 rounded-full object-cover shadow-sm" />
+            <img src={avatarUrl} alt={fullName || "Student"} className="h-20 w-20 sm:h-14 sm:w-14 shrink-0 rounded-full object-cover shadow-sm" />
           ) : (
             <div className="flex h-20 w-20 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground shadow-sm">
-              {getInitials(name)}
+              {getInitials(fullName || "Student")}
             </div>
           )}
 
           <div className="flex-1 min-w-0 w-full flex flex-col items-center sm:items-start">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mb-1 sm:mb-0.5">
-              <h1 className="text-xl font-extrabold tracking-tight text-foreground">{name}</h1>
+              <h1 className="text-xl font-extrabold tracking-tight text-foreground">{fullName || "Student"}</h1>
               {currentStreak > 0 && (
                 <div className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-bold tabular-nums text-orange-500">
                   <Flame size={12} fill="currentColor" aria-hidden="true"/>
@@ -161,49 +202,100 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
               </button>
             </div>
             
-            <div className="space-y-4 mb-6">
-              <div>
-                <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Preferred Branch / Course</label>
-                <input 
-                  id="branchInput"
-                  type="text" 
-                  placeholder="e.g. B.Tech Computer Science"
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background p-3 text-base text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
-                />
+            <form onSubmit={handleSave}>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label htmlFor="nameInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Display Name</label>
+                  <input 
+                    id="nameInput"
+                    required
+                    type="text" 
+                    placeholder="e.g. John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Preferred Branch / Course</label>
+                  <input 
+                    id="branchInput"
+                    type="text" 
+                    placeholder="e.g. B.Tech Computer Science"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Favorite Subjects (Max 5)</label>
+                  <div className="relative">
+                    <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-2 motion-focus-within focus-within:border-primary focus-within:bg-surface">
+                      <Search size={16} className="text-muted ml-1" />
+                      <input 
+                        type="text" 
+                        placeholder={favoriteSubjects.length < 5 ? "Search subjects..." : "Maximum subjects reached"}
+                        value={subjectQuery}
+                        onChange={(e) => setSubjectQuery(e.target.value)}
+                        disabled={favoriteSubjects.length >= 5}
+                        className="w-full bg-transparent text-sm text-foreground outline-none disabled:opacity-50"
+                      />
+                    </div>
+                    {subjectQuery.trim() && favoriteSubjects.length < 5 && (
+                      <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
+                        {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).map(subject => (
+                          <button
+                            key={subject}
+                            type="button"
+                            onClick={() => {
+                              setFavoriteSubjects([...favoriteSubjects, subject]);
+                              setSubjectQuery("");
+                            }}
+                            className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-primary/10 hover:text-primary motion-hover"
+                          >
+                            {subject}
+                          </button>
+                        ))}
+                        {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).length === 0 && (
+                          <div className="px-3 py-2 text-xs text-muted">No subjects found.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {favoriteSubjects.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {favoriteSubjects.map(subject => (
+                        <span key={subject} className="flex items-center gap-1 rounded-full bg-primary/10 pl-3 pr-1 py-1 text-xs font-bold text-primary">
+                          {subject}
+                          <button type="button" onClick={() => setFavoriteSubjects(favoriteSubjects.filter(s => s !== subject))} className="rounded-full p-1 hover:bg-primary/20 text-primary motion-hover">
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-1.5 text-xs text-muted">We will use this to recommend resources in the future.</p>
+                </div>
               </div>
-              <div>
-                <label htmlFor="subjectsInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Favorite Subjects</label>
-                <input 
-                  id="subjectsInput"
-                  type="text" 
-                  placeholder="Maths, Physics, BEE (Comma separated)"
-                  value={subjectsStr}
-                  onChange={(e) => setSubjectsStr(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background p-3 text-base text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
-                />
-                <p className="mt-1.5 text-xs text-muted">We will use this to recommend resources in the future.</p>
-              </div>
-            </div>
 
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setIsEditModalOpen(false)} className="rounded-xl px-4 py-2 text-sm font-bold text-muted bg-surface-hover motion-hover motion-active">Cancel</button>
-              <button 
-                onClick={handleSave} 
-                disabled={isSaving}
-                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90 disabled:opacity-50"
-              >
-                {isSaving ? (
-                  <>
-                    <InlineSpinner label="Saving preferences" size={16} /> 
-                    <span aria-live="polite">Saving preferences...</span>
-                  </>
-                ) : (
-                  "Save Preferences"
-                )}
-              </button>
-            </div>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="rounded-xl px-4 py-2 text-sm font-bold text-muted bg-surface-hover motion-hover motion-active">Cancel</button>
+                <button 
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90 disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <InlineSpinner label="Saving preferences" size={16} /> 
+                      <span aria-live="polite">Saving preferences...</span>
+                    </>
+                  ) : (
+                    "Save Preferences"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

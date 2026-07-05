@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings } from "lucide-react";
+
 
 interface ProfileSidebarCardProps {
   userName: string;
@@ -7,7 +7,7 @@ interface ProfileSidebarCardProps {
 }
 
 export default function ProfileSidebarCard({ userName, role }: ProfileSidebarCardProps) {
-  const initials = userName.substring(0, 2).toUpperCase() || "ST";
+  const initials = userName === "Student" ? "ST" : (userName.substring(0, 2).toUpperCase() || "ST");
 
   return (
     <div className="mt-auto pt-4 pb-2 animate-fade-up">
@@ -22,7 +22,7 @@ export default function ProfileSidebarCard({ userName, role }: ProfileSidebarCar
           <p className="text-sm font-bold text-foreground truncate">{userName}</p>
           <p className="text-xs font-semibold text-primary truncate">{role}</p>
         </div>
-        <Settings size={14} className="shrink-0 text-muted" />
+
       </Link>
     </div>
   );

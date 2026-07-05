@@ -20,7 +20,7 @@ export default function ProfileDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const initials = userName.substring(0, 2).toUpperCase() || "ST";
+  const initials = userName === "Student" ? "ST" : (userName.substring(0, 2).toUpperCase() || "ST");
 
   // Handle dropdown outside click & keyboard navigation
   useEffect(() => {
@@ -122,12 +122,7 @@ export default function ProfileDropdown({
                 <User size={16} aria-hidden="true" /> My Profile
               </Link>
 
-              <button
-                role="menuitem"
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted motion-hover focus:outline-none hover:bg-surface-hover focus:bg-surface-hover"
-              >
-                <Settings size={16} aria-hidden="true" /> Settings
-              </button>
+
             </div>
 
             <div className="border-t border-border pt-2">

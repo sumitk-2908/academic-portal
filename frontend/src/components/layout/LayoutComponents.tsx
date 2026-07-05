@@ -353,7 +353,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
 
   return (
   <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-xl">
-    <div className="mx-auto flex min-h-16 w-full max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 md:flex-nowrap md:gap-4 md:px-6 md:py-0">
+    <div className="mx-auto flex min-h-16 w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3 md:flex-nowrap md:gap-4 md:px-6 md:py-0">
       
       <div className="flex shrink-0 items-center gap-2.5">
         <button onClick={() => ctx.setSidebarCollapsed(!ctx.sidebarCollapsed)} className="hidden rounded-xl p-2 text-muted hover:bg-surface-hover lg:inline-flex">
@@ -433,16 +433,22 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
 
         {(ctx.isAdmin || ctx.isStudent) ? (
           <div className="flex items-center gap-3">
-            <button onClick={() => ctx.setShowUploadForm(true)} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
-              <Plus size={14} /> <span className="hidden sm:inline">{ctx.isAdmin ? "Upload" : "Contribute"}</span>
+            <button onClick={() => {
+              if (ctx.isAdmin || ctx.userProfile.full_name) {
+                ctx.setShowUploadForm(true);
+              } else {
+                ctx.setShowProfileGate(true);
+              }
+            }} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-3 sm:px-4 text-xs font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+              <Plus size={14} /> <span>{ctx.isAdmin ? "Upload" : "Contribute"}</span>
             </button>
             <div className="hidden sm:block">
               <ProfileDropdown userName={ctx.uploadedBy || (ctx.isAdmin ? "Admin" : "Student")} userEmail={ctx.currentUserEmail} onLogout={ctx.handleLogout} />
             </div>
           </div>
         ) : (
-          <button onClick={() => ctx.openAuthPrompt("upload")} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 motion-hover motion-active">
-            <Plus size={14} /> <span className="hidden sm:inline">Contribute</span>
+          <button onClick={() => ctx.openAuthPrompt("upload")} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-3 sm:px-4 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 motion-hover motion-active">
+            <Plus size={14} /> <span>Contribute</span>
           </button>
         )}
       </div>
@@ -807,3 +813,105 @@ export const BannersAndToasts = ({ ctx }: { ctx: ClientLayoutContext }) => (
     </Toast.Root>
   </>
 );
+
+export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState("");
+  
+  const handleSkip = () => {
+    sessionStorage.setItem(`skipped_onboarding_${ctx.currentUserEmail}`, "true");
+    ctx.setShowOnboardingModal(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setLoading(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess?.session?.user) {
+        const { error } = await supabase.from('profiles').upsert({
+          id: sess.session.user.id,
+          full_name: name.trim(),
+        });
+        if (error) throw error;
+        ctx.updateUserProfile({ full_name: name.trim() });
+        ctx.setShowOnboardingModal(false);
+      }
+    } catch (err: any) {
+      alert("Error saving profile: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={ctx.showOnboardingModal} onOpenChange={(open) => {
+      if (!open && !sessionStorage.getItem(`skipped_onboarding_${ctx.currentUserEmail}`)) return;
+      ctx.setShowOnboardingModal(open);
+    }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-full max-w-md translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+          <div className="mb-6">
+            <Dialog.Title className="text-xl font-extrabold text-foreground">Welcome!</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm font-medium leading-6 text-muted">
+              Let&apos;s set up your profile so you can get the most out of the portal.
+            </Dialog.Description>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Display Name</label>
+              <input required type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. John Doe" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
+            </div>
+            <button type="submit" disabled={loading} className="h-12 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+              {loading ? "Saving..." : "Save Name & Continue"}
+            </button>
+            <button type="button" onClick={handleSkip} disabled={loading} className="w-full mt-2 text-sm font-bold text-muted hover:text-foreground">
+              Skip for now
+            </button>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+};
+
+export const ProfileGateModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
+  const router = useRouter();
+  
+  const handleLater = () => {
+    ctx.setShowProfileGate(false);
+    ctx.setShowUploadForm(true);
+  };
+
+  const handleSetup = () => {
+    ctx.setShowProfileGate(false);
+    router.push("/profile?edit=true");
+  };
+
+  return (
+    <Dialog.Root open={ctx.showProfileGate} onOpenChange={ctx.setShowProfileGate}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-full max-w-sm translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+          <div className="mb-6">
+            <Dialog.Title className="text-lg font-extrabold text-foreground">Ready to set up your profile?</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm font-medium leading-6 text-muted">
+              Adding your real name gives you proper attribution for your contributions and builds trust in the community.
+            </Dialog.Description>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button onClick={handleSetup} className="h-11 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+              Set Up Profile
+            </button>
+            <button onClick={handleLater} className="h-11 w-full rounded-xl bg-surface-hover font-bold text-foreground hover:opacity-80 motion-hover motion-active">
+              Later
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+};

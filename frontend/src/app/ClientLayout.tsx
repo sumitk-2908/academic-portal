@@ -5,7 +5,7 @@ import * as Toast from "@radix-ui/react-toast";
 import { useClientLayout } from "@/app/hooks/useClientLayout";
 import { 
   AppShell, TopBar, Sidebar, ContentArea, MobileNav, 
-  AuthModal, UploadModal, BannersAndToasts 
+  AuthModal, UploadModal, BannersAndToasts, OnboardingModal, ProfileGateModal
 } from "@/components/layout/LayoutComponents";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +28,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <AuthModal ctx={ctx} />
           <UploadModal ctx={ctx} />
           <BannersAndToasts ctx={ctx} />
+          <OnboardingModal ctx={ctx} />
+          <ProfileGateModal ctx={ctx} />
 
         </AppShell>
         

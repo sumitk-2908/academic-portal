@@ -57,6 +57,10 @@ export function useClientLayout() {
   const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  const [userProfile, setUserProfile] = useState<{full_name: string | null, preferred_branch: string | null, favorite_subjects: string[] | null}>({ full_name: null, preferred_branch: null, favorite_subjects: null });
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showProfileGate, setShowProfileGate] = useState(false);
+
   const [globalToast, setGlobalToast] = useState({ open: false, title: "", message: "", type: "default" as "default" | "error" | "success" });
 
   const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
@@ -109,7 +113,19 @@ export function useClientLayout() {
         setIsAdmin(true); setIsStudent(false);
       } else {
         setIsAdmin(false); setIsStudent(true);
-        setUploadedBy(session.user.email?.split('@')[0] || "Student");
+        const { data: profileData } = await supabase.from('profiles').select('full_name, preferred_branch, favorite_subjects').eq('id', session.user.id).single();
+        if (profileData) {
+          setUserProfile({ full_name: profileData.full_name, preferred_branch: profileData.preferred_branch, favorite_subjects: profileData.favorite_subjects });
+          setUploadedBy(profileData.full_name || "Student");
+          if (!profileData.full_name && !sessionStorage.getItem(`skipped_onboarding_${session.user.id}`)) {
+            setShowOnboardingModal(true);
+          }
+        } else {
+          setUploadedBy("Student");
+          if (!sessionStorage.getItem(`skipped_onboarding_${session.user.id}`)) {
+            setShowOnboardingModal(true);
+          }
+        }
       }
       const initialBadges = await getAchievements(session.user.id);
       earnedBadgesRef.current = new Set(initialBadges.map((b: any) => b.badge_id));
@@ -172,6 +188,15 @@ export function useClientLayout() {
 
     window.addEventListener("portal_toast", handlePortalToast);
     return () => window.removeEventListener("portal_toast", handlePortalToast);
+  }, []);
+
+  useEffect(() => {
+    const handleProfileUpdate = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail) updateUserProfile(detail);
+    };
+    window.addEventListener("portal_profile_update", handleProfileUpdate);
+    return () => window.removeEventListener("portal_profile_update", handleProfileUpdate);
   }, []);
 
   useEffect(() => {
@@ -256,6 +281,11 @@ export function useClientLayout() {
     } else {
       html.classList.add("dark"); localStorage.setItem("theme", "dark"); setIsDarkMode(true);
     }
+  };
+
+  const updateUserProfile = (profile: { full_name?: string, preferred_branch?: string, favorite_subjects?: string[] }) => {
+    setUserProfile(prev => ({ ...prev, ...profile }));
+    if (profile.full_name) setUploadedBy(profile.full_name);
   };
 
   const handleGoogleLogin = async () => {
@@ -388,11 +418,12 @@ export function useClientLayout() {
     pendingCount, trendingDocs, notifications, unreadCount, showNotifications, activeToast, isAdmin, isStudent, 
     emailConfirmed, currentUserEmail, showAuthModal, authPromptContext, authMode, authEmail, authPassword, authLoading, googleLoading,
     globalToast, isOffline, showUploadForm, uploading, file, uploadTitle, uploadCategory, uploadedBy, uploadSubject, 
-    uploadModule, uploadState, uploadProgress, uploadErrorMsg,
+    uploadModule, uploadState, uploadProgress, uploadErrorMsg, userProfile, showOnboardingModal, showProfileGate,
     setSidebarCollapsed, setShowMobileMenu, setSearchQuery, setShowNotifications, setActiveToast, setShowAuthModal, 
     setAuthMode, setAuthEmail, setAuthPassword, setShowUploadForm, setFile, setUploadTitle, setUploadCategory, 
     setUploadedBy, setUploadSubject, setUploadModule, setGlobalToast, setNotifications, toggleTheme, handleGoogleLogin, 
-    handleAuthSubmit, handleLogout, handleUpload, sendVerificationEmail, handleMarkAsRead, openAuthPrompt, handleAuthModalOpenChange
+    handleAuthSubmit, handleLogout, handleUpload, sendVerificationEmail, handleMarkAsRead, openAuthPrompt, handleAuthModalOpenChange,
+    setShowOnboardingModal, setShowProfileGate, updateUserProfile
   };
 }
 
