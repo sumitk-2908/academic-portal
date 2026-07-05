@@ -36,6 +36,7 @@ export default function DocumentInteractiveGrid({
   const [deletedIds, setDeletedIds] = useState<number[]>([]);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [upvotes, setUpvotes] = useState<number[]>([]);
+  const [upvoteCounts, setUpvoteCounts] = useState<Record<number, number>>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -176,7 +177,16 @@ export default function DocumentInteractiveGrid({
 
     const isUpvoted = upvotes.includes(id);
     const snapshotUpvotes = [...upvotes];
+    const snapshotUpvoteCounts = { ...upvoteCounts };
     let snapshotDocAnalytics: any = null;
+
+    // Get current count from state or fallback to doc data
+    let currentCount = upvoteCounts[id];
+    if (currentCount === undefined) {
+      const doc = displayDocuments.find(d => d.id === id);
+      const analyticsObj = Array.isArray(doc?.document_analytics) ? doc?.document_analytics[0] : doc?.document_analytics;
+      currentCount = analyticsObj?.upvotes || 0;
+    }
 
     if (paginationConfig) {
       const currentData = queryClient.getQueryData<InfiniteDocumentsData>(paginationConfig.queryKey);
@@ -191,6 +201,10 @@ export default function DocumentInteractiveGrid({
 
     const applyOptimistic = () => {
       setUpvotes(prev => isUpvoted ? prev.filter(u => u !== id) : [...prev, id]);
+      setUpvoteCounts(prev => ({
+        ...prev,
+        [id]: isUpvoted ? Math.max(0, currentCount - 1) : currentCount + 1
+      }));
       
       if (paginationConfig) {
         queryClient.setQueryData<InfiniteDocumentsData>(paginationConfig.queryKey, (oldData) => {
@@ -221,6 +235,7 @@ export default function DocumentInteractiveGrid({
 
     const revertOptimistic = () => {
       setUpvotes(snapshotUpvotes);
+      setUpvoteCounts(snapshotUpvoteCounts);
       if (paginationConfig && snapshotDocAnalytics) {
         queryClient.setQueryData<InfiniteDocumentsData>(paginationConfig.queryKey, (oldData) => {
           if (!oldData) return oldData;
@@ -377,6 +392,7 @@ export default function DocumentInteractiveGrid({
                       subjectSlug={subjectSlug}
                       isBookmarked={bookmarks.includes(doc.id)}
                       isUpvoted={upvotes.includes(doc.id)}
+                      currentUpvoteCount={upvoteCounts[doc.id]}
                       isAdmin={isAdmin}
                       onDownload={handleDownload}
                       onToggleBookmark={toggleBookmark}

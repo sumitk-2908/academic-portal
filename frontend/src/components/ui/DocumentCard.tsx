@@ -23,9 +23,10 @@ const getTimeAgo = (dateStr: string | null) => {
 export interface DocumentCardProps {
   doc: DocumentWithAnalytics;
   subjectSlug?: string;
-  isBookmarked: boolean;
+  isBookmarked?: boolean;
   isUpvoted?: boolean;
-  isAdmin: boolean;
+  currentUpvoteCount?: number;
+  isAdmin?: boolean;
   onDownload: (e: React.MouseEvent, doc: DocumentWithAnalytics) => void;
   onToggleBookmark: (id: number) => void;
   onToggleUpvote?: (id: number) => void;
@@ -36,9 +37,10 @@ export interface DocumentCardProps {
 export default function DocumentCard({ 
   doc, 
   subjectSlug, 
-  isBookmarked, 
+  isBookmarked = false, 
   isUpvoted = false,
-  isAdmin, 
+  currentUpvoteCount,
+  isAdmin = false, 
   onDownload, 
   onToggleBookmark, 
   onToggleUpvote,
@@ -108,10 +110,11 @@ export default function DocumentCard({
         
         {onToggleUpvote && (() => {
           const analyticsObj = Array.isArray(doc.document_analytics) ? doc.document_analytics[0] : doc.document_analytics;
+          const displayCount = currentUpvoteCount !== undefined ? currentUpvoteCount : (analyticsObj?.upvotes || 0);
           return (
             <button onClick={() => onToggleUpvote(doc.id)} className={`motion-hover motion-active flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-bold ${isUpvoted ? "border-success bg-success/10 text-success hover:bg-success/20" : "border-border text-muted hover:border-success/50 hover:text-success"}`}>
               <ThumbsUp size={14} className={isUpvoted ? "fill-success" : ""} />
-              {analyticsObj?.upvotes || 0}
+              {displayCount}
             </button>
           );
         })()}
