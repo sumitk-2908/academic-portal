@@ -111,7 +111,8 @@ export const searchDocuments = async (options: SearchOptions = {}) => {
     page_count, 
     created_at, 
     uploaded_by, 
-    uploader_name
+    uploader_name,
+    document_analytics(upvotes, view_count, download_count)
   `;
 
   // Initialize query with exact count for pagination UI
