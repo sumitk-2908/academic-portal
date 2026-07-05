@@ -9,6 +9,7 @@ import {
   getTrendingDocuments,
   getProfilePreferences 
 } from "../lib/api";
+import { requestAuthPrompt } from "../lib/auth-prompts";
 import { Clock, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -24,6 +25,7 @@ export default function ContinueStudyingPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSignedOut, setIsSignedOut] = useState(false);
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
@@ -31,6 +33,16 @@ export default function ContinueStudyingPage() {
       setLoading(true);
       const { data: sess } = await supabase.auth.getSession();
       const currentUserId = sess?.session?.user?.id;
+
+      if (!currentUserId) {
+        setDocuments([]);
+        setSuggestions([]);
+        setIsSignedOut(true);
+        setLoading(false);
+        return;
+      }
+
+      setIsSignedOut(false);
       
       // 1. Fetch User History
       const history = await getRecentStudyActivity(currentUserId);
@@ -207,13 +219,22 @@ export default function ContinueStudyingPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {loading ? (
-            <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" /></div>
-          ) : safeDocuments.map(doc => (
+        {loading ? (
+          <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" /></div>
+        ) : isSignedOut ? (
+          <div className="col-span-full rounded-2xl border border-dashed border-indigo-500/30 bg-indigo-500/5 p-8 text-center">
+            <p className="mx-auto max-w-md text-sm font-medium leading-6 text-muted">
+              Sign in to pick up where you left off and get study suggestions based on your recent materials.
+            </p>
+            <button onClick={() => requestAuthPrompt("continueStudying")} className="mt-4 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+              Continue Studying
+            </button>
+          </div>
+        ) : safeDocuments.map(doc => (
             <DocumentCard key={`hist-${doc.id}`} doc={doc} />
           ))}
           
-          {safeDocuments.length === 0 && !loading && (
+          {safeDocuments.length === 0 && !loading && !isSignedOut && (
             <div className="col-span-full rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
               <p className="text-sm text-muted">Your history is empty. Time to start studying!</p>
             </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, getTrendingDocuments, uploadDocument, getAchievements, searchDocuments, UploadState } from "@/app/lib/api";
+import type { AuthPromptFeature } from "@/app/lib/auth-prompts";
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -47,6 +48,7 @@ export function useClientLayout() {
   const [emailConfirmed, setEmailConfirmed] = useState(true); 
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authPromptContext, setAuthPromptContext] = useState<AuthPromptFeature | null>(null);
   const [authMode, setAuthMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -58,6 +60,17 @@ export function useClientLayout() {
   const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
     setGlobalToast({ open: true, title, message, type });
   };
+
+  const openAuthPrompt = useCallback((feature: AuthPromptFeature) => {
+    setAuthPromptContext(feature);
+    setAuthMode("signin");
+    setShowAuthModal(true);
+  }, []);
+
+  const handleAuthModalOpenChange = useCallback((open: boolean) => {
+    setShowAuthModal(open);
+    if (!open) setAuthPromptContext(null);
+  }, []);
 
   const [isOffline, setIsOffline] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
@@ -138,6 +151,16 @@ export function useClientLayout() {
     window.addEventListener("sidebar_update", handleUpdate);
     return () => window.removeEventListener("sidebar_update", handleUpdate);
   }, []); 
+
+  useEffect(() => {
+    const handleAuthPrompt = (event: Event) => {
+      const feature = (event as CustomEvent<AuthPromptFeature>).detail;
+      if (feature) openAuthPrompt(feature);
+    };
+
+    window.addEventListener("portal_auth_prompt", handleAuthPrompt);
+    return () => window.removeEventListener("portal_auth_prompt", handleAuthPrompt);
+  }, [openAuthPrompt]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => syncUserFromSession(session));
@@ -233,18 +256,18 @@ export function useClientLayout() {
         if (error) throw error;
         showToast("Check Inbox", "Password reset email sent!", "success");
         setAuthMode("signin");
-        setShowAuthModal(false);
+        handleAuthModalOpenChange(false);
       } else if (authMode === "signup") {
         const { data, error } = await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
-        if (data.session) { await syncUserFromSession(data.session); setAuthPassword(""); setShowAuthModal(false); } 
+        if (data.session) { await syncUserFromSession(data.session); setAuthPassword(""); handleAuthModalOpenChange(false); }
         else { showToast("Registration Complete", "Please verify your email.", "success"); setAuthMode("signin"); }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
         if (error) throw error;
         await syncUserFromSession(data.session);
         setAuthPassword("");
-        setShowAuthModal(false);
+        handleAuthModalOpenChange(false);
       }
     } catch (err: any) { showToast("Authentication Error", err.message, "error"); } 
     finally { setAuthLoading(false); }
@@ -326,13 +349,13 @@ export function useClientLayout() {
   return {
     pathname, mounted, isDarkMode, sidebarCollapsed, showMobileMenu, searchQuery, globalSearchResults, isSearching, 
     pendingCount, trendingDocs, notifications, unreadCount, showNotifications, activeToast, isAdmin, isStudent, 
-    emailConfirmed, currentUserEmail, showAuthModal, authMode, authEmail, authPassword, authLoading, googleLoading, 
+    emailConfirmed, currentUserEmail, showAuthModal, authPromptContext, authMode, authEmail, authPassword, authLoading, googleLoading,
     globalToast, isOffline, showUploadForm, uploading, file, uploadTitle, uploadCategory, uploadedBy, uploadSubject, 
     uploadModule, uploadState, uploadProgress, uploadErrorMsg,
     setSidebarCollapsed, setShowMobileMenu, setSearchQuery, setShowNotifications, setActiveToast, setShowAuthModal, 
     setAuthMode, setAuthEmail, setAuthPassword, setShowUploadForm, setFile, setUploadTitle, setUploadCategory, 
     setUploadedBy, setUploadSubject, setUploadModule, setGlobalToast, setNotifications, toggleTheme, handleGoogleLogin, 
-    handleAuthSubmit, handleLogout, handleUpload, sendVerificationEmail, handleMarkAsRead
+    handleAuthSubmit, handleLogout, handleUpload, sendVerificationEmail, handleMarkAsRead, openAuthPrompt, handleAuthModalOpenChange
   };
 }
 

@@ -10,10 +10,11 @@ import {
   getAchievements,
   getEnhancedContributions,
 } from "@/app/lib/api";
+import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileStats from "@/components/profile/ProfileStats";
 import ProfileTabs from "@/components/profile/ProfileTabs";
-import { Loader2 } from "lucide-react";
+import { Activity, Flame, Loader2, Upload, User } from "lucide-react";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -111,6 +112,47 @@ export default function ProfilePage() {
     return (
       <div className="mx-auto flex h-64 w-full max-w-4xl items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="mx-auto w-full max-w-4xl pb-12">
+        <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <User size={24} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Open your profile</h1>
+              <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-muted">
+                Sign in to see your bookmarks, study streak, contribution history, and activity in one place.
+              </p>
+              <button onClick={() => requestAuthPrompt("profile")} className="mt-5 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground motion-hover motion-active hover:opacity-90">
+                Open Profile
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <button onClick={() => requestAuthPrompt("studyStreak")} className="rounded-2xl border border-border bg-surface p-4 text-left shadow-sm motion-hover hover:border-primary/40">
+            <Flame className="mb-3 text-warning" size={20} />
+            <p className="text-sm font-bold text-foreground">Study Streak</p>
+            <p className="mt-1 text-xs leading-5 text-muted">Keep your streak updated as you study.</p>
+          </button>
+          <button onClick={() => requestAuthPrompt("contributionHistory")} className="rounded-2xl border border-border bg-surface p-4 text-left shadow-sm motion-hover hover:border-primary/40">
+            <Upload className="mb-3 text-success" size={20} />
+            <p className="text-sm font-bold text-foreground">Contribution History</p>
+            <p className="mt-1 text-xs leading-5 text-muted">Track uploads, approvals, and impact.</p>
+          </button>
+          <button onClick={() => requestAuthPrompt("activityGraph")} className="rounded-2xl border border-border bg-surface p-4 text-left shadow-sm motion-hover hover:border-primary/40">
+            <Activity className="mb-3 text-primary" size={20} />
+            <p className="text-sm font-bold text-foreground">Activity Graph</p>
+            <p className="mt-1 text-xs leading-5 text-muted">Build your private study activity timeline.</p>
+          </button>
+        </div>
       </div>
     );
   }

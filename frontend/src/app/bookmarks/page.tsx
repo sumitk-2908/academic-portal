@@ -5,6 +5,7 @@ import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
 import { Bookmark, Download, Eye, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { manageOfflinePdf } from "../lib/offline-manager";
+import { requestAuthPrompt } from "../lib/auth-prompts";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
@@ -12,7 +13,7 @@ export default function BookmarksPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSignedOut, setIsSignedOut] = useState(false);
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
@@ -24,24 +25,20 @@ export default function BookmarksPage() {
       const { data: sess } = await supabase.auth.getSession();
       const currentUserId = sess?.session?.user?.id;
       
-      if (currentUserId && isMounted) {
+      if (!currentUserId) {
+        if (isMounted) {
+          setUserId("");
+          setDocuments([]);
+          setIsSignedOut(true);
+          if (!silent) setLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsSignedOut(false);
         setUserId(currentUserId);
         
-        // 1. Check user role
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', currentUserId)
-          .single();
-          
-        // 2. Check MFA status securely
-        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        const isMfaVerified = aalData?.currentLevel === 'aal2';
-
-        // 3. Set admin state only if BOTH are true
-        if (roleData?.role === 'admin' && isMfaVerified) {
-          setIsAdmin(true);
-        }
       }
 
       const userBookmarks = await getStudentBookmarks(currentUserId);
@@ -118,6 +115,15 @@ export default function BookmarksPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {loading ? (
           <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-warning" /></div>
+        ) : isSignedOut ? (
+          <div className="col-span-full rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
+            <p className="mx-auto max-w-md text-sm font-medium leading-6 text-muted">
+              Sign in to sync your bookmarks and continue studying across all your devices.
+            </p>
+            <button onClick={() => requestAuthPrompt("bookmark")} className="mt-4 rounded-xl bg-warning px-4 py-2 text-sm font-bold text-white motion-hover motion-active hover:opacity-90">
+              Save Bookmarks
+            </button>
+          </div>
         ) : documents.map(doc => {
           const Icon = CATEGORY_ICONS[doc.category] || FileText;
           return (
@@ -141,8 +147,8 @@ export default function BookmarksPage() {
             </article>
           );
         })}
-        {documents.length === 0 && !loading && (
-          <p className="col-span-full text-center py-12 text-sm font-medium text-muted">You haven't bookmarked any documents yet.</p>
+        {documents.length === 0 && !loading && !isSignedOut && (
+          <p className="col-span-full text-center py-12 text-sm font-medium text-muted">You have not bookmarked any documents yet.</p>
         )}
       </div>
     </div>

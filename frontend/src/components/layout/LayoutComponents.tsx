@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { ClientLayoutContext, SUBJECTS_LIST, isNonModuleSubject } from "@/app/hooks/useClientLayout";
+import { AUTH_PROMPT_COPY } from "@/app/lib/auth-prompts";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 import UploadProgressBar from "@/components/ui/UploadProgressBar";
@@ -156,8 +157,8 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => (
             </div>
           </div>
         ) : (
-          <button onClick={() => ctx.setShowAuthModal(true)} className="flex h-9 items-center rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 motion-hover motion-active">
-            Sign In <span className="hidden sm:inline">&nbsp;/ Sign Up</span>
+          <button onClick={() => ctx.openAuthPrompt("upload")} className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 motion-hover motion-active">
+            <Plus size={14} /> <span className="hidden sm:inline">Contribute</span>
           </button>
         )}
       </div>
@@ -200,28 +201,50 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
 
     <div>
       {!ctx.sidebarCollapsed && <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Student Workspace</p>}
-      <Link 
-        href="/continue-studying" 
-        title={ctx.sidebarCollapsed ? "Continue Studying" : undefined} 
-        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
-          ctx.pathname === '/continue-studying'
-            ? 'bg-primary/10 text-primary'
-            : 'text-muted hover:bg-surface-hover hover:text-primary'
-        }`}
-      >
-        <Clock size={18} /> {!ctx.sidebarCollapsed && "Continue Studying"}
-      </Link>
-      <Link 
-        href="/bookmarks" 
-        title={ctx.sidebarCollapsed ? "Bookmarks" : undefined} 
-        className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
-          ctx.pathname === '/bookmarks'
-            ? 'bg-warning/10 text-warning'
-            : 'text-muted hover:bg-surface-hover hover:text-warning'
-        }`}
-      >
-        <Bookmark size={18} /> {!ctx.sidebarCollapsed && "Bookmarks"}
-      </Link>
+      {(ctx.isAdmin || ctx.isStudent) ? (
+        <Link
+          href="/continue-studying"
+          title={ctx.sidebarCollapsed ? "Continue Studying" : undefined}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+            ctx.pathname === '/continue-studying'
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted hover:bg-surface-hover hover:text-primary'
+          }`}
+        >
+          <Clock size={18} /> {!ctx.sidebarCollapsed && "Continue Studying"}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          title={ctx.sidebarCollapsed ? "Continue Studying" : undefined}
+          onClick={() => ctx.openAuthPrompt("continueStudying")}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition-colors motion-hover motion-active hover:bg-surface-hover hover:text-primary"
+        >
+          <Clock size={18} /> {!ctx.sidebarCollapsed && "Continue Studying"}
+        </button>
+      )}
+      {(ctx.isAdmin || ctx.isStudent) ? (
+        <Link
+          href="/bookmarks"
+          title={ctx.sidebarCollapsed ? "Bookmarks" : undefined}
+          className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold motion-hover motion-active transition-colors ${
+            ctx.pathname === '/bookmarks'
+              ? 'bg-warning/10 text-warning'
+              : 'text-muted hover:bg-surface-hover hover:text-warning'
+          }`}
+        >
+          <Bookmark size={18} /> {!ctx.sidebarCollapsed && "Bookmarks"}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          title={ctx.sidebarCollapsed ? "Bookmarks" : undefined}
+          onClick={() => ctx.openAuthPrompt("bookmark")}
+          className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition-colors motion-hover motion-active hover:bg-surface-hover hover:text-warning"
+        >
+          <Bookmark size={18} /> {!ctx.sidebarCollapsed && "Bookmarks"}
+        </button>
+      )}
       <Link 
         href="/recent-uploads" 
         title={ctx.sidebarCollapsed ? "Recent Uploads" : undefined} 
@@ -274,16 +297,25 @@ export const Sidebar = ({ ctx }: { ctx: ClientLayoutContext }) => (
 );
 
 // 4. Modals and Overlays
-export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
-  <Dialog.Root open={ctx.showAuthModal} onOpenChange={ctx.setShowAuthModal}>
+export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
+  const promptCopy = ctx.authPromptContext ? AUTH_PROMPT_COPY[ctx.authPromptContext] : null;
+  const title = promptCopy?.title || (ctx.authMode === "signin" ? "Sign In" : ctx.authMode === "signup" ? "Sign Up" : "Reset Password");
+  const description = ctx.authMode === "forgot"
+    ? "Enter your email and we will send you a reset link."
+    : promptCopy?.description || "Authenticate to access your student workspace.";
+
+  return (
+  <Dialog.Root open={ctx.showAuthModal} onOpenChange={ctx.handleAuthModalOpenChange}>
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-full max-w-md translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
-        <div className="flex items-center justify-between mb-6">
-          <Dialog.Title className="text-xl font-extrabold text-foreground">{ctx.authMode === "signin" ? "Sign In" : ctx.authMode === "signup" ? "Sign Up" : "Reset Password"}</Dialog.Title>
-          <Dialog.Close asChild><button aria-label="Close" className="text-muted hover:opacity-80"><X size={20} /></button></Dialog.Close>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <Dialog.Title className="text-xl font-extrabold text-foreground">{title}</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm font-medium leading-6 text-muted">{description}</Dialog.Description>
+          </div>
+          <Dialog.Close asChild><button aria-label="Close" className="shrink-0 text-muted hover:opacity-80"><X size={20} /></button></Dialog.Close>
         </div>
-        <Dialog.Description className="sr-only">Authenticate to access the portal.</Dialog.Description>
         {ctx.authMode !== "forgot" && (
           <>
             <button type="button" onClick={ctx.handleGoogleLogin} disabled={ctx.googleLoading || ctx.authLoading} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface font-bold text-foreground motion-hover motion-active hover:bg-surface-hover hover:shadow-sm">
@@ -310,7 +342,8 @@ export const AuthModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
       </Dialog.Content>
     </Dialog.Portal>
   </Dialog.Root>
-);
+  );
+};
 
 export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
   <Dialog.Root open={ctx.showUploadForm} onOpenChange={ctx.setShowUploadForm}>
@@ -350,6 +383,7 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
 
 export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
+  const isSignedIn = ctx.isAdmin || ctx.isStudent;
 
   // Lock body scroll when Sign Out Modal is open
   useEffect(() => {
@@ -369,12 +403,24 @@ export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
         <Link href="/" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/' ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
           <Home size={22} /><span className="text-xs font-bold">Home</span>
         </Link>
-        <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/profile' ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
-          <User size={22} /><span className="text-xs font-bold">Profile</span>
-        </Link>
-        <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/bookmarks' ? 'bg-warning/10 text-warning' : 'text-muted hover:bg-surface-hover'}`}>
-          <Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span>
-        </Link>
+        {isSignedIn ? (
+          <Link href="/profile" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/profile' ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
+            <User size={22} /><span className="text-xs font-bold">Profile</span>
+          </Link>
+        ) : (
+          <button type="button" onClick={() => ctx.openAuthPrompt("profile")} className="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 text-muted transition-colors hover:bg-surface-hover">
+            <User size={22} /><span className="text-xs font-bold">Profile</span>
+          </button>
+        )}
+        {isSignedIn ? (
+          <Link href="/bookmarks" onClick={() => ctx.setShowMobileMenu(false)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.pathname === '/bookmarks' ? 'bg-warning/10 text-warning' : 'text-muted hover:bg-surface-hover'}`}>
+            <Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span>
+          </Link>
+        ) : (
+          <button type="button" onClick={() => ctx.openAuthPrompt("bookmark")} className="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 text-muted transition-colors hover:bg-surface-hover">
+            <Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span>
+          </button>
+        )}
         <button onClick={() => ctx.setShowMobileMenu(true)} className={`flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 transition-colors ${ctx.showMobileMenu ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-surface-hover'}`}>
           <Menu size={22} /><span className="text-xs font-bold">More</span>
         </button>
@@ -387,9 +433,16 @@ export const MobileNav = ({ ctx }: { ctx: ClientLayoutContext }) => {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-3">
                 <Link href="/recent-uploads" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Upload size={18} className="text-success" /> <span>Uploads</span></Link>
-                <Link href="/continue-studying" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Clock size={18} className="text-primary" /> <span>Continue</span></Link>
+                {isSignedIn ? (
+                  <Link href="/continue-studying" onClick={() => ctx.setShowMobileMenu(false)} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-xs font-bold text-foreground motion-hover motion-active"><Clock size={18} className="text-primary" /> <span>Continue</span></Link>
+                ) : (
+                  <button type="button" onClick={() => { ctx.setShowMobileMenu(false); ctx.openAuthPrompt("continueStudying"); }} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-left text-xs font-bold text-foreground motion-hover motion-active"><Clock size={18} className="text-primary" /> <span>Continue</span></button>
+                )}
+                {!isSignedIn && (
+                  <button type="button" onClick={() => { ctx.setShowMobileMenu(false); ctx.openAuthPrompt("upload"); }} className="flex items-center gap-3 rounded-2xl bg-surface-hover p-3.5 text-left text-xs font-bold text-foreground motion-hover motion-active"><Plus size={18} className="text-primary" /> <span>Contribute</span></button>
+                )}
               </div>
-              {(ctx.isAdmin || ctx.isStudent) && (
+              {isSignedIn && (
                 <div className="border-t border-border pt-4">
                   <button 
                     onClick={() => { 

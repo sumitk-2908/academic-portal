@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FileText, Download, Eye, Bookmark, Trash2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
 import { trackDocumentStat, deleteDocument, supabase, getPaginatedDocumentsByModule } from "@/app/lib/api";
 import { manageOfflinePdf } from "@/app/lib/offline-manager";
+import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
@@ -109,6 +110,11 @@ export default function DocumentInteractiveGrid({
   }, [virtualItems, hasNextPage, isFetchingNextPage, fetchNextPage, rowCount, paginationConfig]);
 
   const toggleBookmark = async (id: number) => {
+    if (!userId) {
+      requestAuthPrompt("bookmark");
+      return;
+    }
+
     const isBookmarked = bookmarks.includes(id);
     const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
     setBookmarks(nextB);
