@@ -1,5 +1,6 @@
 import { supabase, getModulesBySubject } from "@/app/lib/api";
 import SubjectTabs from "@/components/subject/SubjectTabs";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ subjectSlug: string }> }): Promise<Metadata> {
@@ -51,12 +52,17 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
         </p>
       </div>
 
-      <SubjectTabs
-        subjectDetails={dbSubject || { name: displayTitle, is_non_module: false }}
-        modules={modules}
-        moduleCounts={moduleCounts}
-        subjectSlug={subjectSlug}
-      />
+      <ErrorBoundary
+        title="Subject page could not load"
+        message="The subject browser ran into a problem. Try going back and selecting the subject again."
+      >
+        <SubjectTabs
+          subjectDetails={dbSubject || { name: displayTitle, is_non_module: false }}
+          modules={modules}
+          moduleCounts={moduleCounts}
+          subjectSlug={subjectSlug}
+        />
+      </ErrorBoundary>
     </div>
   );
 }

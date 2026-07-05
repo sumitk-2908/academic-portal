@@ -1,10 +1,12 @@
 "use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { UploadCloud, XCircle, AlertCircle, FileText } from "lucide-react";
 import { supabase, uploadWithProgress, UploadState } from "@/app/lib/api";
 import UploadProgressBar from "./UploadProgressBar";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 type DocumentData = {
   id: number;
@@ -123,82 +125,87 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Title Input */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-muted">Document Title</label>
-            <input 
-              type="text" 
-              required 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
-              disabled={uploadState !== "idle" && uploadState !== "error"} 
-              className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50" 
-            />
-          </div>
-
-          {/* Category Dropdown (Fixed for Dark Mode) */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-muted">Category</label>
-            <select 
-              value={category} 
-              onChange={(e) => setCategory(e.target.value)} 
-              disabled={uploadState !== "idle" && uploadState !== "error"} 
-              className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
-            >
-              <option value="notes" className="bg-surface text-foreground">Notes</option>
-              <option value="pyq" className="bg-surface text-foreground">PYQ</option>
-              <option value="syllabus" className="bg-surface text-foreground">Syllabus</option>
-            </select>
-          </div>
-
-          {/* File Dropzone */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-muted">Replace PDF (Optional)</label>
-            <div 
-              onClick={() => { if(uploadState === "idle" || uploadState === "error") fileInputRef.current?.click() }}
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background p-6 transition-colors ${
-                (uploadState === "idle" || uploadState === "error") 
-                  ? "hover:border-primary hover:bg-primary/5" 
-                  : "opacity-50 cursor-not-allowed"
-              }`}
-            >
-              {newFile ? (
-                <div className="flex flex-col items-center text-primary">
-                  <FileText size={32} className="mb-2" />
-                  <span className="text-sm font-medium text-foreground">{newFile.name}</span>
-                  <span className="text-xs text-muted mt-1">Click to change</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center text-muted">
-                  <UploadCloud size={32} className="mb-2" />
-                  <span className="text-sm">Click to upload a new PDF</span>
-                </div>
-              )}
-              <input type="file" accept=".pdf" className="hidden" ref={fileInputRef} onChange={(e) => setNewFile(e.target.files?.[0] || null)} />
+        <ErrorBoundary
+          title="Resubmit form could not load"
+          message="The resubmission workflow ran into a problem. Close this dialog and try again."
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {/* Title Input */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-muted">Document Title</label>
+              <input 
+                type="text" 
+                required 
+                value={title} 
+                onChange={(e) => setTitle(e.target.value)} 
+                disabled={uploadState !== "idle" && uploadState !== "error"} 
+                className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50" 
+              />
             </div>
-          </div>
 
-          {/* Progress Bar */}
-          <UploadProgressBar 
-            state={uploadState} 
-            progress={progress} 
-            fileName={newFile?.name} 
-            errorMessage={error || undefined} 
-          />
+            {/* Category Dropdown (Fixed for Dark Mode) */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-muted">Category</label>
+              <select 
+                value={category} 
+                onChange={(e) => setCategory(e.target.value)} 
+                disabled={uploadState !== "idle" && uploadState !== "error"} 
+                className="w-full rounded-xl border border-border bg-surface text-foreground p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="notes" className="bg-surface text-foreground">Notes</option>
+                <option value="pyq" className="bg-surface text-foreground">PYQ</option>
+                <option value="syllabus" className="bg-surface text-foreground">Syllabus</option>
+              </select>
+            </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={uploadState === "uploading" || uploadState === "processing" || uploadState === "success"}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground p-3 font-bold transition-colors hover:opacity-90 disabled:opacity-50"
-          >
-            {(uploadState === "uploading" || uploadState === "processing") ? (
-              <><InlineSpinner label="Processing resubmission" size={20} /> Processing...</>
-            ) : "Submit Changes"}
-          </button>
-        </form>
+            {/* File Dropzone */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-muted">Replace PDF (Optional)</label>
+              <div 
+                onClick={() => { if(uploadState === "idle" || uploadState === "error") fileInputRef.current?.click() }}
+                className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background p-6 transition-colors ${
+                  (uploadState === "idle" || uploadState === "error") 
+                    ? "hover:border-primary hover:bg-primary/5" 
+                    : "opacity-50 cursor-not-allowed"
+                }`}
+              >
+                {newFile ? (
+                  <div className="flex flex-col items-center text-primary">
+                    <FileText size={32} className="mb-2" />
+                    <span className="text-sm font-medium text-foreground">{newFile.name}</span>
+                    <span className="text-xs text-muted mt-1">Click to change</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center text-muted">
+                    <UploadCloud size={32} className="mb-2" />
+                    <span className="text-sm">Click to upload a new PDF</span>
+                  </div>
+                )}
+                <input type="file" accept=".pdf" className="hidden" ref={fileInputRef} onChange={(e) => setNewFile(e.target.files?.[0] || null)} />
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <UploadProgressBar 
+              state={uploadState} 
+              progress={progress} 
+              fileName={newFile?.name} 
+              errorMessage={error || undefined} 
+            />
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={uploadState === "uploading" || uploadState === "processing" || uploadState === "success"}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground p-3 font-bold transition-colors hover:opacity-90 disabled:opacity-50"
+            >
+              {(uploadState === "uploading" || uploadState === "processing") ? (
+                <><InlineSpinner label="Processing resubmission" size={20} /> Processing...</>
+              ) : "Submit Changes"}
+            </button>
+          </form>
+        </ErrorBoundary>
       </div>
     </div>
   );

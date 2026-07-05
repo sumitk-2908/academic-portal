@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { Shield, KeyRound, QrCode } from "lucide-react";
 import * as Toast from "@radix-ui/react-toast";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 type AuthStep = "MFA_SETUP" | "MFA_VERIFY";
 
-export default function AdminPortalLogin() {
+function AdminPortalLoginContent() {
   const router = useRouter();
   
   const [isChecking, setIsChecking] = useState(true);
@@ -173,5 +174,16 @@ export default function AdminPortalLogin() {
 
       <Toast.Viewport className="fixed bottom-0 right-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
     </Toast.Provider>
+  );
+}
+
+export default function AdminPortalLogin() {
+  return (
+    <ErrorBoundary
+      title="Admin access could not load"
+      message="The admin sign-in flow hit an unexpected problem. Retry this section when you are ready."
+    >
+      <AdminPortalLoginContent />
+    </ErrorBoundary>
   );
 }

@@ -18,6 +18,7 @@ import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ProfileSidebarCard from "@/components/profile/ProfileSidebarCard";
 import UploadProgressBar from "@/components/ui/UploadProgressBar";
 import AchievementToast from "@/components/ui/AchievementToast";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { InlineSpinner, SidebarSkeleton } from "@/components/layout/SharedLayouts";
 import { supabase } from "@/app/lib/api";
 
@@ -239,7 +240,12 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
           <p id="command-palette-description" className="sr-only">
             Search documents, navigate subjects and modules, reopen recent searches, or run quick actions.
           </p>
-          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+          <ErrorBoundary
+            title="Search could not load"
+            message="The search palette hit an unexpected problem. Close it and try again when you are ready."
+            className="m-4"
+          >
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
             <Command size={18} className="hidden text-muted sm:block" aria-hidden="true" />
             <Search size={18} className="text-muted sm:hidden" aria-hidden="true" />
             <input
@@ -316,6 +322,7 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
               </div>
             )}
           </div>
+          </ErrorBoundary>
 
           <div className="hidden items-center justify-between border-t border-border px-4 py-2 text-xs font-semibold text-muted sm:flex">
             <span className="flex items-center gap-2"><ArrowRight size={13} /> Use arrow keys to move</span>
@@ -380,6 +387,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
             {ctx.showNotifications && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => ctx.setShowNotifications(false)} />
+                <ErrorBoundary title="Notifications could not load" className="m-2" message="Notifications panel hit an unexpected problem.">
                 <div className="absolute -right-2 sm:right-0 top-12 z-50 w-[320px] max-w-[calc(100vw-2rem)] sm:w-80 rounded-2xl border border-border bg-surface shadow-2xl animate-in slide-in-from-top-2 motion-dropdown">
                   <div className="flex items-center justify-between border-b border-border p-3">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Notifications</p>
@@ -417,6 +425,7 @@ export const TopBar = ({ ctx }: { ctx: ClientLayoutContext }) => {
                     )}
                   </div>
                 </div>
+                </ErrorBoundary>
               </>
             )}
           </div>
@@ -539,19 +548,21 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
       </Link>
     </div>
 
-    {!ctx.sidebarCollapsed && ctx.trendingDocs.length > 0 && (
-      <div>
-        <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Discovery</p>
-        <div className="rounded-2xl border border-border bg-surface p-3 space-y-2.5">
-          <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-xs tracking-[0.06em] font-extrabold uppercase">Trending Now</h3></div>
-          {ctx.trendingDocs.slice(0, 5).map((doc: SearchDocument, idx: number) => (
-            <Link key={`tr-${doc.id}`} href={documentHref(doc)} className="block text-xs group">
-              <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">{idx + 1}. {doc.title}</p>
-            </Link>
-          ))}
+    <ErrorBoundary title="Trending section could not load" className="mt-2" message="Trending docs failed to load.">
+      {!ctx.sidebarCollapsed && ctx.trendingDocs.length > 0 && (
+        <div>
+          <p className="px-3 pb-2 text-xs tracking-[0.06em] font-bold uppercase text-muted">Discovery</p>
+          <div className="rounded-2xl border border-border bg-surface p-3 space-y-2.5">
+            <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-xs tracking-[0.06em] font-extrabold uppercase">Trending Now</h3></div>
+            {ctx.trendingDocs.slice(0, 5).map((doc: SearchDocument, idx: number) => (
+              <Link key={`tr-${doc.id}`} href={documentHref(doc)} className="block text-xs group">
+                <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">{idx + 1}. {doc.title}</p>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-    )}
+      )}
+    </ErrorBoundary>
     </>
     )}
   </div>

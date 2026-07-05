@@ -8,8 +8,9 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as Toast from "@radix-ui/react-toast";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-export default function AdminInboxAuditingRoute() {
+function AdminInboxAuditingContent() {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged'>('pending');
   
   const [pendingDocs, setPendingDocs] = useState<any[]>([]);
@@ -320,5 +321,16 @@ export default function AdminInboxAuditingRoute() {
         <Toast.Viewport className="fixed bottom-0 right-0 z-50 p-6" />
       </main>
     </Toast.Provider>
+  );
+}
+
+export default function AdminInboxAuditingRoute() {
+  return (
+    <ErrorBoundary
+      title="Admin dashboard could not load"
+      message="The moderation dashboard ran into a problem. Retry this section without losing access to the rest of the app."
+    >
+      <AdminInboxAuditingContent />
+    </ErrorBoundary>
   );
 }

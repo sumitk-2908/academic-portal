@@ -8,10 +8,11 @@ import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, should
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { manageOfflinePdf } from "../lib/offline-manager";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
-export default function RecentUploadsPage() {
+function RecentUploadsContent() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
@@ -189,5 +190,16 @@ export default function RecentUploadsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function RecentUploadsPage() {
+  return (
+    <ErrorBoundary
+      title="Uploads could not load"
+      message="The recent uploads section hit an unexpected problem. Retry it or continue using the rest of the portal."
+    >
+      <RecentUploadsContent />
+    </ErrorBoundary>
   );
 }

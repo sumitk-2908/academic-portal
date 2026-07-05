@@ -1,13 +1,16 @@
 "use client";
 
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/api";
 import { KeyRound, ArrowRight } from "lucide-react";
 import * as Toast from "@radix-ui/react-toast";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -140,5 +143,16 @@ export default function ResetPasswordPage() {
 
       <Toast.Viewport className="fixed bottom-0 right-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
     </Toast.Provider>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <ErrorBoundary
+      title="Password reset could not load"
+      message="An error occurred during password reset. Please use the link from your email again."
+    >
+      <ResetPasswordContent />
+    </ErrorBoundary>
   );
 }

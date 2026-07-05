@@ -9,10 +9,11 @@ import { requestAuthPrompt } from "../lib/auth-prompts";
 import { requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 import { BookmarksSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 import type { DocumentRecord } from "@/app/lib/document-types";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
-export default function BookmarksPage() {
+function BookmarksContent() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
@@ -192,5 +193,16 @@ export default function BookmarksPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BookmarksPage() {
+  return (
+    <ErrorBoundary
+      title="Bookmarks could not load"
+      message="Your saved library ran into a problem. The rest of the portal stays available."
+    >
+      <BookmarksContent />
+    </ErrorBoundary>
   );
 }

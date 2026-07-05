@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Layers } from "lucide-react";
 import { searchDocuments, type Module, type Subject } from "@/app/lib/api";
 import DocumentInteractiveGrid from "./DocumentInteractiveGrid";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import type { DocumentRecord } from "@/app/lib/document-types";
 
 export default function SubjectTabs({
@@ -52,6 +53,7 @@ export default function SubjectTabs({
                 ? "border-primary text-primary"
                 : "border-transparent text-muted hover:text-foreground"
             }`}
+            
           >
             {tab}
           </button>
@@ -59,6 +61,7 @@ export default function SubjectTabs({
       </div>
 
       {activeTab === "dashboard" && !subjectDetails?.is_non_module ? (
+        <ErrorBoundary title="Course Modules could not load" message="The module grid hit an unexpected problem. Try refreshing.">
         <div className="space-y-4 pt-6">
           <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
             Course Modules
@@ -91,13 +94,19 @@ export default function SubjectTabs({
             })}
           </div>
         </div>
+        </ErrorBoundary>
       ) : activeTab !== "dashboard" ? (
         <div className="pt-6">
-          <DocumentInteractiveGrid
-            initialDocuments={documents}
-            subjectSlug={subjectSlug}
-            loading={loading}
-          />
+          <ErrorBoundary
+            title="Document grid could not load"
+            message="The filtered resources hit an unexpected problem. Try again or switch tabs."
+          >
+            <DocumentInteractiveGrid
+              initialDocuments={documents}
+              subjectSlug={subjectSlug}
+              loading={loading}
+            />
+          </ErrorBoundary>
         </div>
       ) : null}
     </>

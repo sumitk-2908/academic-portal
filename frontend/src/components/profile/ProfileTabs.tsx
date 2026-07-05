@@ -15,6 +15,7 @@ import AchievementsList from "./AchievementsList";
 import ActivityTimeline from "./ActivityTimeline";
 import UserDocumentCard from "./UserDocumentCard";
 import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "@/app/lib/student-prompts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 export default function ProfileTabs({ user, history, bookmarks, uploads, achievements }: any) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -119,7 +120,11 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
       {activeTab === "overview" && (
         <div className="animate-fade-up">
-          {history.length > 0 && <ActivityHeatmap history={history} />}
+          {history.length > 0 && (
+            <ErrorBoundary title="Activity chart could not load" message="The activity heatmap hit an unexpected problem.">
+              <ActivityHeatmap history={history} />
+            </ErrorBoundary>
+          )}
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -284,13 +289,17 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
 
       {activeTab === "achievements" && (
         <div className="animate-fade-up">
-           <AchievementsList achievements={achievements} />
+           <ErrorBoundary title="Achievements could not load" message="The achievements list hit an unexpected problem.">
+             <AchievementsList achievements={achievements} />
+           </ErrorBoundary>
         </div>
       )}
 
       {activeTab === "activity" && (
         <div className="animate-fade-up">
-           <ActivityTimeline history={history} bookmarks={bookmarks} uploads={uploads} />
+           <ErrorBoundary title="Timeline could not load" message="The activity timeline hit an unexpected problem.">
+             <ActivityTimeline history={history} bookmarks={bookmarks} uploads={uploads} />
+           </ErrorBoundary>
         </div>
       )}
     </div>

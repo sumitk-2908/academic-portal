@@ -2,6 +2,7 @@ import { supabase } from "@/app/lib/api";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import DocumentInteractiveGrid from "@/components/subject/DocumentInteractiveGrid";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { Metadata } from "next";
 
 export async function generateMetadata({
@@ -63,10 +64,15 @@ export default async function ModulePage({
         </p>
       </div>
 
-      <DocumentInteractiveGrid
-        initialDocuments={documents || []}
-        subjectSlug={subjectSlug}
-      />
+      <ErrorBoundary
+        title="Document grid could not load"
+        message="The module resources hit an unexpected problem. You can retry this grid or keep browsing other sections."
+      >
+        <DocumentInteractiveGrid
+          initialDocuments={documents || []}
+          subjectSlug={subjectSlug}
+        />
+      </ErrorBoundary>
     </div>
   );
 }

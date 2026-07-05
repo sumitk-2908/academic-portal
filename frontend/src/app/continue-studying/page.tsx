@@ -14,6 +14,7 @@ import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPromp
 import { Clock, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 // Added tutorial_sheet to match the doccategory ENUM in database.types.ts
 const CATEGORY_ICONS: Record<string, any> = { 
@@ -23,7 +24,7 @@ const CATEGORY_ICONS: Record<string, any> = {
   tutorial_sheet: FileText 
 };
 
-export default function ContinueStudyingPage() {
+function ContinueStudyingContent() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -301,5 +302,16 @@ export default function ContinueStudyingPage() {
       )}
 
     </div>
+  );
+}
+
+export default function ContinueStudyingPage() {
+  return (
+    <ErrorBoundary
+      title="Study workspace could not load"
+      message="Your recent activity ran into a problem. Navigate to any subject to keep studying."
+    >
+      <ContinueStudyingContent />
+    </ErrorBoundary>
   );
 }

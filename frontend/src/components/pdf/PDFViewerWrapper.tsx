@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 // The dynamic import with ssr: false is perfectly valid inside a Client Component
 const PDFViewerClient = dynamic(() => import("./PDFViewerClient"), {
@@ -19,5 +20,12 @@ const PDFViewerClient = dynamic(() => import("./PDFViewerClient"), {
 });
 
 export default function PDFViewerWrapper({ documentMeta }: { documentMeta: any }) {
-  return <PDFViewerClient documentMeta={documentMeta} />;
+  return (
+    <ErrorBoundary
+      title="Document viewer could not load"
+      message="The PDF viewer ran into a problem. Try refreshing, or open the document in a new tab."
+    >
+      <PDFViewerClient documentMeta={documentMeta} />
+    </ErrorBoundary>
+  );
 }

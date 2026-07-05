@@ -16,8 +16,9 @@ import ProfileStats from "@/components/profile/ProfileStats";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import { Activity, Flame, Upload, User } from "lucide-react";
 import { ProfileSkeleton } from "@/components/layout/SharedLayouts";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-export default function ProfilePage() {
+function ProfileContent() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -174,5 +175,16 @@ export default function ProfilePage() {
         achievements={achievements}
       />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <ErrorBoundary
+      title="Profile could not load"
+      message="Your profile workspace ran into a problem. Retry this section while the rest of the portal stays available."
+    >
+      <ProfileContent />
+    </ErrorBoundary>
   );
 }
