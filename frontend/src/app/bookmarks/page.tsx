@@ -2,17 +2,18 @@
 
 import { useEffect, useState, useRef } from "react";
 import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
-import { Bookmark, Download, Eye, FileText, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
+import { Bookmark, Download, Eye, FileText, NotebookPen, FileQuestion, ListChecks, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { manageOfflinePdf } from "../lib/offline-manager";
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 import { BookmarksSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
+import type { DocumentRecord } from "@/app/lib/document-types";
 
-const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+const CATEGORY_ICONS: Record<string, LucideIcon> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
 export default function BookmarksPage() {
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
   const [isSignedOut, setIsSignedOut] = useState(false);
@@ -86,7 +87,7 @@ export default function BookmarksPage() {
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
-  const handleDownload = async (e: React.MouseEvent, doc: any) => {
+  const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord) => {
     e.preventDefault();
     
     if (downloadingRef.current.has(doc.id)) return;

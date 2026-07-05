@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Eye, FileQuestion, Upload } from "lucide-react";
 import { trackDocumentStat, deleteDocument, supabase, getPaginatedDocumentsByModule } from "@/app/lib/api";
@@ -10,8 +10,9 @@ import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, should
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
-import { LoadingGrid, EmptyState, CenteredSpinner } from "@/components/layout/SharedLayouts";
+import { DocumentGridSkeleton, EmptyState, CenteredSpinner } from "@/components/layout/SharedLayouts";
 import DocumentCard from "@/components/ui/DocumentCard";
+import type { DocumentRecord, InfiniteDocumentsData, StoredBookmark } from "@/app/lib/document-types";
 
 export interface PaginationConfig {
   queryKey: string[];
@@ -24,13 +25,13 @@ export default function DocumentInteractiveGrid({
   loading = false,
   paginationConfig 
 }: { 
-  initialDocuments: any[]; 
+  initialDocuments: DocumentRecord[]; 
   subjectSlug: string;
   loading?: boolean;
   paginationConfig?: PaginationConfig;
 }) {
   const queryClient = useQueryClient();
-  const [localDocuments, setLocalDocuments] = useState(initialDocuments);
+  const [deletedIds, setDeletedIds] = useState<number[]>([]);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
@@ -48,18 +49,18 @@ export default function DocumentInteractiveGrid({
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
   });
 
-  const displayDocuments = paginationConfig 
-    ? (data?.pages.flatMap(page => page.data) || [])
-    : localDocuments;
+  const displayDocuments = useMemo(() => {
+    const documents = paginationConfig
+      ? (data?.pages.flatMap(page => page.data) || [])
+      : initialDocuments;
 
-  useEffect(() => {
-    if (!paginationConfig) setLocalDocuments(initialDocuments);
-  }, [initialDocuments, paginationConfig]);
+    return documents.filter((doc) => !deletedIds.includes(doc.id));
+  }, [data?.pages, deletedIds, initialDocuments, paginationConfig]);
 
   useEffect(() => {
     const initClientState = async () => {
-      const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
-      const bookmarkIds = rawBookmarks.map((b: any) => typeof b === 'object' ? b.id : b);
+      const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]") as StoredBookmark[];
+      const bookmarkIds = rawBookmarks.map((b) => typeof b === 'object' ? b.id : b);
       setBookmarks(bookmarkIds);
       setShowContributionPrompt(shouldShowContributionPrompt(bookmarkIds.length));
 
@@ -117,7 +118,7 @@ export default function DocumentInteractiveGrid({
     let newStorage;
     
     if (isBookmarked) {
-      newStorage = currentStorage.filter((b: any) => (typeof b === 'object' ? b.id : b) !== id);
+      newStorage = (currentStorage as StoredBookmark[]).filter((b) => (typeof b === 'object' ? b.id : b) !== id);
       if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'REMOVE_PDF').catch(console.error);
       if (userId) await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
     } else {
@@ -130,7 +131,7 @@ export default function DocumentInteractiveGrid({
     window.dispatchEvent(new Event("sidebar_update"));
   };
 
-  const handleDownload = async (e: React.MouseEvent, doc: any) => {
+  const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord) => {
     e.preventDefault();
     if (downloadingIds.includes(doc.id)) return;
     setDownloadingIds((prev) => [...prev, doc.id]);
@@ -162,16 +163,16 @@ export default function DocumentInteractiveGrid({
   const confirmDelete = async () => {
     if (!documentToDelete) return;
     await deleteDocument(documentToDelete);
-    setLocalDocuments(prev => prev.filter(d => d.id !== documentToDelete));
+    setDeletedIds((prev) => [...prev, documentToDelete]);
     
     if (paginationConfig) {
-      queryClient.setQueryData(paginationConfig.queryKey, (oldData: any) => {
+      queryClient.setQueryData<InfiniteDocumentsData>(paginationConfig.queryKey, (oldData) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
-          pages: oldData.pages.map((page: any) => ({
+          pages: oldData.pages.map((page) => ({
             ...page,
-            data: page.data.filter((d: any) => d.id !== documentToDelete)
+            data: page.data.filter((d) => d.id !== documentToDelete)
           }))
         };
       });
@@ -180,7 +181,7 @@ export default function DocumentInteractiveGrid({
     setDocumentToDelete(null);
   };
 
-  if (loading) return <LoadingGrid count={6} />;
+  if (loading) return <DocumentGridSkeleton count={6} />;
   if (displayDocuments.length === 0 && !hasNextPage) {
     const uploadCopy = getUploadPromptCopy(displayDocuments.length);
 

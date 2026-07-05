@@ -11,7 +11,15 @@ type DocumentData = {
   title: string;
   category: string;
   subject: string;
-  module_id: number | null;
+  module_id?: number | null;
+  status?: string | null;
+  created_at?: string | null;
+  file_size?: number | null;
+  file_url?: string;
+  page_count?: number | null;
+  thumbnail_url?: string | null;
+  uploaded_by?: string;
+  uploader_name?: string | null;
   rejection_reason?: string | null;
 };
 
@@ -82,9 +90,9 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
         setUploadState("idle"); 
       }, 1500);
 
-    } catch (err: any) {
+    } catch (err) {
       setUploadState("error");
-      setError(err.message || "Something went wrong during resubmission.");
+      setError(err instanceof Error ? err.message : "Something went wrong during resubmission.");
     }
   };
 

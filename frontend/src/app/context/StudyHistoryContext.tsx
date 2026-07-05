@@ -1,34 +1,30 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { supabase } from "@/app/lib/api"; 
-
-import { Database } from "@/app/lib/database.types";
-
-export type StudyDocument = Database['public']['Tables']['documents']['Row'];
+import type { DocumentRecord } from "@/app/lib/document-types";
 
 type StudyHistoryContextType = {
-  history: any[];
-  addDocumentToHistory: (doc: any) => Promise<void>;
+  history: DocumentRecord[];
+  addDocumentToHistory: (doc: DocumentRecord) => Promise<void>;
 };
 
 const StudyHistoryContext = createContext<StudyHistoryContextType | undefined>(undefined);
 
 export const StudyHistoryProvider = ({ children }: { children: React.ReactNode }) => {
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<DocumentRecord[]>(() => {
+    if (typeof window === "undefined") return [];
 
-  useEffect(() => {
     try {
       const stored = localStorage.getItem("portal_study_history");
-      if (stored) {
-        setHistory(JSON.parse(stored));
-      }
-    } catch (e) {
+      return stored ? (JSON.parse(stored) as DocumentRecord[]) : [];
+    } catch {
       console.warn("Resetting corrupted history local storage");
+      return [];
     }
-  }, []);
+  });
 
-  const addDocumentToHistory = async (doc: any) => {
+  const addDocumentToHistory = async (doc: DocumentRecord) => {
     setHistory((prevHistory) => {
       let newHistory = prevHistory.filter((d) => d.id !== doc.id);
       newHistory.unshift(doc);
@@ -55,7 +51,7 @@ export const StudyHistoryProvider = ({ children }: { children: React.ReactNode }
         );
         if (error) console.error("Failed to sync history to DB:", error.message);
       }
-    } catch (error) {
+    } catch {
       console.error("Network error while syncing study history");
     }
   };

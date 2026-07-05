@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, type LucideIcon } from "lucide-react";
 
 /** 
  * 1. Page Header (New)
@@ -63,7 +63,7 @@ export const EmptyState = ({
 }: {
   title?: string;
   message: string;
-  icon?: any;
+  icon?: LucideIcon;
   action?: React.ReactNode;
 }) => (
   <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-hover/50 p-12 text-center">
@@ -110,8 +110,6 @@ export const DocumentGridSkeleton = ({ count = 6 }: { count?: number }) => (
     ))}
   </CardGrid>
 );
-
-export const LoadingGrid = DocumentGridSkeleton;
 
 export const SidebarSkeleton = ({ collapsed = false }: { collapsed?: boolean }) => (
   <div className="flex flex-1 flex-col gap-6" aria-label="Loading navigation">

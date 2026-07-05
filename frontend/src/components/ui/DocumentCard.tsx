@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
+import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks, type LucideIcon } from "lucide-react";
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
+import type { DocumentRecord } from "@/app/lib/document-types";
 
-const CATEGORY_ICONS: Record<string, any> = { 
+const CATEGORY_ICONS: Record<string, LucideIcon> = { 
   notes: NotebookPen, 
   pyq: FileQuestion, 
   syllabus: ListChecks 
 };
 
-const getTimeAgo = (dateStr: string) => {
+const getTimeAgo = (dateStr: string | null) => {
+  if (!dateStr) return "recently";
   const days = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / (1000 * 3600 * 24));
   if (days === 0) return 'today';
   if (days === 1) return 'yesterday';
@@ -19,11 +21,11 @@ const getTimeAgo = (dateStr: string) => {
 };
 
 export interface DocumentCardProps {
-  doc: any;
+  doc: DocumentRecord;
   subjectSlug?: string;
   isBookmarked: boolean;
   isAdmin: boolean;
-  onDownload: (e: React.MouseEvent, doc: any) => void;
+  onDownload: (e: React.MouseEvent, doc: DocumentRecord) => void;
   onToggleBookmark: (id: number) => void;
   onDelete?: (id: number) => void;
   isDownloading?: boolean;
@@ -87,7 +89,7 @@ export default function DocumentCard({
           <span>·</span>
           <span>{doc.file_size ? `${doc.file_size.toFixed(1)} MB` : 'N/A'}</span>
           <span>·</span>
-          <span>{getTimeAgo(doc.created_at)}</span>
+          <span>{getTimeAgo(doc.created_at ?? null)}</span>
         </div>
       </div>
       

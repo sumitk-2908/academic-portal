@@ -3,16 +3,11 @@
 import React, { useState } from "react";
 import { FileText, Eye, Download, AlertCircle, RefreshCw } from "lucide-react";
 import ResubmitModal from "@/components/ui/ResubmitModal";
+import type { DocumentWithAnalytics } from "@/app/lib/document-types";
 
 interface UserDocumentCardProps {
-  item: any;
+  item: DocumentWithAnalytics;
   onRefresh: () => void;
-  // Included these as optional to satisfy any legacy types if they exist, 
-  // though ProfileTabs doesn't currently pass them to this specific component
-  onDownload?: (e: React.MouseEvent, doc: any) => void;
-  onToggleBookmark?: (id: number) => void;
-  isBookmarked?: boolean;
-  onDelete?: (id: number) => void;
 }
 
 export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
@@ -33,8 +28,11 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
   const rejectReason = item?.rejection_reason || "Does not meet community guidelines.";
   
   // Extract analytics exactly how ProfileTabs calculates total impact
-  const views = item?.document_analytics?.view_count || 0;
-  const downloads = item?.document_analytics?.download_count || 0;
+  const analytics = Array.isArray(item.document_analytics)
+    ? item.document_analytics[0]
+    : item.document_analytics;
+  const views = analytics?.view_count || 0;
+  const downloads = analytics?.download_count || 0;
 
   const getStatusColor = (status: string) => {
     const s = status.toLowerCase();

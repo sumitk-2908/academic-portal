@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Layers } from "lucide-react";
-import { searchDocuments } from "@/app/lib/api";
+import { searchDocuments, type Module, type Subject } from "@/app/lib/api";
 import DocumentInteractiveGrid from "./DocumentInteractiveGrid";
+import type { DocumentRecord } from "@/app/lib/document-types";
 
 export default function SubjectTabs({
   subjectDetails,
@@ -12,13 +13,13 @@ export default function SubjectTabs({
   moduleCounts,
   subjectSlug
 }: {
-  subjectDetails: any;
-  modules: any[];
+  subjectDetails: Subject;
+  modules: Module[];
   moduleCounts: Record<number, number>;
   subjectSlug: string;
 }) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "syllabus">("dashboard");
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
