@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Layers } from "lucide-react";
+import { Layers, FileText } from "lucide-react";
 import { searchDocuments, type Module, type Subject } from "@/app/lib/api";
 import DocumentInteractiveGrid from "./DocumentInteractiveGrid";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -75,20 +75,34 @@ export default function SubjectTabs({
                 <Link
                   key={mod.id}
                   href={`/subject/${subjectSlug}/module-${mod.module_number}`}
-                  className="group rounded-2xl border border-border bg-background p-5 text-center transition-all hover:-translate-y-1 hover:border-primary"
+                  className="group relative flex flex-col items-start justify-between overflow-hidden rounded-2xl border border-border bg-surface p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                 >
-                  <Layers
-                    size={18}
-                    className="mx-auto mb-2 text-muted group-hover:text-primary"
-                  />
-
-                  <p className="text-xs font-bold">
-                    {mod.name || `Module ${mod.module_number}`}
-                  </p>
-
-                  <p className="mt-1 text-xs text-muted">
-                    {count} items indexed
-                  </p>
+                  <div className="absolute left-0 top-0 h-1 w-full bg-primary" />
+                  <div className="w-full">
+                    <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                      <Layers size={24} />
+                    </div>
+                    <h2 className="text-base font-bold tracking-tight text-foreground">
+                      {mod.name || `Module ${mod.module_number}`}
+                    </h2>
+                    {mod.name && (
+                      <p className="mt-1 text-sm text-muted">Module {mod.module_number}</p>
+                    )}
+                  </div>
+                  
+                  <div className="mt-6">
+                    {count > 0 ? (
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-500">
+                        <FileText size={14} />
+                        <span>{count} resource{count !== 1 ? 's' : ''}</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-background/50 px-3 py-1 text-xs font-medium text-muted">
+                        <div className="size-1.5 rounded-full bg-muted-foreground/50" />
+                        <span>No resources yet</span>
+                      </div>
+                    )}
+                  </div>
                 </Link>
               );
             })}

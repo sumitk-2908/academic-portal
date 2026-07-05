@@ -38,7 +38,7 @@ export const SUBJECT_UI_MAP: Record<string, any> = {
    "bme": { icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", hoverBg: "group-hover:bg-destructive", border: "border-destructive" },
    "nss": { icon: Users, color: "text-destructive", bg: "bg-destructive/10", hoverBg: "group-hover:bg-destructive", border: "border-destructive" },
 
-   "engineering-graphics": { icon: PenTool, color: "text-muted", bg: "bg-muted/10", hoverBg: "group-hover:bg-muted", border: "border-muted" },
+   "engineering-graphics": { icon: PenTool, color: "text-sky-500", bg: "bg-sky-500/10", hoverBg: "group-hover:bg-sky-500", border: "border-sky-500" },
    
-   "default": { icon: BookOpen, color: "text-muted", bg: "bg-muted/10", hoverBg: "group-hover:bg-muted", border: "border-muted" }
+   "default": { icon: BookOpen, color: "text-primary", bg: "bg-primary/10", hoverBg: "group-hover:bg-primary", border: "border-primary" }
 };
