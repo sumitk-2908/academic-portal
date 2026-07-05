@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Layers } from "lucide-react";
-import { searchDocuments, supabase } from "@/app/lib/api";
+import { searchDocuments } from "@/app/lib/api";
 import DocumentInteractiveGrid from "./DocumentInteractiveGrid";
 
 export default function SubjectTabs({
@@ -17,7 +17,7 @@ export default function SubjectTabs({
   moduleCounts: Record<number, number>;
   subjectSlug: string;
 }) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "syllabus" | "bookmarks">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "syllabus">("dashboard");
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -26,30 +26,12 @@ export default function SubjectTabs({
       if (activeTab === "dashboard") return;
 
       setLoading(true);
-      if (activeTab === "bookmarks") {
-        const bookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]").map((b: any) =>
-          typeof b === "object" ? b.id : b
-        );
-
-        if (bookmarks.length > 0) {
-          const { data } = await supabase
-            .from("documents")
-            .select("*")
-            .in("id", bookmarks)
-            .eq("status", "approved");
-
-          setDocuments(data || []);
-        } else {
-          setDocuments([]);
-        }
-      } else {
-        const response = await searchDocuments({
-          subject: subjectDetails.name,
-          category: activeTab,
-          limit: 50
-        });
-        setDocuments(response.data);
-      }
+      const response = await searchDocuments({
+        subject: subjectDetails.name,
+        category: activeTab,
+        limit: 50
+      });
+      setDocuments(response.data);
 
       setLoading(false);
     };
@@ -60,10 +42,10 @@ export default function SubjectTabs({
   return (
     <>
       <div className="flex gap-1 overflow-x-auto border-b border-border pb-1">
-        {["dashboard", "notes", "pyq", "syllabus", "bookmarks"].map((tab) => (
+        {(["dashboard", "notes", "pyq", "syllabus"] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab)}
             className={`border-b-2 px-4 py-2 text-xs font-bold capitalize transition-colors ${
               activeTab === tab
                 ? "border-primary text-primary"

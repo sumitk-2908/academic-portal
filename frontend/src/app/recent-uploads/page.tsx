@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { trackDocumentStat, searchDocuments } from "../lib/api";
-import { Upload, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks } from "lucide-react";
+import { trackDocumentStat, searchDocuments, supabase } from "../lib/api";
+import { Upload, Eye, Download, FileText, Loader2, NotebookPen, FileQuestion, ListChecks, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
+import { requestAuthPrompt } from "../lib/auth-prompts";
+import { manageOfflinePdf } from "../lib/offline-manager";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
@@ -12,18 +14,57 @@ export default function RecentUploadsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
+  const [bookmarks, setBookmarks] = useState<number[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     const fetchRecent = async () => {
       setLoading(true);
+      const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
+      const bookmarkIds = rawBookmarks.map((b: any) => typeof b === "object" ? b.id : b);
+      setBookmarks(bookmarkIds);
+      setShowContributionPrompt(shouldShowContributionPrompt(bookmarkIds.length));
+
+      const { data: sess } = await supabase.auth.getSession();
+      setUserId(sess?.session?.user?.id || null);
+
       const response = await searchDocuments({ limit: 24, sortBy: "created_at", sortOrder: "desc" });
       setDocuments(response.data);
       setLoading(false);
     };
     fetchRecent();
   }, []);
+
+  const toggleBookmark = async (doc: any) => {
+    if (!userId) {
+      requestAuthPrompt("bookmark");
+      return;
+    }
+
+    const isBookmarked = bookmarks.includes(doc.id);
+    const nextBookmarks = isBookmarked ? bookmarks.filter(id => id !== doc.id) : [...bookmarks, doc.id];
+    setBookmarks(nextBookmarks);
+
+    const currentStorage = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
+    const nextStorage = isBookmarked
+      ? currentStorage.filter((b: any) => (typeof b === "object" ? b.id : b) !== doc.id)
+      : [...currentStorage, { id: doc.id, bookmarked_at: new Date().toISOString() }];
+
+    localStorage.setItem("portal_bookmarks", JSON.stringify(nextStorage));
+
+    if (isBookmarked) {
+      if (doc.file_url) manageOfflinePdf(doc.file_url, "REMOVE_PDF").catch(console.error);
+      await supabase.from("student_bookmarks").delete().match({ user_id: userId, document_id: doc.id });
+    } else {
+      if (doc.file_url) manageOfflinePdf(doc.file_url, "CACHE_PDF").catch(console.error);
+      await supabase.from("student_bookmarks").insert({ user_id: userId, document_id: doc.id });
+      setShowContributionPrompt(shouldShowContributionPrompt(nextBookmarks.length));
+    }
+
+    window.dispatchEvent(new Event("sidebar_update"));
+  };
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
@@ -127,6 +168,18 @@ export default function RecentUploadsPage() {
                   >
                     <Eye size={12} /> View
                   </Link>
+
+                  <button
+                    onClick={() => toggleBookmark(doc)}
+                    className={`rounded-xl border p-2 motion-hover motion-active ${
+                      bookmarks.includes(doc.id)
+                        ? "border-warning bg-warning text-white"
+                        : "border-warning/30 text-warning hover:bg-warning/10"
+                    }`}
+                    aria-label={bookmarks.includes(doc.id) ? "Remove bookmark" : "Bookmark resource"}
+                  >
+                    <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-white text-white" : "text-warning"} />
+                  </button>
                 </div>
               </article>
             );

@@ -14,7 +14,7 @@ export const getUploadPromptCopy = (documentCount: number) => {
     };
   }
 
-  if (documentCount < 6) {
+  if (documentCount < 5) {
     return {
       tone: "few" as UploadPromptTone,
       title: "A few resources are here",
