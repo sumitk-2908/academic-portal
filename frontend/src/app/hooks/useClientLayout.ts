@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, getTrendingDocuments, uploadDocument, getAchievements, searchDocuments, UploadState } from "@/app/lib/api";
 import type { AuthPromptFeature } from "@/app/lib/auth-prompts";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useRouter, usePathname } from 'next/navigation';
 
 export const SUBJECTS_LIST = [
@@ -35,6 +35,7 @@ export function useClientLayout() {
   const { data: trendingDocs = [] } = useQuery({
     queryKey: ['trendingDocuments'],
     queryFn: getTrendingDocuments,
+    placeholderData: keepPreviousData,
   });
 
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -162,6 +163,16 @@ export function useClientLayout() {
     window.addEventListener("portal_auth_prompt", handleAuthPrompt);
     return () => window.removeEventListener("portal_auth_prompt", handleAuthPrompt);
   }, [openAuthPrompt]);
+
+  useEffect(() => {
+    const handlePortalToast = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail) showToast(detail.title, detail.message, detail.type);
+    };
+
+    window.addEventListener("portal_toast", handlePortalToast);
+    return () => window.removeEventListener("portal_toast", handlePortalToast);
+  }, []);
 
   useEffect(() => {
     const handleUploadPrompt = () => {
@@ -345,9 +356,22 @@ export function useClientLayout() {
 
   const handleMarkAsRead = async (id: string, isRead: boolean) => {
     if (isRead) return;
+    
+    const snapshotNotifications = [...notifications];
+    const snapshotUnreadCount = unreadCount;
+
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+
+    try {
+      const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Failed to mark as read, rolling back:", error);
+      setNotifications(snapshotNotifications);
+      setUnreadCount(snapshotUnreadCount);
+      showToast("Error", "Failed to mark notification as read", "error");
+    }
   };
 
   useEffect(() => {

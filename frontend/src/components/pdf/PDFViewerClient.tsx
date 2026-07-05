@@ -50,6 +50,11 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
       if (!hasTrackedView.current && documentMeta) {
         hasTrackedView.current = true; 
         
+        addDocumentToHistory({
+          ...documentMeta,
+          accessed_at: new Date().toISOString()
+        });
+
         await trackDocumentStat(documentMeta.id, 'view');
 
         const { data: sess } = await supabase.auth.getSession();
@@ -57,11 +62,6 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
           await logStudySession(sess.session.user.id, documentMeta.id);
           await triggerStreakUpdate(sess.session.user.id);
         }
-
-        addDocumentToHistory({
-          ...documentMeta,
-          accessed_at: new Date().toISOString()
-        });
       }
     };
     trackAnalytics();

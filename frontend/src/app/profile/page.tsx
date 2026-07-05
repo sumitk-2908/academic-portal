@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   supabase,
   getStudentBookmarks,
@@ -37,10 +37,15 @@ function ProfileContent() {
   const [streak, setStreak] = useState<any>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
 
+  const lastFetchTime = useRef(0);
+
   useEffect(() => {
     let isMounted = true;
 
     const fetchDashboardData = async () => {
+      const now = Date.now();
+      if (now - lastFetchTime.current < 2000) return;
+      lastFetchTime.current = now;
       // 1. Get Auth Session
       const { data: sess } = await supabase.auth.getSession();
       const currentUser = sess?.session?.user;

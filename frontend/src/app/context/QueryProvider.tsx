@@ -12,6 +12,7 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
         staleTime: 1000 * 60 * 5, // 5 minutes
         gcTime: 1000 * 60 * 30, // 30 minutes
         refetchOnWindowFocus: false, // Prevent fetch storms when switching tabs
+        refetchOnMount: false, // Prevent unnecessary refetches on component remounts
         retry: 1,
       },
     },

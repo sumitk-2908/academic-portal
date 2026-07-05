@@ -8,7 +8,9 @@ import { manageOfflinePdf } from "@/app/lib/offline-manager";
 import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "@/app/lib/student-prompts";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { withOptimisticUpdate } from "@/app/lib/optimistic";
+import { dispatchToast } from "@/app/lib/toast";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { DocumentGridSkeleton, EmptyState, CenteredSpinner } from "@/components/layout/SharedLayouts";
 import DocumentCard from "@/components/ui/DocumentCard";
@@ -47,6 +49,7 @@ export default function DocumentInteractiveGrid({
     enabled: !!paginationConfig,
     initialData: paginationConfig ? { pages: [{ data: initialDocuments, nextCursor: 2, total: 0 }], pageParams: [1] } : undefined,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
+    placeholderData: keepPreviousData,
   });
 
   const displayDocuments = useMemo(() => {
@@ -109,26 +112,56 @@ export default function DocumentInteractiveGrid({
     }
 
     const isBookmarked = bookmarks.includes(id);
-    const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
-    setBookmarks(nextB);
-    if (!isBookmarked) setShowContributionPrompt(shouldShowContributionPrompt(nextB.length));
-    
+    const snapshotBookmarks = [...bookmarks];
+    const snapshotLocalStorage = localStorage.getItem("portal_bookmarks");
     const targetDoc = displayDocuments.find(d => d.id === id);
-    const currentStorage = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
-    let newStorage;
-    
-    if (isBookmarked) {
-      newStorage = (currentStorage as StoredBookmark[]).filter((b) => (typeof b === 'object' ? b.id : b) !== id);
-      if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'REMOVE_PDF').catch(console.error);
-      if (userId) await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
-    } else {
-      newStorage = [...currentStorage, { id, bookmarked_at: new Date().toISOString() }];
-      if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'CACHE_PDF').catch(console.error);
-      if (userId) await supabase.from('student_bookmarks').insert({ user_id: userId, document_id: id });
-    }
-    
-    localStorage.setItem("portal_bookmarks", JSON.stringify(newStorage));
-    window.dispatchEvent(new Event("sidebar_update"));
+
+    const applyOptimistic = () => {
+      const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
+      setBookmarks(nextB);
+      if (!isBookmarked) setShowContributionPrompt(shouldShowContributionPrompt(nextB.length));
+
+      const currentStorage = JSON.parse(snapshotLocalStorage || "[]");
+      let newStorage;
+      if (isBookmarked) {
+        newStorage = (currentStorage as StoredBookmark[]).filter((b) => (typeof b === 'object' ? b.id : b) !== id);
+      } else {
+        newStorage = [...currentStorage, { id, bookmarked_at: new Date().toISOString() }];
+      }
+      localStorage.setItem("portal_bookmarks", JSON.stringify(newStorage));
+      window.dispatchEvent(new Event("sidebar_update"));
+    };
+
+    const revertOptimistic = () => {
+      setBookmarks(snapshotBookmarks);
+      if (!isBookmarked) setShowContributionPrompt(shouldShowContributionPrompt(snapshotBookmarks.length));
+      if (snapshotLocalStorage) {
+        localStorage.setItem("portal_bookmarks", snapshotLocalStorage);
+      } else {
+        localStorage.removeItem("portal_bookmarks");
+      }
+      window.dispatchEvent(new Event("sidebar_update"));
+      dispatchToast("Error", "Failed to update bookmark", "error");
+    };
+
+    const serverMutation = async () => {
+      if (isBookmarked) {
+        if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'REMOVE_PDF').catch(console.error);
+        const { error } = await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
+        if (error) throw error;
+      } else {
+        if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'CACHE_PDF').catch(console.error);
+        const { error } = await supabase.from('student_bookmarks').insert({ user_id: userId, document_id: id });
+        if (error) throw error;
+      }
+    };
+
+    await withOptimisticUpdate(
+      applyOptimistic,
+      null,
+      serverMutation,
+      revertOptimistic
+    );
   };
 
   const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord) => {

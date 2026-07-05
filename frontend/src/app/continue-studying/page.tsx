@@ -25,9 +25,17 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 function ContinueStudyingContent() {
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("portal_study_history");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(documents.length === 0);
   const [isSignedOut, setIsSignedOut] = useState(false);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
@@ -35,7 +43,9 @@ function ContinueStudyingContent() {
 
   useEffect(() => {
     const fetchHistoryAndSuggestions = async () => {
-      setLoading(true);
+      // Don't show skeleton if we have optimistic local data
+      if (documents.length === 0) setLoading(true);
+      
       const { data: sess } = await supabase.auth.getSession();
       const currentUserId = sess?.session?.user?.id;
 

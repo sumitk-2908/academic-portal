@@ -49,10 +49,10 @@ export const StudyHistoryProvider = ({ children }: { children: React.ReactNode }
           },
           { onConflict: "user_id, document_id" }
         );
-        if (error) console.error("Failed to sync history to DB:", error.message);
+        if (error) console.warn("Supabase failure: Failed to sync history to DB:", error.message);
       }
-    } catch {
-      console.error("Network error while syncing study history");
+    } catch (error) {
+      console.warn("Network error while syncing study history", error);
     }
   };
 

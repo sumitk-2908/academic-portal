@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
+import { withOptimisticUpdate } from "../lib/optimistic";
+import { dispatchToast } from "../lib/toast";
 import { Bookmark, Download, Eye, FileText, NotebookPen, FileQuestion, ListChecks, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { manageOfflinePdf } from "../lib/offline-manager";
@@ -72,20 +74,46 @@ function BookmarksContent() {
 
   const toggleBookmark = async (id: number) => {
     const docToRemove = documents.find(d => d.id === id);
-    const nextDocs = documents.filter(d => d.id !== id);
-    setDocuments(nextDocs);
-    setShowContributionPrompt(shouldShowContributionPrompt(nextDocs.length));
-    const nextIds = nextDocs.map(d => d.id);
-    localStorage.setItem("portal_bookmarks", JSON.stringify(nextIds));
+    const snapshotDocuments = [...documents];
+    const snapshotLocalStorage = localStorage.getItem("portal_bookmarks");
 
-    if (docToRemove?.file_url) {
-      manageOfflinePdf(docToRemove.file_url, 'REMOVE_PDF').catch(console.error);
-    }
-    
-    if (userId) {
-      await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
-    }
-    window.dispatchEvent(new Event("sidebar_update"));
+    const applyOptimistic = () => {
+      const nextDocs = documents.filter(d => d.id !== id);
+      setDocuments(nextDocs);
+      setShowContributionPrompt(shouldShowContributionPrompt(nextDocs.length));
+      const nextIds = nextDocs.map(d => d.id);
+      localStorage.setItem("portal_bookmarks", JSON.stringify(nextIds));
+      window.dispatchEvent(new Event("sidebar_update"));
+    };
+
+    const revertOptimistic = () => {
+      setDocuments(snapshotDocuments);
+      setShowContributionPrompt(shouldShowContributionPrompt(snapshotDocuments.length));
+      if (snapshotLocalStorage) {
+        localStorage.setItem("portal_bookmarks", snapshotLocalStorage);
+      } else {
+        localStorage.removeItem("portal_bookmarks");
+      }
+      window.dispatchEvent(new Event("sidebar_update"));
+      dispatchToast("Error", "Failed to remove bookmark", "error");
+    };
+
+    const serverMutation = async () => {
+      if (docToRemove?.file_url) {
+        manageOfflinePdf(docToRemove.file_url, 'REMOVE_PDF').catch(console.error);
+      }
+      if (userId) {
+        const { error } = await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
+        if (error) throw error;
+      }
+    };
+
+    await withOptimisticUpdate(
+      applyOptimistic,
+      null, // not using current state in apply function directly
+      serverMutation,
+      revertOptimistic
+    );
   };
 
   const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord) => {
