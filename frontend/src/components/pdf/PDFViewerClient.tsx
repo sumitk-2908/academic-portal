@@ -9,12 +9,13 @@ import {
 import { useRouter } from "next/navigation";
 import { supabase, trackDocumentStat, logStudySession, triggerStreakUpdate } from "@/app/lib/api"; 
 import { useStudyHistory } from "@/app/context/StudyHistoryContext";
+import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import * as Toast from "@radix-ui/react-toast";
-import { InlineSpinner } from "@/components/layout/SharedLayouts";
+import { InlineSpinner, SkeletonBlock } from "@/components/layout/SharedLayouts";
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -230,15 +231,19 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-2">
         <div className="flex items-center gap-1">
-          <button onClick={() => setScale(s => Math.max(s - 0.2, 0.6))} className="motion-hover motion-active rounded-lg p-1.5 text-muted hover:bg-surface-hover"><ZoomOut size={18} /></button>
-          <span className="w-10 text-center text-sm font-bold text-foreground tabular-nums">{Math.round(scale * 100)}%</span>
-          <button onClick={() => setScale(s => Math.min(s + 0.2, 2.5))} className="motion-hover motion-active rounded-lg p-1.5 text-muted hover:bg-surface-hover"><ZoomIn size={18} /></button>
+          <button aria-label="Zoom Out" onClick={() => setScale(s => Math.max(s - 0.2, 0.6))} className="motion-hover motion-active rounded-lg p-1.5 text-muted hover:bg-surface-hover"><ZoomOut size={18} aria-hidden="true" /></button>
+          <span className="w-10 text-center text-sm font-bold text-foreground tabular-nums" aria-hidden="true">{Math.round(scale * 100)}%</span>
+          <button aria-label="Zoom In" onClick={() => setScale(s => Math.min(s + 0.2, 2.5))} className="motion-hover motion-active rounded-lg p-1.5 text-muted hover:bg-surface-hover"><ZoomIn size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => changePage(-1)} disabled={pageNumber <= 1} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronLeft size={18} /></button>
-          <span className="text-sm font-bold text-muted tabular-nums">Page {pageNumber} of {numPages || '--'}</span>
-          <button onClick={() => changePage(1)} disabled={pageNumber >= numPages} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronRight size={18} /></button>
+          <button aria-label="Previous Page" onClick={() => changePage(-1)} disabled={pageNumber <= 1} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronLeft size={18} aria-hidden="true" /></button>
+          <span className="text-sm font-bold text-muted tabular-nums" aria-hidden="true">Page {pageNumber} of {numPages || '--'}</span>
+          <button aria-label="Next Page" onClick={() => changePage(1)} disabled={pageNumber >= numPages} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronRight size={18} aria-hidden="true" /></button>
+        </div>
+        {/* ARIA Live region for screen readers to announce page changes */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {numPages > 0 ? `Page ${pageNumber} of ${numPages}` : 'Loading PDF'}
         </div>
       </div>
 
@@ -246,28 +251,31 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
         <Document file={documentMeta.file_url} onLoadSuccess={onDocumentLoadSuccess} loading={<Loader2 className="mt-10 animate-spin text-primary" size={32} />} error={<p className="mt-10 text-xs text-destructive">Failed to load PDF. Please ensure CORS is configured in Supabase.</p>}>
           {containerWidth > 0 && (
             <div className="mb-4 shadow-lg ring-1 ring-foreground/5">
-              <Page pageNumber={pageNumber} scale={scale} width={containerWidth * 0.95} renderTextLayer={true} renderAnnotationLayer={true} loading={<div className="h-[500px] w-full animate-pulse bg-surface" />} />
+              <Page pageNumber={pageNumber} scale={scale} width={containerWidth * 0.95} renderTextLayer={true} renderAnnotationLayer={true} loading={<SkeletonBlock className="h-[500px] w-full rounded-none" />} />
             </div>
           )}
         </Document>
       </div>
 
-      {isFlagModalOpen && (
-        <div className="motion-modal fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-          <div className="animate-in fade-in zoom-in-95 motion-modal w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
+      <Dialog.Root open={isFlagModalOpen} onOpenChange={setIsFlagModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" />
+          <Dialog.Content className="animate-in fade-in zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 motion-modal fixed top-[50%] left-[50%] z-[100] w-full max-w-md translate-[-50%] overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
             <div className="flex items-center justify-between border-b border-border p-4">
-              <h3 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
-                <Flag size={16} className="text-destructive" /> Report Issue
-              </h3>
-              <button onClick={() => setIsFlagModalOpen(false)} className="motion-hover text-muted hover:text-foreground">
-                <X size={18} />
-              </button>
+              <Dialog.Title className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
+                <Flag size={16} className="text-destructive" aria-hidden="true" /> Report Issue
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button aria-label="Close" className="motion-hover text-muted hover:text-foreground">
+                  <X size={18} aria-hidden="true" />
+                </button>
+              </Dialog.Close>
             </div>
-            
+            <Dialog.Description className="sr-only">Report an issue with this document such as incorrect content, duplication, or low quality.</Dialog.Description>
             <form onSubmit={handleSubmitFlag} className="space-y-4 p-4">
               <div>
-                <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Issue Type</label>
-                <select value={flagReason} onChange={(e) => setFlagReason(e.target.value)} className="motion-focus w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-primary">
+                <label htmlFor="flag-reason" className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Issue Type</label>
+                <select id="flag-reason" value={flagReason} onChange={(e) => setFlagReason(e.target.value)} className="motion-focus w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-primary">
                   <option value="incorrect" className="bg-surface">Incorrect/Outdated Content</option>
                   <option value="duplicate" className="bg-surface">Duplicate Document</option>
                   <option value="low_quality" className="bg-surface">Poor Quality / Unreadable</option>
@@ -276,20 +284,22 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Additional Details (Optional)</label>
-                <textarea value={flagDescription} onChange={(e) => setFlagDescription(e.target.value)} className="motion-focus min-h-[80px] w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-primary" />
+                <label htmlFor="flag-description" className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Additional Details (Optional)</label>
+                <textarea id="flag-description" value={flagDescription} onChange={(e) => setFlagDescription(e.target.value)} className="motion-focus min-h-[80px] w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-primary" />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setIsFlagModalOpen(false)} className="motion-hover motion-active rounded-xl bg-surface-hover px-4 py-2 text-xs font-bold text-foreground">Cancel</button>
+                <Dialog.Close asChild>
+                  <button type="button" className="motion-hover motion-active rounded-xl bg-surface-hover px-4 py-2 text-xs font-bold text-foreground">Cancel</button>
+                </Dialog.Close>
                 <button type="submit" disabled={isSubmittingQuality} className="motion-hover motion-active flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50">
                   {isSubmittingQuality ? <InlineSpinner label="Submitting report" size={14} /> : null} Submit Report
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
       <Toast.Root open={toast.open} onOpenChange={(open) => setToast(prev => ({...prev, open}))} className={`fixed right-4 bottom-4 z-[150] w-auto max-w-md rounded-xl border p-4 shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${toast.type === 'error' ? 'border-destructive/20 bg-destructive/10' : 'border-success/20 bg-success/10'}`}>
         <Toast.Title className={`text-sm font-bold ${toast.type === 'error' ? 'text-destructive' : 'text-success'}`}>{toast.title}</Toast.Title>

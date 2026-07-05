@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState,useEffect } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Toast from "@radix-ui/react-toast";
+import Fuse from "fuse.js";
 import { 
   GraduationCap, Search, Moon, Sun, LogOut, PanelLeft, PanelLeftClose, TrendingUp, X, 
   Bookmark, Clock, Upload, Inbox, Plus, FileText, Home, Menu, Mail,
@@ -144,7 +145,7 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
     },
   ], [closePalette, ctx, isSignedIn, navigateTo]);
 
-  const subjectItems = useMemo<CommandItem[]>(() => SUBJECTS_LIST.flatMap((subject) => {
+  const allSubjectItems = useMemo<CommandItem[]>(() => SUBJECTS_LIST.flatMap((subject) => {
     const slug = subjectSlug(subject);
     const base: CommandItem = {
       id: `subject-${slug}`,
@@ -163,10 +164,13 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
       action: () => navigateTo(`/subject/${slug}/module-${module}`),
     }));
     return [base, ...modules];
-  }).filter((item) => {
-    if (!normalizedQuery) return false;
-    return `${item.label} ${item.description || ""}`.toLowerCase().includes(normalizedQuery);
-  }).slice(0, 8), [navigateTo, normalizedQuery]);
+  }), [navigateTo]);
+
+  const subjectItems = useMemo<CommandItem[]>(() => {
+    if (!normalizedQuery) return [];
+    const fuse = new Fuse(allSubjectItems, { keys: ["label", "description"], threshold: 0.4 });
+    return fuse.search(normalizedQuery).map(result => result.item).slice(0, 8);
+  }, [allSubjectItems, normalizedQuery]);
 
   const documentItems = useMemo<CommandItem[]>(() => ctx.globalSearchResults.map((doc) => ({
     id: `doc-${doc.id}`,
@@ -193,10 +197,11 @@ const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutC
       },
     })), [ctx, normalizedQuery, recentSearches, saveRecentSearch]);
 
-  const visibleQuickActions = quickActions.filter((item) => {
-    if (!normalizedQuery) return true;
-    return `${item.label} ${item.description || ""}`.toLowerCase().includes(normalizedQuery);
-  });
+  const visibleQuickActions = useMemo<CommandItem[]>(() => {
+    if (!normalizedQuery) return quickActions;
+    const fuse = new Fuse(quickActions, { keys: ["label", "description"], threshold: 0.4 });
+    return fuse.search(normalizedQuery).map(result => result.item);
+  }, [quickActions, normalizedQuery]);
 
   const items = [
     ...(normalizedQuery ? documentItems : []),
@@ -668,6 +673,7 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
           <Dialog.Title className="text-lg font-extrabold text-foreground">{ctx.isAdmin ? "Admin Database Upload" : "Student Contribution"}</Dialog.Title>
           <Dialog.Close asChild><button className="text-muted transition-opacity hover:opacity-80"><X size={20} /></button></Dialog.Close>
         </div>
+        <Dialog.Description className="sr-only">Upload a PDF document to the portal.</Dialog.Description>
         <form onSubmit={ctx.handleUpload} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
