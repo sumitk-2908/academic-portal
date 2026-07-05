@@ -57,7 +57,7 @@ export function useClientLayout() {
   const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const [userProfile, setUserProfile] = useState<{full_name: string | null, preferred_branch: string | null, favorite_subjects: string[] | null}>({ full_name: null, preferred_branch: null, favorite_subjects: null });
+  const [userProfile, setUserProfile] = useState<{full_name: string | null, preferred_branch: string | null, favorite_subjects: string[] | null, academic_year: string | null}>({ full_name: null, preferred_branch: null, favorite_subjects: null, academic_year: null });
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showProfileGate, setShowProfileGate] = useState(false);
 
@@ -113,9 +113,9 @@ export function useClientLayout() {
         setIsAdmin(true); setIsStudent(false);
       } else {
         setIsAdmin(false); setIsStudent(true);
-        const { data: profileData } = await supabase.from('profiles').select('full_name, preferred_branch, favorite_subjects').eq('id', session.user.id).single();
+        const { data: profileData } = await supabase.from('profiles').select('full_name, preferred_branch, favorite_subjects, academic_year').eq('id', session.user.id).single();
         if (profileData) {
-          setUserProfile({ full_name: profileData.full_name, preferred_branch: profileData.preferred_branch, favorite_subjects: profileData.favorite_subjects });
+          setUserProfile({ full_name: profileData.full_name, preferred_branch: profileData.preferred_branch, favorite_subjects: profileData.favorite_subjects, academic_year: profileData.academic_year });
           setUploadedBy(profileData.full_name || "Student");
           if (!profileData.full_name && !sessionStorage.getItem(`skipped_onboarding_${session.user.id}`)) {
             setShowOnboardingModal(true);
@@ -283,7 +283,7 @@ export function useClientLayout() {
     }
   };
 
-  const updateUserProfile = (profile: { full_name?: string, preferred_branch?: string, favorite_subjects?: string[] }) => {
+  const updateUserProfile = (profile: { full_name?: string, preferred_branch?: string, favorite_subjects?: string[], academic_year?: string }) => {
     setUserProfile(prev => ({ ...prev, ...profile }));
     if (profile.full_name) setUploadedBy(profile.full_name);
   };

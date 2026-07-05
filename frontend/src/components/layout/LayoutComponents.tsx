@@ -576,10 +576,24 @@ export const SidebarNavigation = ({ ctx }: { ctx: ClientLayoutContext }) => (
 
 export const SidebarFooter = ({ ctx }: { ctx: ClientLayoutContext }) => {
   if (ctx.sidebarCollapsed) return null;
+  
+  let roleDisplay = "Student Account";
+  if (ctx.isAdmin) {
+    roleDisplay = "Administrator";
+  } else if (ctx.userProfile) {
+    if (ctx.userProfile.academic_year && ctx.userProfile.preferred_branch) {
+      roleDisplay = `${ctx.userProfile.academic_year} · ${ctx.userProfile.preferred_branch}`;
+    } else if (ctx.userProfile.preferred_branch) {
+      roleDisplay = ctx.userProfile.preferred_branch;
+    } else if (ctx.userProfile.academic_year) {
+      roleDisplay = ctx.userProfile.academic_year;
+    }
+  }
+
   return (
     <div className="mt-auto flex flex-col pt-4">
       {(ctx.isAdmin || ctx.isStudent) && (
-        <ProfileSidebarCard userName={ctx.uploadedBy || (ctx.isAdmin ? "Admin" : "Student")} role={ctx.isAdmin ? "Administrator" : "1st year · CSE"} />
+        <ProfileSidebarCard userName={ctx.uploadedBy || (ctx.isAdmin ? "Admin" : "Student")} role={roleDisplay} />
       )}
       <div className="space-y-0.5 border-t border-border mt-3 px-3 pt-4 text-xs tracking-[0.06em] font-medium text-muted">
         <p>Academic Portal • Version 1.6</p>
@@ -670,7 +684,6 @@ export const UploadModal = ({ ctx }: { ctx: ClientLayoutContext }) => (
           <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Title</label><input required type="text" value={ctx.uploadTitle} onChange={(e) => ctx.setUploadTitle(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Category</label><select value={ctx.uploadCategory} onChange={(e) => ctx.setUploadCategory(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
-            <div><label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Uploader</label><input type="text" value={ctx.uploadedBy} onChange={(e) => ctx.setUploadedBy(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none text-foreground motion-focus" /></div>
           </div>
           <div><input required type="file" accept="application/pdf" onChange={(e) => ctx.setFile(e.target.files?.[0] || null)} className="w-full py-2 text-xs text-foreground disabled:opacity-50" /></div>
           <UploadProgressBar state={ctx.uploadState} progress={ctx.uploadProgress} fileName={ctx.file?.name} errorMessage={ctx.uploadErrorMsg} />
@@ -818,6 +831,11 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
+  const [branch, setBranch] = useState("");
+  const [academicYear, setAcademicYear] = useState("");
+  const [favoriteSubjects, setFavoriteSubjects] = useState<string[]>([]);
+  const [subjectQuery, setSubjectQuery] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   
   const handleSkip = () => {
     sessionStorage.setItem(`skipped_onboarding_${ctx.currentUserEmail}`, "true");
@@ -826,7 +844,15 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setErrorMsg("Display name is required.");
+      return;
+    }
+    if ((branch && !academicYear) || (!branch && academicYear)) {
+      setErrorMsg("If you provide a branch, you must also provide your year, and vice versa.");
+      return;
+    }
+    setErrorMsg("");
     setLoading(true);
     try {
       const { data: sess } = await supabase.auth.getSession();
@@ -834,13 +860,21 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
         const { error } = await supabase.from('profiles').upsert({
           id: sess.session.user.id,
           full_name: name.trim(),
+          preferred_branch: branch || null,
+          academic_year: academicYear || null,
+          favorite_subjects: favoriteSubjects,
         });
         if (error) throw error;
-        ctx.updateUserProfile({ full_name: name.trim() });
+        ctx.updateUserProfile({ 
+          full_name: name.trim(), 
+          preferred_branch: branch || undefined, 
+          academic_year: academicYear || undefined, 
+          favorite_subjects: favoriteSubjects 
+        });
         ctx.setShowOnboardingModal(false);
       }
     } catch (err: any) {
-      alert("Error saving profile: " + err.message);
+      setErrorMsg("Error saving profile: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -861,16 +895,87 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
             </Dialog.Description>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMsg && <p className="text-sm font-semibold text-destructive">{errorMsg}</p>}
             <div>
-              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Display Name</label>
-              <input required type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. John Doe" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
+              <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Display Name *</label>
+              <input required type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. John Doe" className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
             </div>
-            <button type="submit" disabled={loading} className="h-12 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
-              {loading ? "Saving..." : "Save Name & Continue"}
-            </button>
-            <button type="button" onClick={handleSkip} disabled={loading} className="w-full mt-2 text-sm font-bold text-muted hover:text-foreground">
-              Skip for now
-            </button>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Branch</label>
+                <input type="text" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="e.g. CSE" className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary text-foreground motion-focus" />
+              </div>
+              <div>
+                <label className="block mb-1 text-xs tracking-[0.06em] font-bold uppercase text-muted">Year</label>
+                <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary text-foreground motion-focus">
+                  <option value="">Select Year</option>
+                  <option value="1st year">1st year</option>
+                  <option value="2nd year">2nd year</option>
+                  <option value="3rd year">3rd year</option>
+                  <option value="4th year">4th year</option>
+                  <option value="5th year">5th year</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Favorite Subjects (Max 5)</label>
+              <div className="relative">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-2 motion-focus-within focus-within:border-primary focus-within:bg-surface">
+                  <Search size={16} className="text-muted ml-1" />
+                  <input 
+                    type="text" 
+                    placeholder={favoriteSubjects.length < 5 ? "Search subjects..." : "Maximum subjects reached"}
+                    value={subjectQuery}
+                    onChange={(e) => setSubjectQuery(e.target.value)}
+                    disabled={favoriteSubjects.length >= 5}
+                    className="w-full bg-transparent text-sm text-foreground outline-none disabled:opacity-50"
+                  />
+                </div>
+                {subjectQuery.trim() && favoriteSubjects.length < 5 && (
+                  <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
+                    {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).map(subject => (
+                      <button
+                        key={subject}
+                        type="button"
+                        onClick={() => {
+                          setFavoriteSubjects([...favoriteSubjects, subject]);
+                          setSubjectQuery("");
+                        }}
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-primary/10 hover:text-primary motion-hover"
+                      >
+                        {subject}
+                      </button>
+                    ))}
+                    {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).length === 0 && (
+                      <div className="px-3 py-2 text-xs text-muted">No subjects found.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {favoriteSubjects.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {favoriteSubjects.map(subject => (
+                    <span key={subject} className="flex items-center gap-1 rounded-full bg-primary/10 pl-3 pr-1 py-1 text-xs font-bold text-primary">
+                      {subject}
+                      <button type="button" onClick={() => setFavoriteSubjects(favoriteSubjects.filter(s => s !== subject))} className="rounded-full p-1 hover:bg-primary/20 text-primary motion-hover">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button type="submit" disabled={loading} className="h-11 w-full rounded-xl bg-primary font-bold text-primary-foreground hover:opacity-90 motion-hover motion-active">
+                {loading ? "Saving..." : "Save & Continue"}
+              </button>
+              <button type="button" onClick={handleSkip} disabled={loading} className="w-full mt-2 text-xs font-bold text-muted hover:text-foreground">
+                Skip for now
+              </button>
+            </div>
           </form>
         </Dialog.Content>
       </Dialog.Portal>

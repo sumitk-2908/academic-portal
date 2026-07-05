@@ -531,7 +531,7 @@ export const getProfilePreferences = async (userId: string) => {
 
 export const updateProfilePreferences = async (
   userId: string, 
-  preferences: { favorite_subjects?: string[], preferred_branch?: string, full_name?: string }
+  preferences: { favorite_subjects?: string[], preferred_branch?: string, full_name?: string, academic_year?: string }
 ) => {
   const { error } = await supabase
     .from('profiles')

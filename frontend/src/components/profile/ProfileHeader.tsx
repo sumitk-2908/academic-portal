@@ -19,8 +19,10 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
   // Preference States
   const [fullName, setFullName] = useState("");
   const [branch, setBranch] = useState("");
+  const [academicYear, setAcademicYear] = useState("");
   const [favoriteSubjects, setFavoriteSubjects] = useState<string[]>([]);
   const [subjectQuery, setSubjectQuery] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Refs for Focus Management
   const modalRef = useRef<HTMLDivElement>(null);
@@ -42,6 +44,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
       getProfilePreferences(user.id).then(data => {
         if (data) {
           setBranch(data.preferred_branch || "");
+          setAcademicYear(data.academic_year || "");
           setFavoriteSubjects(data.favorite_subjects || []);
           setFullName(data.full_name || "Student");
         } else {
@@ -56,6 +59,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
       getProfilePreferences(user.id).then(data => {
         if (data) {
           setBranch(data.preferred_branch || "");
+          setAcademicYear(data.academic_year || "");
           setFavoriteSubjects(data.favorite_subjects || []);
           if (data.full_name) setFullName(data.full_name);
         }
@@ -110,11 +114,17 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id || !fullName.trim()) return;
+    if ((branch && !academicYear) || (!branch && academicYear)) {
+      setErrorMsg("If you provide a branch, you must also provide your year, and vice versa.");
+      return;
+    }
+    setErrorMsg("");
     setIsSaving(true);
     try {
       const updates = {
         full_name: fullName.trim(),
-        preferred_branch: branch,
+        preferred_branch: branch || undefined,
+        academic_year: academicYear || undefined,
         favorite_subjects: favoriteSubjects
       };
       await updateProfilePreferences(user.id, updates);
@@ -216,16 +226,30 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                     className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
                   />
                 </div>
-                <div>
-                  <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Preferred Branch / Course</label>
-                  <input 
-                    id="branchInput"
-                    type="text" 
-                    placeholder="e.g. B.Tech Computer Science"
-                    value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
-                  />
+                {errorMsg && <p className="text-sm font-semibold text-destructive">{errorMsg}</p>}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="branchInput" className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Preferred Branch / Course</label>
+                    <input 
+                      id="branchInput"
+                      type="text" 
+                      placeholder="e.g. B.Tech Computer Science"
+                      value={branch}
+                      onChange={(e) => setBranch(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none motion-focus focus:border-primary focus:bg-surface"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Year</label>
+                    <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary text-foreground motion-focus">
+                      <option value="">Select Year</option>
+                      <option value="1st year">1st year</option>
+                      <option value="2nd year">2nd year</option>
+                      <option value="3rd year">3rd year</option>
+                      <option value="4th year">4th year</option>
+                      <option value="5th year">5th year</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted mb-2">Favorite Subjects (Max 5)</label>
