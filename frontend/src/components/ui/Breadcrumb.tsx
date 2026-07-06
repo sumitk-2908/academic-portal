@@ -20,8 +20,8 @@ export default function Breadcrumb() {
     else if (label.toLowerCase() === "os") label = "OS";
     else label = label.replace(/\b\w/g, char => char.toUpperCase());
 
-    return { href, label };
-  });
+    return { href, label, isSubject: segment === "subject" && index === 0 };
+  }).filter(crumb => !crumb.isSubject);
 
   return (
     <nav aria-label="breadcrumb" className="mb-6 flex w-full overflow-x-auto py-2">
@@ -29,7 +29,7 @@ export default function Breadcrumb() {
         <li>
           <Link href="/" className="motion-hover flex items-center gap-1.5 rounded-md px-2 py-1 font-medium hover:bg-surface-hover hover:text-foreground">
             <Home size={14} />
-            Home
+            Subjects
           </Link>
         </li>
         

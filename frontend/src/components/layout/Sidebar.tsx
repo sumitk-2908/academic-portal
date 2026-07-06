@@ -15,10 +15,8 @@ export const SidebarNavigation = () => {
 
   return (
     <div className="flex-1 space-y-6">
-      {sidebarLoading ? (
-        <SidebarSkeleton collapsed={sidebarCollapsed} />
-      ) : (
       <>
+
       <div>
         {!sidebarCollapsed && <p className="px-3 pb-2 text-xs font-bold tracking-[0.06em] text-muted uppercase">Navigation</p>}
         <Link 
@@ -109,22 +107,28 @@ export const SidebarNavigation = () => {
       </div>
 
       <ErrorBoundary title="Trending section could not load" className="mt-2" message="Trending docs failed to load.">
-        {!sidebarCollapsed && trendingDocs.length > 0 && (
-          <div>
-            <p className="px-3 pb-2 text-xs font-bold tracking-[0.06em] text-muted uppercase">Discovery</p>
-            <div className="space-y-2.5 rounded-2xl border border-border bg-surface p-3">
-              <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-xs font-extrabold tracking-[0.06em] uppercase">Trending Now</h3></div>
-              {trendingDocs.slice(0, 5).map((doc: SearchDocument, idx: number) => (
-                <Link key={`tr-${doc.id}`} href={documentHref(doc)} className="group block text-xs">
-                  <p className="truncate font-bold text-foreground transition-colors group-hover:text-primary">{idx + 1}. {doc.title}</p>
-                </Link>
-              ))}
-            </div>
+        {sidebarLoading && !sidebarCollapsed ? (
+          <div className="mt-4 animate-pulse space-y-3 px-3">
+            <div className="h-3 w-24 rounded-xl bg-surface-hover" />
+            <div className="h-32 w-full rounded-2xl bg-surface-hover" />
           </div>
+        ) : (
+          !sidebarCollapsed && trendingDocs.length > 0 && (
+            <div>
+              <p className="px-3 pb-2 text-xs font-bold tracking-[0.06em] text-muted uppercase">Discovery</p>
+              <div className="space-y-2.5 rounded-2xl border border-border bg-surface p-3">
+                <div className="flex items-center gap-2 text-primary"><TrendingUp size={13} /><h3 className="text-xs font-extrabold tracking-[0.06em] uppercase">Trending Now</h3></div>
+                {trendingDocs.slice(0, 5).map((doc: SearchDocument, idx: number) => (
+                  <Link key={`tr-${doc.id}`} href={documentHref(doc)} className="group block text-xs">
+                    <p className="truncate font-bold text-foreground transition-colors group-hover:text-primary">{idx + 1}. {doc.title}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
         )}
       </ErrorBoundary>
       </>
-      )}
     </div>
   );
 };

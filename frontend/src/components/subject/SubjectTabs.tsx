@@ -85,7 +85,7 @@ export default function SubjectTabs({
                     <h2 className="text-base font-bold tracking-tight text-foreground">
                       {mod.name || `Module ${mod.module_number}`}
                     </h2>
-                    {mod.name && (
+                    {mod.name && mod.name.trim().toLowerCase() !== `module ${mod.module_number}` && (
                       <p className="mt-1 text-sm text-muted">Module {mod.module_number}</p>
                     )}
                   </div>

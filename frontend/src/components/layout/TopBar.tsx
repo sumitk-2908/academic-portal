@@ -83,7 +83,7 @@ export const TopBar = () => {
 
       <div className="flex shrink-0 items-center gap-2">
         <button onClick={toggleTheme} className="motion-hover motion-active flex size-9 items-center justify-center rounded-xl border border-border text-foreground hover:bg-surface-hover">
-          {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : null}
+          {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : <Moon size={18} className="text-muted opacity-50" />}
         </button>
         
         {(isAdmin || isStudent) && (

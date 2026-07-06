@@ -48,11 +48,8 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   return (
     <div className="animate-fade-up mx-auto max-w-6xl space-y-6">
       <Breadcrumb />
-      <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
-        <h1 className="text-xl font-extrabold sm:text-3xl">{displayTitle}</h1>
-        <p className="mt-1 text-xs text-muted">
-          Core Subject Curricular Interface
-        </p>
+      <div className="flex min-h-[5.5rem] items-center rounded-3xl border border-border bg-surface px-6 py-4 shadow-sm">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl">{displayTitle}</h1>
       </div>
 
       <ErrorBoundary

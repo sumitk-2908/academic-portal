@@ -5,7 +5,10 @@ import { LandingHero } from "@/components/landing/LandingHero";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Home",
+  title: {
+    absolute: "Academic Resource Hub — Notes, PYQs & Study Materials for Engineering",
+  },
+  description: "Free notes, previous year questions, and study materials for 18+ engineering subjects. Crowd-sourced and peer-reviewed.",
 };
 
 // Force Next.js to not cache this page since it contains user-specific greetings
@@ -58,13 +61,21 @@ export default async function SubjectDirectory() {
 
   const subjects = dbSubjects || [];
 
-  // 4. Server-Side Sorting: Favorites first, then alphabetical
+  // 4. Server-Side Sorting: Favorites first, then resource count descending, then alphabetical
   const sortedSubjects = [...subjects].sort((a, b) => {
     const aIsFav = userFavs.includes(a.name);
     const bIsFav = userFavs.includes(b.name);
 
     if (aIsFav && !bIsFav) return -1;
     if (!aIsFav && bIsFav) return 1;
+
+    const aCount = counts[a.name.toUpperCase()] || 0;
+    const bCount = counts[b.name.toUpperCase()] || 0;
+
+    if (aCount > 0 && bCount === 0) return -1;
+    if (aCount === 0 && bCount > 0) return 1;
+    if (aCount !== bCount) return bCount - aCount;
+
     return a.name.localeCompare(b.name);
   });
 
