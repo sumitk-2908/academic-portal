@@ -3,10 +3,15 @@
 import { StudyHistoryProvider } from "@/app/context/StudyHistoryContext";
 import * as Toast from "@radix-ui/react-toast";
 import { useClientLayout } from "@/app/hooks/useClientLayout";
-import { 
-  AppShell, TopBar, Sidebar, ContentArea, MobileNav, 
-  AuthModal, UploadModal, BannersAndToasts, OnboardingModal, ProfileGateModal
-} from "@/components/layout/LayoutComponents";
+import { AppShell, ContentArea } from "@/components/layout/AppShell";
+import { TopBar } from "@/components/layout/TopBar";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { MobileNav } from "@/components/layout/MobileNav";
+import { BannersAndToasts } from "@/components/layout/BannersAndToasts";
+import { AuthModal } from "@/components/layout/modals/AuthModal";
+import { UploadModal } from "@/components/layout/modals/UploadModal";
+import { OnboardingModal } from "@/components/layout/modals/OnboardingModal";
+import { ProfileGateModal } from "@/components/layout/modals/ProfileGateModal";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const ctx = useClientLayout();
