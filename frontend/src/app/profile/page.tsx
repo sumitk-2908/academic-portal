@@ -14,12 +14,15 @@ import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileStats from "@/components/profile/ProfileStats";
 import ProfileTabs from "@/components/profile/ProfileTabs";
-import { Activity, Flame, Upload, User } from "lucide-react";
+import { Activity, Flame, Upload, User as UserIcon } from "lucide-react";
 import { ProfileSkeleton } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { DocumentWithAnalytics } from "@/app/lib/document-types";
+import { Tables } from "@/app/lib/database.types";
+import { User } from "@supabase/supabase-js";
 
 function ProfileContent() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState({
@@ -29,13 +32,13 @@ function ProfileContent() {
     downloads: 0,
   });
 
-  const [history, setHistory] = useState<any[]>([]);
-  const [bookmarks, setBookmarks] = useState<any[]>([]);
-  const [uploads, setUploads] = useState<any[]>([]);
+  const [history, setHistory] = useState<DocumentWithAnalytics[]>([]);
+  const [bookmarks, setBookmarks] = useState<DocumentWithAnalytics[]>([]);
+  const [uploads, setUploads] = useState<DocumentWithAnalytics[]>([]);
 
   // New Phase 3 States
-  const [streak, setStreak] = useState<any>(null);
-  const [achievements, setAchievements] = useState<any[]>([]);
+  const [streak, setStreak] = useState<Tables<'study_streaks'> | null>(null);
+  const [achievements, setAchievements] = useState<Tables<'user_achievements'>[]>([]);
 
   const lastFetchTime = useRef(0);
 
@@ -125,7 +128,7 @@ function ProfileContent() {
         <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 shadow-sm">
           <div className="flex items-start gap-4">
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <User size={24} />
+              <UserIcon size={24} />
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Open your profile</h1>

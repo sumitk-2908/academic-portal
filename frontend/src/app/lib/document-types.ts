@@ -13,6 +13,10 @@ export type DocumentWithAnalytics = DocumentRecord & {
   document_analytics?: Partial<DocumentAnalytics> | Partial<DocumentAnalytics>[] | null;
 };
 
+export type FlaggedDocument = DatabaseDocument & {
+  flags?: Database["public"]["Tables"]["document_flags"]["Row"][];
+};
+
 export type DocumentsPage = {
   data: DocumentWithAnalytics[];
   nextCursor: number | null;

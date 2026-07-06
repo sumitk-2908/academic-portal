@@ -118,7 +118,7 @@ export const TopBar = () => {
                       <p className="p-4 text-center text-xs text-muted">You&apos;re all caught up!</p>
                     ) : (
                       notifications.map((notif) => (
-                        <div key={notif.id} onClick={() => handleMarkAsRead(notif.id, notif.is_read)} className={`flex cursor-pointer flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-surface-hover ${!notif.is_read ? "bg-accent/50" : ""}`}>
+                        <div key={notif.id} onClick={() => handleMarkAsRead(notif.id, notif.is_read ?? false)} className={`flex cursor-pointer flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-surface-hover ${!notif.is_read ? "bg-accent/50" : ""}`}>
                           <div className="flex items-start justify-between">
                             <p className={`text-xs ${!notif.is_read ? "font-bold text-foreground" : "font-semibold text-muted"}`}>{notif.title}</p>
                             {!notif.is_read ? <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" /> : <CheckCheck size={12} className="mt-0.5 shrink-0 text-success" />}

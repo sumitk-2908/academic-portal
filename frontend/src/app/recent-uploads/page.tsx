@@ -9,11 +9,12 @@ import { requestAuthPrompt } from "../lib/auth-prompts";
 import { manageOfflinePdf } from "../lib/offline-manager";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { DocumentWithAnalytics } from "@/app/lib/document-types";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
 
 function RecentUploadsContent() {
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<DocumentWithAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const [bookmarks, setBookmarks] = useState<number[]>([]);

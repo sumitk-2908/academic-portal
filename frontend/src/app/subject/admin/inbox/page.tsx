@@ -9,12 +9,13 @@ import * as Toast from "@radix-ui/react-toast";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { DocumentWithAnalytics, FlaggedDocument } from "@/app/lib/document-types";
 
 function AdminInboxAuditingContent() {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged'>('pending');
   
-  const [pendingDocs, setPendingDocs] = useState<any[]>([]);
-  const [flaggedDocs, setFlaggedDocs] = useState<any[]>([]);
+  const [pendingDocs, setPendingDocs] = useState<DocumentWithAnalytics[]>([]);
+  const [flaggedDocs, setFlaggedDocs] = useState<FlaggedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [rejectingDocId, setRejectingDocId] = useState<number | null>(null);
@@ -22,7 +23,7 @@ function AdminInboxAuditingContent() {
   const [isRejecting, setIsRejecting] = useState(false);
   
   // New state for reviewing specific flags
-  const [reviewingFlagsDoc, setReviewingFlagsDoc] = useState<any | null>(null);
+  const [reviewingFlagsDoc, setReviewingFlagsDoc] = useState<FlaggedDocument | null>(null);
   const [isDismissing, setIsDismissing] = useState(false);
 
   const [toast, setToast] = useState({ open: false, message: "", type: "error" });
@@ -149,9 +150,9 @@ function AdminInboxAuditingContent() {
                   <h3 className="mt-3 line-clamp-2 min-h-[2rem] text-base font-bold tracking-tight text-foreground">{doc.title}</h3>
                   <p className="mt-2 text-sm font-semibold text-muted">{doc.subject} • Module {doc.module_id || 1}</p>
                   <div className="mt-2 flex flex-col gap-2">
-                    {doc.resubmission_count > 0 && (
+                    {(doc.resubmission_count ?? 0) > 0 && (
                       <span className="inline-flex items-center self-start rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-primary">
-                        Resubmission (Attempt #{doc.resubmission_count})
+                        Resubmission (Attempt #{doc.resubmission_count ?? 0})
                       </span>
                     )}
 
@@ -290,7 +291,7 @@ function AdminInboxAuditingContent() {
                 </a>
                 
                 <button 
-                  onClick={() => handleDismissFlags(reviewingFlagsDoc.id)}
+                  onClick={() => reviewingFlagsDoc && handleDismissFlags(reviewingFlagsDoc.id)}
                   disabled={isDismissing}
                   className="motion-hover rounded-xl bg-surface-hover px-4 py-2 text-sm font-bold text-foreground hover:opacity-90 disabled:opacity-50"
                 >
@@ -299,8 +300,10 @@ function AdminInboxAuditingContent() {
                 
                 <button 
                   onClick={() => {
-                    setRejectingDocId(reviewingFlagsDoc.id);
-                    setRejectReason(`Removed due to community reports: ${reviewingFlagsDoc.flags[0]?.reason}`);
+                    if (reviewingFlagsDoc) {
+                      setRejectingDocId(reviewingFlagsDoc.id);
+                      setRejectReason(`Removed due to community reports: ${reviewingFlagsDoc.flags?.[0]?.reason || 'violation'}`);
+                    }
                   }}
                   className="motion-hover rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:opacity-90"
                 >

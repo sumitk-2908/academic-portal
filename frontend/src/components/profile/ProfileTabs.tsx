@@ -16,10 +16,21 @@ import ActivityTimeline from "./ActivityTimeline";
 import UserDocumentCard from "./UserDocumentCard";
 import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "@/app/lib/student-prompts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { DocumentWithAnalytics } from "@/app/lib/document-types";
+import { Tables } from "@/app/lib/database.types";
+import { User } from "@supabase/supabase-js";
 
-export default function ProfileTabs({ user, history, bookmarks, uploads, achievements }: any) {
+interface ProfileTabsProps {
+  user: User | null;
+  history: DocumentWithAnalytics[];
+  bookmarks: DocumentWithAnalytics[];
+  uploads: DocumentWithAnalytics[];
+  achievements: Tables<'user_achievements'>[];
+}
+
+export default function ProfileTabs({ user, history, bookmarks, uploads, achievements }: ProfileTabsProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<DocumentWithAnalytics[]>([]);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const downloadingRef = useRef<Set<number>>(new Set());
   

@@ -2,15 +2,16 @@
 
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { supabase, getAchievements } from "@/app/lib/api";
+import { Tables } from "@/app/lib/database.types";
 
 interface NotificationsContextType {
-  notifications: any[];
+  notifications: Tables<'notifications'>[];
   unreadCount: number;
   showNotifications: boolean;
   activeToast: {title: string, description: string} | null;
   globalToast: { open: boolean, title: string, message: string, type: "default" | "error" | "success" };
 
-  setNotifications: React.Dispatch<React.SetStateAction<any[]>>;
+  setNotifications: React.Dispatch<React.SetStateAction<Tables<'notifications'>[]>>;
   setShowNotifications: (v: boolean) => void;
   setActiveToast: (toast: {title: string, description: string} | null) => void;
   setGlobalToast: (toast: any) => void;
@@ -20,7 +21,7 @@ interface NotificationsContextType {
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Tables<'notifications'>[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeToast, setActiveToast] = useState<{title: string, description: string} | null>(null);
@@ -85,7 +86,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       notifChannel = supabase
         .channel(`notifications-${userId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
-            setNotifications(prev => [payload.new, ...prev]);
+            setNotifications(prev => [payload.new as Tables<'notifications'>, ...prev]);
             setUnreadCount(prev => prev + 1);
             setActiveToast({ title: payload.new.title, description: payload.new.message });
           })
@@ -95,7 +96,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         .channel(`notifications-update-${userId}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
             setNotifications(prev => {
-              const updatedList = prev.map(n => n.id === payload.new.id ? payload.new : n);
+              const updatedList = prev.map(n => n.id === payload.new.id ? payload.new as Tables<'notifications'> : n);
               setUnreadCount(updatedList.filter(n => !n.is_read).length);
               return updatedList;
             });

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { usePathname } from "next/navigation";
 import { supabase, getTrendingDocuments, searchDocuments } from "@/app/lib/api";
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { DocumentWithAnalytics } from "@/app/lib/document-types";
 
 interface SidebarContextType {
   pathname: string;
@@ -12,9 +13,9 @@ interface SidebarContextType {
   showMobileMenu: boolean;
   sidebarLoading: boolean;
   pendingCount: number;
-  trendingDocs: any[];
+  trendingDocs: DocumentWithAnalytics[];
   searchQuery: string;
-  globalSearchResults: any[];
+  globalSearchResults: DocumentWithAnalytics[];
   isSearching: boolean;
 
   setSidebarCollapsed: (v: boolean) => void;
@@ -33,7 +34,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
+  const [globalSearchResults, setGlobalSearchResults] = useState<DocumentWithAnalytics[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   const { data: trendingDocs = [] } = useQuery({

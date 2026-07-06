@@ -15,6 +15,7 @@ import { Clock, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, 
 import Link from "next/link";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { DocumentWithAnalytics } from "@/app/lib/document-types";
 
 // Added tutorial_sheet to match the doccategory ENUM in database.types.ts
 const CATEGORY_ICONS: Record<string, any> = { 
@@ -25,7 +26,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 function ContinueStudyingContent() {
-  const [documents, setDocuments] = useState<any[]>(() => {
+  const [documents, setDocuments] = useState<DocumentWithAnalytics[]>(() => {
     if (typeof window === "undefined") return [];
     try {
       const stored = localStorage.getItem("portal_study_history");
@@ -34,7 +35,7 @@ function ContinueStudyingContent() {
       return [];
     }
   });
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<DocumentWithAnalytics[]>([]);
   const [loading, setLoading] = useState(documents.length === 0);
   const [isSignedOut, setIsSignedOut] = useState(false);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
