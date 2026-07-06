@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Edit, GraduationCap, BookOpen, X, Flame, Search } from "lucide-react";
 import { getProfilePreferences, updateProfilePreferences } from "@/app/lib/api";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
-import { SUBJECTS_LIST } from "@/app/hooks/useClientLayout";
+import { SUBJECTS_LIST } from "@/app/lib/subject-config";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ProfileHeader({ user, streak }: { user: any, streak?: any }) {

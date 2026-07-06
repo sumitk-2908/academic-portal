@@ -3,10 +3,12 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Search } from "lucide-react";
-import { ClientLayoutContext, SUBJECTS_LIST } from "@/app/hooks/useClientLayout";
+import { SUBJECTS_LIST } from "@/app/lib/subject-config";
+import { useAuth } from "@/app/context/AuthContext";
 import { supabase } from "@/app/lib/api";
 
-export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
+export const OnboardingModal = () => {
+  const { currentUserEmail, showOnboardingModal, setShowOnboardingModal, updateUserProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [branch, setBranch] = useState("");
@@ -16,8 +18,8 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
   const [errorMsg, setErrorMsg] = useState("");
   
   const handleSkip = () => {
-    sessionStorage.setItem(`skipped_onboarding_${ctx.currentUserEmail}`, "true");
-    ctx.setShowOnboardingModal(false);
+    sessionStorage.setItem(`skipped_onboarding_${currentUserEmail}`, "true");
+    setShowOnboardingModal(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,13 +45,13 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
           favorite_subjects: favoriteSubjects,
         });
         if (error) throw error;
-        ctx.updateUserProfile({ 
+        updateUserProfile({ 
           full_name: name.trim(), 
           preferred_branch: branch || undefined, 
           academic_year: academicYear || undefined, 
           favorite_subjects: favoriteSubjects 
         });
-        ctx.setShowOnboardingModal(false);
+        setShowOnboardingModal(false);
       }
     } catch (err: any) {
       setErrorMsg("Error saving profile: " + err.message);
@@ -59,9 +61,9 @@ export const OnboardingModal = ({ ctx }: { ctx: ClientLayoutContext }) => {
   };
 
   return (
-    <Dialog.Root open={ctx.showOnboardingModal} onOpenChange={(open) => {
-      if (!open && !sessionStorage.getItem(`skipped_onboarding_${ctx.currentUserEmail}`)) return;
-      ctx.setShowOnboardingModal(open);
+    <Dialog.Root open={showOnboardingModal} onOpenChange={(open) => {
+      if (!open && !sessionStorage.getItem(`skipped_onboarding_${currentUserEmail}`)) return;
+      setShowOnboardingModal(open);
     }}>
       <Dialog.Portal>
         <Dialog.Overlay className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" />

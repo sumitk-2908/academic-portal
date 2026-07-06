@@ -42,3 +42,15 @@ export const SUBJECT_UI_MAP: Record<string, any> = {
    
    "default": { icon: BookOpen, color: "text-primary", bg: "bg-primary/10", hoverBg: "group-hover:bg-primary", border: "border-primary", topBar: "bg-primary" }
 };
+
+export const SUBJECTS_LIST = [
+  "MATHS 1", "MATHS 2", "PHYSICS", "BEE", "PPS", "BIOLOGY", "WORKSHOP",
+  "PHYSICS LAB", "COMMUNICATION SKILLS", "CHEMISTRY", "BME", "BE",
+  "ENVIRONMENTAL SCIENCE", "BE LAB", "BEE LAB", "CHEMISTRY LAB", "NSS",
+  "ENGINEERING GRAPHICS"
+];
+
+export const isNonModuleSubject = (subjectName: string) => {
+  const nonModules = ["WORKSHOP", "ENGINEERING GRAPHICS", "COMMUNICATION SKILLS", "NSS"];
+  return nonModules.includes(subjectName) || subjectName.endsWith("LAB");
+};

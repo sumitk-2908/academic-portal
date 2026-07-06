@@ -7,7 +7,9 @@ import Fuse from "fuse.js";
 import { 
   Search, Clock, Bookmark, Upload, User, FileText, Command, X, ArrowRight, CornerDownLeft, FolderOpen
 } from "lucide-react";
-import { ClientLayoutContext, SUBJECTS_LIST, isNonModuleSubject } from "@/app/hooks/useClientLayout";
+import { SUBJECTS_LIST, isNonModuleSubject } from "@/app/lib/subject-config";
+import { useSidebar } from "@/app/context/SidebarContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
@@ -24,7 +26,9 @@ type CommandItem = {
   action: () => void;
 };
 
-export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: ClientLayoutContext; open: boolean; onOpenChange: (open: boolean) => void; isMac: boolean }) => {
+export const CommandPalette = ({ open, onOpenChange, isMac }: { open: boolean; onOpenChange: (open: boolean) => void; isMac: boolean }) => {
+  const { searchQuery, setSearchQuery, globalSearchResults, isSearching } = useSidebar();
+  const { isAdmin, isStudent, openAuthPrompt } = useAuth();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -36,8 +40,8 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
       return [];
     }
   });
-  const isSignedIn = ctx.isAdmin || ctx.isStudent;
-  const normalizedQuery = ctx.searchQuery.trim().toLowerCase();
+  const isSignedIn = isAdmin || isStudent;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
 
   useEffect(() => {
     if (!open) return;
@@ -58,11 +62,11 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
   }, [onOpenChange]);
 
   const navigateTo = useCallback((href: string) => {
-    saveRecentSearch(ctx.searchQuery);
+    saveRecentSearch(searchQuery);
     closePalette();
-    ctx.setSearchQuery("");
+    setSearchQuery("");
     router.push(href);
-  }, [closePalette, ctx, router, saveRecentSearch]);
+  }, [closePalette, searchQuery, setSearchQuery, router, saveRecentSearch]);
 
   const quickActions = useMemo<CommandItem[]>(() => [
     {
@@ -71,7 +75,7 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
       description: isSignedIn ? "Resume your study workspace" : "Sign in to resume your study workspace",
       section: "Quick Actions",
       icon: <Clock size={16} className="text-primary" aria-hidden="true" />,
-      action: () => isSignedIn ? navigateTo("/continue-studying") : (closePalette(), ctx.openAuthPrompt("continueStudying")),
+      action: () => isSignedIn ? navigateTo("/continue-studying") : (closePalette(), openAuthPrompt("continueStudying")),
     },
     {
       id: "quick-bookmarks",
@@ -79,7 +83,7 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
       description: isSignedIn ? "Open saved resources" : "Sign in to view saved resources",
       section: "Quick Actions",
       icon: <Bookmark size={16} className="text-warning" aria-hidden="true" />,
-      action: () => isSignedIn ? navigateTo("/bookmarks") : (closePalette(), ctx.openAuthPrompt("bookmark")),
+      action: () => isSignedIn ? navigateTo("/bookmarks") : (closePalette(), openAuthPrompt("bookmark")),
     },
     {
       id: "quick-upload",
@@ -95,9 +99,9 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
       description: isSignedIn ? "Open your profile" : "Sign in to manage your profile",
       section: "Quick Actions",
       icon: <User size={16} className="text-primary" aria-hidden="true" />,
-      action: () => isSignedIn ? navigateTo("/profile") : (closePalette(), ctx.openAuthPrompt("profile")),
+      action: () => isSignedIn ? navigateTo("/profile") : (closePalette(), openAuthPrompt("profile")),
     },
-  ], [closePalette, ctx, isSignedIn, navigateTo]);
+  ], [closePalette, openAuthPrompt, isSignedIn, navigateTo]);
 
   const allSubjectItems = useMemo<CommandItem[]>(() => SUBJECTS_LIST.flatMap((subject) => {
     const slug = subjectSlug(subject);
@@ -126,14 +130,14 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
     return fuse.search(normalizedQuery).map(result => result.item).slice(0, 8);
   }, [allSubjectItems, normalizedQuery]);
 
-  const documentItems = useMemo<CommandItem[]>(() => ctx.globalSearchResults.map((doc) => ({
+  const documentItems = useMemo<CommandItem[]>(() => globalSearchResults.map((doc) => ({
     id: `doc-${doc.id}`,
     label: doc.title,
     description: `${doc.subject} • Module ${doc.module_id || "N/A"} • ${doc.category}`,
     section: "Documents",
     icon: <FileText size={16} className="text-primary" aria-hidden="true" />,
     action: () => navigateTo(documentHref(doc)),
-  })), [ctx.globalSearchResults, navigateTo]);
+  })), [globalSearchResults, navigateTo]);
 
   const recentItems = useMemo<CommandItem[]>(() => recentSearches
     .filter((item) => !normalizedQuery || item.toLowerCase().includes(normalizedQuery))
@@ -144,12 +148,12 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
       section: "Recent Searches",
       icon: <Clock size={16} className="text-muted" aria-hidden="true" />,
       action: () => {
-        ctx.setSearchQuery(item);
+        setSearchQuery(item);
         saveRecentSearch(item);
         setActiveIndex(0);
         inputRef.current?.focus();
       },
-    })), [ctx, normalizedQuery, recentSearches, saveRecentSearch]);
+    })), [setSearchQuery, normalizedQuery, recentSearches, saveRecentSearch]);
 
   const visibleQuickActions = useMemo<CommandItem[]>(() => {
     if (!normalizedQuery) return quickActions;
@@ -209,9 +213,9 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
             <Search size={18} className="text-muted sm:hidden" aria-hidden="true" />
             <input
               ref={inputRef}
-              value={ctx.searchQuery}
+              value={searchQuery}
               onChange={(event) => {
-                ctx.setSearchQuery(event.target.value);
+                setSearchQuery(event.target.value);
                 setActiveIndex(0);
               }}
               onKeyDown={handleKeyDown}
@@ -233,12 +237,12 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
           </div>
 
           <div id="command-palette-results" role="listbox" className="max-h-[68vh] overflow-y-auto p-2">
-            {ctx.isSearching && normalizedQuery && (
+            {isSearching && normalizedQuery && (
               <div className="flex items-center gap-2 p-3 text-xs font-bold text-muted">
                 <InlineSpinner label="Searching" size={14} /> Searching documents
               </div>
             )}
-            {!ctx.isSearching && normalizedQuery && documentItems.length === 0 && (
+            {!isSearching && normalizedQuery && documentItems.length === 0 && (
               <div className="p-3 text-xs font-semibold text-muted">No documents found. Try a subject, module, or quick action.</div>
             )}
 
@@ -273,7 +277,7 @@ export const CommandPalette = ({ ctx, open, onOpenChange, isMac }: { ctx: Client
               </div>
             ))}
 
-            {!ctx.isSearching && items.length === 0 && (
+            {!isSearching && items.length === 0 && (
               <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
                 <Search size={24} className="text-muted" aria-hidden="true" />
                 <p className="mt-3 text-sm font-bold text-foreground">No commands found</p>
