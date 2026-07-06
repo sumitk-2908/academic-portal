@@ -334,6 +334,9 @@ export default function DocumentInteractiveGrid({
 
   return (
     <>
+      <span aria-live="polite" className="sr-only">
+        {loading ? "Loading documents..." : `Showing ${displayDocuments.length} document${displayDocuments.length === 1 ? '' : 's'}`}
+      </span>
       {showContributionPrompt && (
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

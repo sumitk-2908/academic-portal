@@ -26,7 +26,7 @@ export const BannersAndToasts = () => {
         </div>
       )}
       {activeToast && <AchievementToast title={activeToast.title} description={activeToast.description} onClose={() => setActiveToast(null)} />}
-      <Toast.Root open={globalToast.open} onOpenChange={(open) => setGlobalToast((prev: any) => ({...prev, open}))} className={`fixed right-4 bottom-4 z-[150] w-auto max-w-md rounded-xl border p-4 shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${globalToast.type === 'error' ? 'border-destructive/20 bg-destructive/10' : globalToast.type === 'success' ? 'border-success/20 bg-success/10' : 'border-border bg-surface'}`}>
+      <Toast.Root role="status" aria-live="polite" open={globalToast.open} onOpenChange={(open) => setGlobalToast((prev: any) => ({...prev, open}))} className={`fixed right-4 bottom-4 z-[150] w-auto max-w-md rounded-xl border p-4 shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${globalToast.type === 'error' ? 'border-destructive/20 bg-destructive/10' : globalToast.type === 'success' ? 'border-success/20 bg-success/10' : 'border-border bg-surface'}`}>
         <Toast.Title className={`text-sm font-bold ${globalToast.type === 'error' ? 'text-destructive' : globalToast.type === 'success' ? 'text-success' : 'text-foreground'}`}>{globalToast.title}</Toast.Title>
         <Toast.Description className={`mt-1 text-xs ${globalToast.type === 'error' ? 'text-destructive/80' : globalToast.type === 'success' ? 'text-success/80' : 'text-muted'}`}>{globalToast.message}</Toast.Description>
       </Toast.Root>

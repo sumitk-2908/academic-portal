@@ -19,7 +19,7 @@ export default function UploadProgressBar({
   if (state === "idle") return null;
 
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-border bg-background p-4">
+    <div aria-live="polite" className="mt-4 overflow-hidden rounded-xl border border-border bg-background p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Dynamic Icon based on state */}

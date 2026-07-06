@@ -32,6 +32,8 @@ export default function AchievementToast({
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={`premium-transition fixed right-6 bottom-6 z-50 flex max-w-sm transform items-start gap-4 rounded-2xl border border-warning/20 bg-surface p-4 shadow-xl
         ${
           isVisible
