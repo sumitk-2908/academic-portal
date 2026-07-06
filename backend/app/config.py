@@ -4,9 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     APP_NAME: str = "Academic Portal API"
     APP_ENV: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     DATABASE_URL: str
-    SECRET_KEY: str = "super-secret-key-change-later"
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30

@@ -8,6 +8,7 @@ from enum import Enum
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request, Depends
 from app.auth import verify_admin, verify_token, assert_aal2
 from app.storage import upload_to_r2, delete_from_r2, key_from_public_url
+from app.config import settings
 from supabase import create_client, Client
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -134,6 +135,9 @@ async def upload_document(
                 detail=f"File too large. Maximum allowed size is {MAX_FILE_SIZE_MB} MB.",
             )
 
+        if not file_bytes.startswith(b"%PDF"):
+            raise HTTPException(status_code=400, detail="Invalid file format. Only PDF files are allowed.")
+
         file_size_mb = round(len(file_bytes) / (1024 * 1024), 2)
 
         # --- PDF validation + thumbnail (CPU-bound, offloaded to thread) ---
@@ -193,7 +197,8 @@ async def upload_document(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Backend Crash: {str(e)}")
+        detail = f"Backend Crash: {str(e)}" if settings.DEBUG else "An internal error occurred"
+        raise HTTPException(status_code=500, detail=detail)
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +243,8 @@ async def delete_document(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to delete document: {str(e)}")
+        detail = f"Failed to delete document: {str(e)}" if settings.DEBUG else "An internal error occurred while deleting document."
+        raise HTTPException(status_code=500, detail=detail)
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +322,8 @@ async def update_document_status(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to update document status: {str(e)}")
+        detail = f"Failed to update document status: {str(e)}" if settings.DEBUG else "An internal error occurred while updating document status."
+        raise HTTPException(status_code=500, detail=detail)
 
 
 # ---------------------------------------------------------------------------
@@ -380,6 +387,9 @@ async def resubmit_document(
                     status_code=413,
                     detail=f"File too large. Maximum allowed size is {MAX_FILE_SIZE_MB} MB.",
                 )
+
+            if not file_bytes.startswith(b"%PDF"):
+                raise HTTPException(status_code=400, detail="Invalid file format. Only PDF files are allowed.")
 
             file_size_mb = round(len(file_bytes) / (1024 * 1024), 2)
 
@@ -446,7 +456,8 @@ async def resubmit_document(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Resubmission Error: {str(e)}")
+        detail = f"Resubmission Error: {str(e)}" if settings.DEBUG else "An internal error occurred during resubmission."
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @router.post("/{document_id}/dismiss-flags")
@@ -476,4 +487,5 @@ async def dismiss_flags(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to dismiss flags: {str(e)}")
+        detail = f"Failed to dismiss flags: {str(e)}" if settings.DEBUG else "An internal error occurred while dismissing flags."
+        raise HTTPException(status_code=500, detail=detail)

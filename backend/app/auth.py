@@ -4,6 +4,7 @@ import httpx
 import os
 import json
 import base64
+from jose import jwt
 
 SUPABASE_URL = os.getenv("SUPABASE_URL") 
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -52,10 +53,13 @@ def assert_aal2(user: dict) -> None:
         raise HTTPException(status_code=401, detail="Authentication token required for MFA validation.")
         
     try:
-        # Decode the payload securely
-        payload_b64 = token.split(".")[1]
-        payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
-        payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
+        # Decode the payload securely and verify signature
+        payload = jwt.decode(
+            token,
+            SUPABASE_KEY,
+            algorithms=["HS256"],
+            options={"verify_aud": False}
+        )
         
         # SECURE: Strictly enforce AAL2
         if payload.get("aal") != "aal2":
@@ -65,8 +69,9 @@ def assert_aal2(user: dict) -> None:
             )
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token format")
+    except Exception as e:
+        print(f"Token validation failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or tampered token")
 
 
 async def verify_admin(user: dict = Depends(verify_token)):
