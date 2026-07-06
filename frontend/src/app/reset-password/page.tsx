@@ -4,16 +4,31 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/api";
 import { KeyRound, ArrowRight } from "lucide-react";
-import * as Toast from "@radix-ui/react-toast";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { useNotifications } from "@/app/context/NotificationsContext";
 
 function ResetPasswordContent() {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [toast, setToast] = useState({ open: false, message: "" });
+  const { setGlobalToast } = useNotifications();
   const router = useRouter();
+
+  const calculateStrength = (password: string) => {
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    return Math.min(4, score);
+  };
+
+  const strength = calculateStrength(newPassword);
+
+  const setToast = (t: { open: boolean, message: string }) => {
+    setGlobalToast({ open: t.open, title: 'Success', message: t.message, type: 'success' });
+  };
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event) => {
@@ -32,8 +47,8 @@ function ResetPasswordContent() {
     setLoading(true);
     setError("");
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      setError("Password must be at least 8 characters long, contain an uppercase letter and a number.");
       setLoading(false);
       return;
     }
@@ -59,8 +74,7 @@ function ResetPasswordContent() {
   };
 
   return (
-    <Toast.Provider swipeDirection="right">
-      <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center p-4">
+    <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center p-4">
         <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-2xl">
           <div className="mb-6 flex flex-col items-center text-center">
             <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -90,6 +104,28 @@ function ResetPasswordContent() {
                 placeholder="••••••••"
                 className="motion-focus h-12 w-full rounded-xl border border-border bg-background px-4 text-base text-foreground outline-none focus:border-primary focus:bg-surface"
               />
+              
+              <div className="mt-2 flex gap-1">
+                {[1, 2, 3, 4].map((level) => (
+                  <div
+                    key={level}
+                    className={`h-1.5 flex-1 rounded-full ${
+                      newPassword.length === 0
+                        ? "bg-border"
+                        : strength >= level
+                        ? strength < 2
+                          ? "bg-destructive"
+                          : strength < 3
+                          ? "bg-warning"
+                          : "bg-success"
+                        : "bg-surface-hover"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-muted">
+                Requires 8+ chars, 1 uppercase, 1 number.
+              </p>
             </div>
 
             {error && (
@@ -124,23 +160,6 @@ function ResetPasswordContent() {
           </form>
         </div>
       </div>
-
-      <Toast.Root
-        open={toast.open}
-        onOpenChange={(open) => setToast((prev) => ({ ...prev, open }))}
-        className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-xl"
-      >
-        <Toast.Title className="text-sm font-bold text-success">
-          Success
-        </Toast.Title>
-
-        <Toast.Description className="text-xs text-muted">
-          {toast.message}
-        </Toast.Description>
-      </Toast.Root>
-
-      <Toast.Viewport className="fixed right-0 bottom-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
-    </Toast.Provider>
   );
 }
 

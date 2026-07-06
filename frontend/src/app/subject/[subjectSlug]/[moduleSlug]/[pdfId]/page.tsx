@@ -28,6 +28,8 @@ export async function generateMetadata({ params }: { params: Promise<{ subjectSl
   };
 }
 
+import Breadcrumb from "@/components/ui/Breadcrumb";
+
 // Server Component
 export default async function PDFViewerPage({ params }: { params: Promise<{ pdfId: string }> }) {
   const { pdfId } = await params;
@@ -50,5 +52,10 @@ export default async function PDFViewerPage({ params }: { params: Promise<{ pdfI
   }
 
   // Use the wrapper to render the client logic
-  return <PDFViewerWrapper documentMeta={documentMeta} />;
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col space-y-4">
+      <Breadcrumb />
+      <PDFViewerWrapper documentMeta={documentMeta} />
+    </div>
+  );
 }

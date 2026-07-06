@@ -5,11 +5,11 @@ import { supabase, updateDocumentStatus, deleteDocument, getFlaggedDocuments, di
 import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, X, Flag, ShieldAlert, MessageSquareWarning, Upload } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
-import * as Toast from "@radix-ui/react-toast";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DocumentWithAnalytics, FlaggedDocument } from "@/app/lib/document-types";
+import { useNotifications } from "@/app/context/NotificationsContext";
 
 function AdminInboxAuditingContent() {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged'>('pending');
@@ -26,7 +26,10 @@ function AdminInboxAuditingContent() {
   const [reviewingFlagsDoc, setReviewingFlagsDoc] = useState<FlaggedDocument | null>(null);
   const [isDismissing, setIsDismissing] = useState(false);
 
-  const [toast, setToast] = useState({ open: false, message: "", type: "error" });
+  const { setGlobalToast } = useNotifications();
+  const setToast = (t: { open: boolean, message: string, type: string }) => {
+    setGlobalToast({ open: t.open, title: t.type === 'error' ? 'Error' : 'Success', message: t.message, type: t.type });
+  };
 
   const loadInbox = async () => {
     setLoading(true);
@@ -97,9 +100,8 @@ function AdminInboxAuditingContent() {
   };
 
   return (
-    <Toast.Provider swipeDirection="right">
-      <main className="animate-fade-up mx-auto w-full max-w-6xl space-y-6 pb-12">
-        <Link href="/" className="motion-hover inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary">
+    <main className="animate-fade-up mx-auto w-full max-w-6xl space-y-6 pb-12">
+      <Link href="/" className="motion-hover inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary">
           <ArrowLeft size={14} /> Back to Hub
         </Link>
 
@@ -314,16 +316,7 @@ function AdminInboxAuditingContent() {
           </Dialog.Portal>
         </Dialog.Root>
 
-        {/* Global Toast Error Handler */}
-        <Toast.Root open={toast.open} onOpenChange={(open) => setToast(prev => ({...prev, open}))} className="rounded-xl border border-border bg-surface p-4 shadow-lg">
-          <Toast.Title className={`text-sm font-bold ${toast.type === 'error' ? 'text-destructive' : 'text-success'}`}>
-            {toast.type === 'error' ? 'Error' : 'Success'}
-          </Toast.Title>
-          <Toast.Description className="mt-1 text-xs text-muted">{toast.message}</Toast.Description>
-        </Toast.Root>
-        <Toast.Viewport className="fixed right-0 bottom-0 z-50 p-6" />
       </main>
-    </Toast.Provider>
   );
 }
 

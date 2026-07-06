@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/api";
 import { useRouter } from "next/navigation";
 import { Shield, KeyRound, QrCode } from "lucide-react";
-import * as Toast from "@radix-ui/react-toast";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { useNotifications } from "@/app/context/NotificationsContext";
 
 type AuthStep = "MFA_SETUP" | "MFA_VERIFY";
 
@@ -19,7 +19,10 @@ function AdminPortalLoginContent() {
   const [otp, setOtp] = useState("");
   const [factorId, setFactorId] = useState("");
   const [qrCode, setQrCode] = useState("");
-  const [toast, setToast] = useState({ open: false, message: "", type: "error" });
+  const { setGlobalToast } = useNotifications();
+  const setToast = (t: { open: boolean, message: string, type: string }) => {
+    setGlobalToast({ open: t.open, title: t.type === 'error' ? 'Authentication Error' : 'Success', message: t.message, type: t.type });
+  };
 
   useEffect(() => {
     const initializeMFA = async () => {
@@ -81,8 +84,7 @@ function AdminPortalLoginContent() {
   if (isChecking) return <div className="min-h-screen bg-background" />;
 
   return (
-    <Toast.Provider swipeDirection="right">
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-2xl">
           <div className="mb-8 flex flex-col items-center text-center">
             <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
@@ -158,22 +160,6 @@ function AdminPortalLoginContent() {
           )}
         </div>
       </div>
-
-      <Toast.Root
-        open={toast.open}
-        onOpenChange={(open) => setToast((prev) => ({ ...prev, open }))}
-        className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-xl"
-      >
-        <Toast.Title className={`text-sm font-bold ${toast.type === "error" ? "text-red-500" : "text-emerald-500"}`}>
-          {toast.type === "error" ? "Authentication Error" : "Success"}
-        </Toast.Title>
-        <Toast.Description className="text-xs text-muted">
-          {toast.message}
-        </Toast.Description>
-      </Toast.Root>
-
-      <Toast.Viewport className="fixed right-0 bottom-0 z-[2147483647] m-0 flex w-[390px] max-w-[100vw] list-none flex-col gap-2 p-6 outline-none" />
-    </Toast.Provider>
   );
 }
 

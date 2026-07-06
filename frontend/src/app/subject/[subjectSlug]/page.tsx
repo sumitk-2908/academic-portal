@@ -12,6 +12,8 @@ export async function generateMetadata({ params }: { params: Promise<{ subjectSl
   };
 }
 
+import Breadcrumb from "@/components/ui/Breadcrumb";
+
 export default async function SubjectPage({ params }: { params: Promise<{ subjectSlug: string }> }) {
   const { subjectSlug } = await params;
 
@@ -45,6 +47,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
 
   return (
     <div className="animate-fade-up mx-auto max-w-6xl space-y-6">
+      <Breadcrumb />
       <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm">
         <h1 className="text-xl font-extrabold sm:text-3xl">{displayTitle}</h1>
         <p className="mt-1 text-xs text-muted">

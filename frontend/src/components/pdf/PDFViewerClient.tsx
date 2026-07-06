@@ -14,8 +14,8 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import * as Toast from "@radix-ui/react-toast";
 import { InlineSpinner, SkeletonBlock } from "@/components/layout/SharedLayouts";
+import { useNotifications } from "@/app/context/NotificationsContext";
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -34,10 +34,10 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   const hasTrackedView = useRef(false);
   const isDownloading = useRef(false);
 
-  const [toast, setToast] = useState({ open: false, title: "", message: "", type: "error" });
+  const { setGlobalToast } = useNotifications();
 
   const showToast = (title: string, message: string, type: "error" | "success") => {
-    setToast({ open: true, title, message, type });
+    setGlobalToast({ open: true, title, message, type });
   };
 
   const [userRating, setUserRating] = useState<boolean | null>(null);
@@ -193,7 +193,6 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   };
 
   return (
-   <Toast.Provider swipeDirection="right">
     <div className="flex h-[calc(100vh-8rem)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
       
       {/* 1. Header: w-full ensures it takes full width for flex distributions */}
@@ -325,11 +324,5 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
         </Dialog.Portal>
       </Dialog.Root>
     </div>
-      <Toast.Root open={toast.open} onOpenChange={(open) => setToast(prev => ({...prev, open}))} className={`fixed right-4 bottom-4 z-[150] w-auto max-w-md rounded-xl border p-4 shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${toast.type === 'error' ? 'border-destructive/20 bg-destructive/10' : 'border-success/20 bg-success/10'}`}>
-        <Toast.Title className={`text-sm font-bold ${toast.type === 'error' ? 'text-destructive' : 'text-success'}`}>{toast.title}</Toast.Title>
-        <Toast.Description className={`mt-1 text-xs ${toast.type === 'error' ? 'text-destructive/80' : 'text-success/80'}`}>{toast.message}</Toast.Description>
-      </Toast.Root>
-      <Toast.Viewport className="fixed right-0 bottom-0 z-[150] flex w-full flex-col gap-2 p-6 outline-none md:max-w-[400px]" />
-    </Toast.Provider>
   );
 }

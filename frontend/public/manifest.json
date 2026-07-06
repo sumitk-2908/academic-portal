@@ -3,10 +3,40 @@
   "short_name": "Portal",
   "description": "Student Resource and PDF Study Hub",
   "start_url": "/",
+  "id": "/?source=pwa",
   "display": "standalone",
   "background_color": "#0a0a0b",
   "theme_color": "#6366f1",
   "orientation": "portrait-primary",
+  "categories": ["education", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bookmarks",
+      "short_name": "Bookmarks",
+      "url": "/bookmarks",
+      "description": "View your saved documents"
+    },
+    {
+      "name": "Recent Uploads",
+      "short_name": "Recent",
+      "url": "/recent-uploads",
+      "description": "View recently uploaded documents"
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192x192.png",
