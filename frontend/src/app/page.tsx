@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase/server";
 
 import { LandingHero } from "@/components/landing/LandingHero";
 import { Metadata } from "next";
+import { Suspense } from "react";
+import { HomeSkeleton } from "@/components/layout/SharedLayouts";
 
 export const metadata: Metadata = {
   title: {
@@ -14,13 +16,8 @@ export const metadata: Metadata = {
 // Force Next.js to not cache this page since it contains user-specific greetings
 export const dynamic = 'force-dynamic';
 
-export default async function SubjectDirectory() {
+async function SubjectGridFetcher({ session }: { session: any }) {
   const supabase = await createClient();
-
-  // 1. Fetch authenticated user and profile securely on the server
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
 
   let userFavs: string[] = [];
   let firstName = "";
@@ -82,7 +79,7 @@ export default async function SubjectDirectory() {
   const isAuthenticated = !!session?.user;
 
   return (
-    <div className="animate-fade-up mx-auto w-full max-w-6xl">
+    <>
       {!isAuthenticated ? (
         <LandingHero />
       ) : (
@@ -118,6 +115,24 @@ export default async function SubjectDirectory() {
           subjectCounts={counts}
         />
       </section>
+    </>
+  );
+}
+
+export default async function SubjectDirectory() {
+  const supabase = await createClient();
+
+  // 1. Fetch authenticated user securely on the server
+  // This is fast since it just reads the cookie and verifies locally in the client creation
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return (
+    <div className="animate-fade-up mx-auto w-full max-w-6xl">
+      <Suspense fallback={<HomeSkeleton />}>
+        <SubjectGridFetcher session={session} />
+      </Suspense>
     </div>
   );
 }

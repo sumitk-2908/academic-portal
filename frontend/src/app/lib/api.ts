@@ -22,7 +22,13 @@ export const api = axios.create({
 
 // 2. The Interceptor: Automatically attach the token to every request
 api.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
+  let { data: { session } } = await supabase.auth.getSession();
+  
+  // Refresh token proactively if it expires in less than 60 seconds
+  if (session?.expires_at && (session.expires_at * 1000) - Date.now() < 60000) {
+    const { data } = await supabase.auth.refreshSession();
+    session = data.session;
+  }
   
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
@@ -167,7 +173,12 @@ export const uploadDocument = async (
   onStateChange: (state: UploadState) => void
 ) => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    let { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.expires_at && (session.expires_at * 1000) - Date.now() < 60000) {
+      const { data } = await supabase.auth.refreshSession();
+      session = data.session;
+    }
     
     const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload/`;
 
@@ -412,8 +423,8 @@ export const getUserUpvotes = async (userId: string) => {
 };
 
 export const toggleUpvote = async (docId: number) => {
-  const { data: sess } = await supabase.auth.getSession();
-  const user_id = sess?.session?.user?.id;
+  const { data: { user } } = await supabase.auth.getUser();
+  const user_id = user?.id;
   if (!user_id) return false;
 
   const { data, error } = await supabase.rpc('toggle_upvote', { 
@@ -799,6 +810,13 @@ export const uploadWithProgress = (
     const xhr = new XMLHttpRequest();
     xhr.open("POST", endpointUrl, true);
     xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    
+    // Add 2-minute timeout
+    xhr.timeout = 120000;
+    xhr.ontimeout = () => {
+      onStateChange("error");
+      reject(new Error("Upload timed out. Please try again."));
+    };
 
     // 1. Track Network Transfer
     xhr.upload.onprogress = (event) => {

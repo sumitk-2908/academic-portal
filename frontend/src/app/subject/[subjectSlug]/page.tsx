@@ -2,6 +2,8 @@ import { supabase, getModulesBySubject } from "@/app/lib/api";
 import SubjectTabs from "@/components/subject/SubjectTabs";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { Metadata } from "next";
+import { Suspense } from "react";
+import { SubjectPageSkeleton } from "@/components/layout/SharedLayouts";
 
 export async function generateMetadata({ params }: { params: Promise<{ subjectSlug: string }> }): Promise<Metadata> {
   const { subjectSlug } = await params;
@@ -14,10 +16,8 @@ export async function generateMetadata({ params }: { params: Promise<{ subjectSl
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
-export default async function SubjectPage({ params }: { params: Promise<{ subjectSlug: string }> }) {
-  const { subjectSlug } = await params;
-
-  // Server-side fetching
+// New async component that handles the heavy lifting
+async function SubjectTabsFetcher({ subjectSlug, displayTitle }: { subjectSlug: string, displayTitle: string }) {
   const { data: dbSubject } = await supabase
     .from("subjects")
     .select("*")
@@ -30,20 +30,32 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   if (dbSubject && !dbSubject.is_non_module) {
     modules = await getModulesBySubject(dbSubject.id);
 
-    const { data: countData } = await supabase
-      .from("documents")
-      .select("module_id")
-      .eq("subject", dbSubject.name)
-      .eq("status", "approved");
+    const { data: countData } = await supabase.rpc('get_module_counts', { p_subject: dbSubject.name });
 
     if (countData) {
-      countData.forEach(doc => {
-        if (doc.module_id) moduleCounts[doc.module_id] = (moduleCounts[doc.module_id] || 0) + 1;
+      countData.forEach((row: any) => {
+        if (row.module_id) {
+          moduleCounts[row.module_id] = Number(row.count);
+        }
       });
     }
   }
 
-  const displayTitle = dbSubject?.name || subjectSlug.replace(/-/g, " ").toUpperCase();
+  return (
+    <SubjectTabs
+      subjectDetails={dbSubject || { name: displayTitle, is_non_module: false }}
+      modules={modules}
+      moduleCounts={moduleCounts}
+      subjectSlug={subjectSlug}
+    />
+  );
+}
+
+export default async function SubjectPage({ params }: { params: Promise<{ subjectSlug: string }> }) {
+  const { subjectSlug } = await params;
+
+  // We can derive a display title instantly for the shell
+  const displayTitle = subjectSlug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
   return (
     <div className="animate-fade-up mx-auto max-w-6xl space-y-6">
@@ -56,12 +68,9 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
         title="Subject page could not load"
         message="The subject browser ran into a problem. Try going back and selecting the subject again."
       >
-        <SubjectTabs
-          subjectDetails={dbSubject || { name: displayTitle, is_non_module: false }}
-          modules={modules}
-          moduleCounts={moduleCounts}
-          subjectSlug={subjectSlug}
-        />
+        <Suspense fallback={<SubjectPageSkeleton moduleView={false} />}>
+          <SubjectTabsFetcher subjectSlug={subjectSlug} displayTitle={displayTitle} />
+        </Suspense>
       </ErrorBoundary>
     </div>
   );
