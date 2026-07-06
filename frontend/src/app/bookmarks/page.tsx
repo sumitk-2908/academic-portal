@@ -10,7 +10,8 @@ import { manageOfflinePdf } from "../lib/offline-manager";
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 import { BookmarksSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
-import type { DocumentRecord } from "@/app/lib/document-types";
+import type { DocumentRecord, DocumentWithAnalytics } from "@/app/lib/document-types";
+import DocumentCard from "@/components/ui/DocumentCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
@@ -116,7 +117,7 @@ function BookmarksContent() {
     );
   };
 
-  const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord) => {
+  const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord | DocumentWithAnalytics) => {
     e.preventDefault();
     
     if (downloadingRef.current.has(doc.id)) return;
@@ -185,29 +186,16 @@ function BookmarksContent() {
               Save Bookmarks
             </button>
           </div>
-        ) : documents.map(doc => {
-          const Icon = CATEGORY_ICONS[doc.category] || FileText;
-          return (
-            <article key={doc.id} className="group motion-hover flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm hover:-translate-y-0.5 hover:border-warning">
-              <div className="flex items-start justify-between">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-warning/10 text-warning"><Icon size={16} /></div>
-                <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-bold tracking-[0.06em] text-muted uppercase">{doc.subject}</span>
-              </div>
-              <h3 className="mt-3 line-clamp-2 min-h-[2rem] text-sm font-bold tracking-tight text-foreground">{doc.title}</h3>
-              <div className="mt-4 flex gap-2 border-t border-border pt-3">
-                <button onClick={(e) => handleDownload(e, doc)} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface py-2 text-sm font-bold text-foreground hover:bg-surface-hover">
-                  {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
-                </button>
-                <Link href={`/subject/${doc.subject.toLowerCase().replace(/ /g, '-')}/module-${doc.module_id || 1}/${doc.id}`} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-warning py-2 text-sm font-bold text-white hover:opacity-90">
-                  <Eye size={12} /> View
-                </Link>
-                <button onClick={() => toggleBookmark(doc.id)} className="motion-hover motion-active shrink-0 rounded-xl border border-warning/30 bg-warning/10 p-2 text-warning">
-                  <Bookmark size={14} className="fill-warning" />
-                </button>
-              </div>
-            </article>
-          );
-        })}
+        ) : documents.map(doc => (
+          <DocumentCard
+            key={doc.id}
+            doc={doc as DocumentWithAnalytics}
+            isBookmarked={true}
+            onDownload={handleDownload as any}
+            onToggleBookmark={toggleBookmark}
+            isDownloading={downloadingIds.includes(doc.id)}
+          />
+        ))}
         {documents.length === 0 && !isSignedOut && (
           <div className="col-span-full rounded-2xl border border-dashed border-warning/30 bg-warning/5 p-8 text-center">
             <h2 className="text-lg font-extrabold tracking-tight text-foreground">Build your study library</h2>

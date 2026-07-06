@@ -8,6 +8,7 @@ import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, should
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { manageOfflinePdf } from "../lib/offline-manager";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
+import DocumentCard from "@/components/ui/DocumentCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DocumentWithAnalytics } from "@/app/lib/document-types";
 
@@ -141,53 +142,16 @@ function RecentUploadsContent() {
             </button>
           </div>
         ) : (
-          documents.map((doc) => {
-            const Icon = CATEGORY_ICONS[doc.category] || FileText;
-            return (
-              <article className="group motion-hover flex flex-col rounded-2xl border border-border bg-surface p-4 shadow-sm hover:-translate-y-0.5 hover:border-success" key={doc.id}>
-                <div className="flex items-start justify-between">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
-                    <Icon size={16} />
-                  </div>
-                  <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-bold tracking-[0.06em] text-muted uppercase">
-                    {doc.subject}
-                  </span>
-                </div>
-
-                <h3 className="mt-3 line-clamp-2 min-h-[2rem] text-sm font-bold tracking-tight text-foreground">
-                  {doc.title}
-                </h3>
-
-                <div className="mt-4 flex gap-2 border-t border-border pt-3">
-                  <button
-                    onClick={(e) => handleDownload(e, doc)}
-                    className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface py-2 text-sm font-bold text-foreground hover:bg-surface-hover"
-                  >
-                    {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
-                  </button>
-
-                  <Link
-                    href={`/subject/${doc.subject.toLowerCase().replace(/ /g, "-")}/module-${doc.module_id || 1}/${doc.id}`}
-                    className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-success py-2 text-sm font-bold text-white hover:opacity-90"
-                  >
-                    <Eye size={12} /> View
-                  </Link>
-
-                  <button
-                    onClick={() => toggleBookmark(doc)}
-                    className={`motion-hover motion-active rounded-xl border p-2 ${
-                      bookmarks.includes(doc.id)
-                        ? "border-warning bg-warning text-white"
-                        : "border-warning/30 text-warning hover:bg-warning/10"
-                    }`}
-                    aria-label={bookmarks.includes(doc.id) ? "Remove bookmark" : "Bookmark resource"}
-                  >
-                    <Bookmark size={14} className={bookmarks.includes(doc.id) ? "fill-white text-white" : "text-warning"} />
-                  </button>
-                </div>
-              </article>
-            );
-          })
+          documents.map((doc) => (
+            <DocumentCard
+              key={doc.id}
+              doc={doc}
+              isBookmarked={bookmarks.includes(doc.id)}
+              onDownload={handleDownload}
+              onToggleBookmark={() => toggleBookmark(doc)}
+              isDownloading={downloadingIds.includes(doc.id)}
+            />
+          ))
         )}
       </div>
     </div>

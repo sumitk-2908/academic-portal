@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FileText, Eye, Download, AlertCircle, RefreshCw } from "lucide-react";
+import { FileText, Eye, Download, AlertCircle, RefreshCw, ThumbsUp } from "lucide-react";
 import ResubmitModal from "@/components/ui/ResubmitModal";
 import type { DocumentWithAnalytics } from "@/app/lib/document-types";
 
@@ -27,12 +27,12 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
   
   const rejectReason = item?.rejection_reason || "Does not meet community guidelines.";
   
-  // Extract analytics exactly how ProfileTabs calculates total impact
   const analytics = Array.isArray(item.document_analytics)
     ? item.document_analytics[0]
     : item.document_analytics;
   const views = analytics?.view_count || 0;
   const downloads = analytics?.download_count || 0;
+  const upvotes = analytics?.upvotes || 0;
 
   const getStatusColor = (status: string) => {
     const s = status.toLowerCase();
@@ -72,15 +72,19 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
           </div>
         </div>
 
-        {/* Right Side: View & Download Counts */}
+        {/* Right Side: View & Download & Upvote Counts */}
         <div className="flex shrink-0 items-center gap-4 pt-1 text-sm text-muted">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" title="Views">
             <Eye className="size-4" />
             <span>{views}</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" title="Downloads">
             <Download className="size-4" />
             <span>{downloads}</span>
+          </div>
+          <div className="flex items-center gap-1.5" title="Upvotes">
+            <ThumbsUp className="size-4" />
+            <span>{upvotes}</span>
           </div>
         </div>
       </div>

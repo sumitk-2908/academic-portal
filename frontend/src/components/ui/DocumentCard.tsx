@@ -28,8 +28,10 @@ export interface DocumentCardProps {
   isUpvoted?: boolean;
   currentUpvoteCount?: number;
   isAdmin?: boolean;
+  isSuggestion?: boolean;
+  badgeText?: string;
   onDownload: (e: React.MouseEvent, doc: DocumentWithAnalytics) => void;
-  onToggleBookmark: (id: number) => void;
+  onToggleBookmark?: (id: number) => void;
   onToggleUpvote?: (id: number) => void;
   onDelete?: (id: number) => void;
   isDownloading?: boolean;
@@ -41,7 +43,9 @@ export default function DocumentCard({
   isBookmarked = false, 
   isUpvoted = false,
   currentUpvoteCount,
-  isAdmin = false, 
+  isAdmin = false,
+  isSuggestion = false,
+  badgeText,
   onDownload, 
   onToggleBookmark, 
   onToggleUpvote,
@@ -58,11 +62,19 @@ export default function DocumentCard({
 
   return (
     <article className={`group flex flex-col rounded-2xl border border-l-[3px] ${accentBorderColor} motion-hover p-5 shadow-sm hover:-translate-y-1 hover:shadow-md ${
-      isBookmarked 
+      isSuggestion
+        ? "border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40 hover:border-y-amber-500/40 dark:hover:border-indigo-500"
+        : isBookmarked 
         ? "border-warning/20 bg-warning/5 hover:border-warning/40 hover:border-y-warning/40" 
         : "border-border bg-surface hover:border-y-border hover:border-r-border"
     }`}>
       
+      {isSuggestion && badgeText && (
+        <span className="mb-3 self-start rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
+          {badgeText}
+        </span>
+      )}
+
       {/* Thumbnail with category badge (top-left) and bookmark button (top-right) */}
       <div className="relative mb-4 flex h-32 w-full items-center justify-center overflow-hidden rounded-xl bg-background">
         {doc.thumbnail_url ? (
@@ -77,17 +89,19 @@ export default function DocumentCard({
           {doc.category}
         </span>
         {/* Bookmark Button: top-right */}
-        <button
-          onClick={(e) => { e.preventDefault(); onToggleBookmark(doc.id); }}
-          className={`motion-hover motion-active absolute top-2 right-2 rounded-lg border p-1.5 shadow-sm backdrop-blur-md ${
-            isBookmarked
-              ? "border-warning bg-warning text-white"
-              : "border-border/60 bg-background/70 text-warning hover:bg-warning/10"
-          }`}
-          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
-        >
-          <Bookmark size={13} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
-        </button>
+        {onToggleBookmark && (
+          <button
+            onClick={(e) => { e.preventDefault(); onToggleBookmark(doc.id); }}
+            className={`motion-hover motion-active absolute top-2 right-2 rounded-lg border p-1.5 shadow-sm backdrop-blur-md ${
+              isBookmarked
+                ? "border-warning bg-warning text-white"
+                : "border-border/60 bg-background/70 text-warning hover:bg-warning/10"
+            }`}
+            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
+          >
+            <Bookmark size={13} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
+          </button>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col">

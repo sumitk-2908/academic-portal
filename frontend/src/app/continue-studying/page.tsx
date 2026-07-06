@@ -14,6 +14,7 @@ import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPromp
 import { Clock, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
+import DocumentCard from "@/components/ui/DocumentCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DocumentWithAnalytics } from "@/app/lib/document-types";
 
@@ -188,44 +189,6 @@ function ContinueStudyingContent() {
 
   const safeDocuments = Array.isArray(documents) ? documents : [];
 
-  const DocumentCard = ({ doc, isSuggestion = false }: { doc: any, isSuggestion?: boolean }) => {
-    const Icon = CATEGORY_ICONS[doc?.category] || FileText;
-    
-    let badgeText = "Recommended";
-    if (isSuggestion && doc.score) {
-      if (doc.recSource === 'related') badgeText = "Because you studied this";
-      else if (doc.recSource === 'profile') badgeText = "Based on your favorites";
-      else if (doc.recSource === 'trending') badgeText = "Trending right now";
-    }
-
-    return (
-      <article className={`group flex flex-col rounded-2xl border ${isSuggestion ? 'border-amber-500/20 bg-amber-500/5 hover:border-amber-500' : 'border-border bg-surface hover:border-indigo-500'} p-4 shadow-sm transition-all hover:-translate-y-0.5   dark:hover:border-indigo-500`}>
-        
-        {isSuggestion && (
-          <span className="mb-3 self-start rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
-            {badgeText}
-          </span>
-        )}
-
-        <div className="flex items-start justify-between">
-          <div className={`flex size-9 items-center justify-center rounded-xl ${isSuggestion ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-500'}`}>
-            <Icon size={16} />
-          </div>
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-extrabold uppercase dark:bg-slate-800">{doc.subject}</span>
-        </div>
-        <h3 className="mt-3 line-clamp-2 min-h-[2rem] text-xs font-bold">{doc.title}</h3>
-        <div className="mt-4 flex gap-2 border-t pt-3 ">
-          <button onClick={(e) => handleDownload(e, doc)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border bg-surface py-2 text-xs font-bold  hover:bg-surface-hover ">
-            {downloadingIds.includes(doc.id) ? <InlineSpinner label="Downloading" size={12} /> : <Download size={12} />} Download
-          </button>
-          <Link href={`/subject/${doc.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${doc.module_id || 1}/${doc.id}`} className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold text-white ${isSuggestion ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}>
-            <Eye size={12} /> View
-          </Link>
-        </div>
-      </article>
-    );
-  };
-
   return (
     <div className="animate-fade-up mx-auto max-w-6xl space-y-10">
       
@@ -252,7 +215,12 @@ function ContinueStudyingContent() {
             </button>
           </div>
         ) : safeDocuments.map(doc => (
-            <DocumentCard key={`hist-${doc.id}`} doc={doc} />
+            <DocumentCard
+              key={`hist-${doc.id}`}
+              doc={doc}
+              onDownload={handleDownload}
+              isDownloading={downloadingIds.includes(doc.id)}
+            />
           ))}
           
           {safeDocuments.length === 0 && !loading && !isSignedOut && (
@@ -305,9 +273,24 @@ function ContinueStudyingContent() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {suggestions.map(doc => (
-              <DocumentCard key={`sugg-${doc.id}`} doc={doc} isSuggestion={true} />
-            ))}
+            {suggestions.map(doc => {
+              let badgeText = "Recommended";
+              if ((doc as any).score) {
+                if ((doc as any).recSource === 'related') badgeText = "Because you studied this";
+                else if ((doc as any).recSource === 'profile') badgeText = "Based on your favorites";
+                else if ((doc as any).recSource === 'trending') badgeText = "Trending right now";
+              }
+              return (
+                <DocumentCard
+                  key={`sugg-${doc.id}`}
+                  doc={doc}
+                  isSuggestion={true}
+                  badgeText={badgeText}
+                  onDownload={handleDownload}
+                  isDownloading={downloadingIds.includes(doc.id)}
+                />
+              );
+            })}
           </div>
         </section>
       )}

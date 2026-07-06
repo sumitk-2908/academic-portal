@@ -5,11 +5,14 @@ export const STUDENT_CONTRIBUTION_PROMPT_DISMISSED_KEY = "portal_contribution_pr
 
 export type UploadPromptTone = "empty" | "few" | "many";
 
-export const getUploadPromptCopy = (documentCount: number) => {
+export const getUploadPromptCopy = (documentCount: number, subjectName?: string) => {
+  const subjectContext = subjectName ? ` for ${subjectName}` : "";
+  const specificContext = subjectName ? ` on ${subjectName}` : "";
+
   if (documentCount === 0) {
     return {
       tone: "empty" as UploadPromptTone,
-      title: "No documents yet",
+      title: `No documents yet${subjectContext}`,
       message: "Be the first student to upload notes.",
     };
   }
@@ -18,14 +21,14 @@ export const getUploadPromptCopy = (documentCount: number) => {
     return {
       tone: "few" as UploadPromptTone,
       title: "A few resources are here",
-      message: "Help your classmates by sharing another perspective.",
+      message: `Help your classmates by sharing another perspective${specificContext}.`,
     };
   }
 
   return {
     tone: "many" as UploadPromptTone,
     title: "This section is growing",
-    message: "Have better notes? Share them with the community.",
+    message: `Have better notes${subjectContext}? Share them with the community.`,
   };
 };
 
