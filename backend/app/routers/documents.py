@@ -6,7 +6,7 @@ import json
 import base64
 from enum import Enum
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request, Depends
-from app.auth import verify_admin, verify_token
+from app.auth import verify_admin, verify_token, assert_aal2
 from app.storage import upload_to_r2, delete_from_r2, key_from_public_url
 from supabase import create_client, Client
 from slowapi import Limiter
@@ -60,28 +60,6 @@ def extract_pdf_metadata(file_bytes: bytes):
     return page_count, thumbnail_bytes
 
 
-def _assert_aal2(user: dict) -> None:
-    """
-    Decode the raw JWT and assert the session has AAL2 (MFA verified).
-    Raises HTTPException 403 if it does not.
-    """
-    token = user.get("raw_jwt")
-    if not token:
-        raise HTTPException(status_code=401, detail="Authentication token required for MFA validation.")
-    try:
-        payload_b64 = token.split(".")[1]
-        payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
-        payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
-        if payload.get("aal") != "aal2":
-            raise HTTPException(
-                status_code=403,
-                detail="This action requires Authenticator MFA (AAL2). Please verify at /portal-admin.",
-            )
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token format")
-
 
 def _r2_keys_for_doc(doc: dict) -> list[str]:
     """
@@ -131,7 +109,7 @@ async def upload_document(
 
     if is_admin:
         if status != "pending":
-            _assert_aal2(user)
+            assert_aal2(user)
         secure_status = status
     else:
         # Students can never self-approve.

@@ -41,6 +41,34 @@ async def verify_token(request: Request):
     return user_data
 
 
+def assert_aal2(user: dict) -> None:
+    """
+    Decode the raw JWT and assert the session has AAL2 (MFA verified).
+    Raises HTTPException 403 if it does not.
+    """
+    token = user.get("raw_jwt")
+    if not token:
+        # SECURE: Fail immediately if the token is missing. No bypass allowed.
+        raise HTTPException(status_code=401, detail="Authentication token required for MFA validation.")
+        
+    try:
+        # Decode the payload securely
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
+        payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
+        
+        # SECURE: Strictly enforce AAL2
+        if payload.get("aal") != "aal2":
+            raise HTTPException(
+                status_code=403, 
+                detail="This action requires Authenticator MFA (AAL2). Please verify at /portal-admin."
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token format")
+
+
 async def verify_admin(user: dict = Depends(verify_token)):
     
     user_id = user.get("id")
@@ -58,26 +86,6 @@ async def verify_admin(user: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail=f"Authorization check failed: {str(e)}")
 
     # 2. STRICT AAL2 (MFA) VERIFICATION
-    token = user.get("raw_jwt")
-    if not token:
-        # SECURE: Fail immediately if the token is missing. No bypass allowed.
-        raise HTTPException(status_code=401, detail="Authentication token required for MFA validation.")
-        
-    try:
-        # Decode the payload securely
-        payload_b64 = token.split(".")[1]
-        payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
-        payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
-        
-        # SECURE: Strictly enforce AAL2
-        if payload.get("aal") != "aal2":
-            raise HTTPException(
-                status_code=403, 
-                detail="Destructive action requires Authenticator MFA (AAL2). Please verify at /portal-admin."
-            )
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token format")
+    assert_aal2(user)
 
     return user
