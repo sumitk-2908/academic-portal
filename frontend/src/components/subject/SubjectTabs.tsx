@@ -19,7 +19,7 @@ export default function SubjectTabs({
   moduleCounts: Record<number, number>;
   subjectSlug: string;
 }) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "syllabus">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "tutorial_sheet" | "syllabus">("dashboard");
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +44,7 @@ export default function SubjectTabs({
   return (
     <>
       <div className="flex gap-1 overflow-x-auto border-b border-border pb-1">
-        {(["dashboard", "notes", "pyq", "syllabus"] as const).map((tab) => (
+        {(["dashboard", "notes", "pyq", "tutorial_sheet", "syllabus"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -55,7 +55,7 @@ export default function SubjectTabs({
             }`}
             
           >
-            {tab}
+            {tab === "tutorial_sheet" ? "Tutorial" : tab}
           </button>
         ))}
       </div>

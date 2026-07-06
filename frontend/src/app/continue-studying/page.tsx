@@ -11,7 +11,7 @@ import {
 } from "../lib/api";
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
-import { Clock, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Sparkles } from "lucide-react";
+import { Clock, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Sparkles, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 import DocumentCard from "@/components/ui/DocumentCard";
@@ -23,7 +23,7 @@ const CATEGORY_ICONS: Record<string, any> = {
   notes: NotebookPen, 
   pyq: FileQuestion, 
   syllabus: ListChecks,
-  tutorial_sheet: FileText 
+  tutorial_sheet: BookOpen 
 };
 
 function ContinueStudyingContent() {

@@ -41,7 +41,7 @@ export const UploadModal = () => {
             </div>
           </div>
           <div><label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Title</label><input required type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none" /></div>
-          <div><label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Category</label><select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="syllabus">Syllabus</option></select></div>
+          <div><label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Category</label><select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none"><option value="notes">Notes</option><option value="pyq">PYQ</option><option value="tutorial_sheet">Tutorial</option><option value="syllabus">Syllabus</option></select></div>
           <div>
             <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">File Upload</label>
             <div className="relative flex items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-hover p-6 transition-colors hover:border-primary/50 hover:bg-surface">

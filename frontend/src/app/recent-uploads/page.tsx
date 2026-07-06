@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { trackDocumentStat, searchDocuments, supabase } from "../lib/api";
-import { Upload, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Bookmark } from "lucide-react";
+import { Upload, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Bookmark, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
 import { requestAuthPrompt } from "../lib/auth-prompts";
@@ -12,7 +12,7 @@ import DocumentCard from "@/components/ui/DocumentCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DocumentWithAnalytics } from "@/app/lib/document-types";
 
-const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, tutorial_sheet: BookOpen, syllabus: ListChecks };
 
 function RecentUploadsContent() {
   const [documents, setDocuments] = useState<DocumentWithAnalytics[]>([]);

@@ -10,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 
 # Import the optimized documents router
 from app.routers import documents
+from app.config import settings
 
 # Force Python to read your .env file locally (Render will use its own environment variables)
 load_dotenv()
@@ -28,7 +29,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Configuration: Allow frontend to communicate with backend
-origins=["http://localhost:3000", "https://academic-portal-git-beta-sumitk2408-s-projects.vercel.app", "https://academic-portal-blush.vercel.app"]
+origins=settings.CORS_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,

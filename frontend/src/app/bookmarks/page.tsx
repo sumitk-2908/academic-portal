@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
 import { withOptimisticUpdate } from "../lib/optimistic";
 import { dispatchToast } from "../lib/toast";
-import { Bookmark, Download, Eye, FileText, NotebookPen, FileQuestion, ListChecks, type LucideIcon } from "lucide-react";
+import { Bookmark, Download, Eye, FileText, NotebookPen, FileQuestion, ListChecks, BookOpen, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { manageOfflinePdf } from "../lib/offline-manager";
 import { requestAuthPrompt } from "../lib/auth-prompts";
@@ -14,7 +14,7 @@ import type { DocumentRecord, DocumentWithAnalytics } from "@/app/lib/document-t
 import DocumentCard from "@/components/ui/DocumentCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-const CATEGORY_ICONS: Record<string, LucideIcon> = { notes: NotebookPen, pyq: FileQuestion, syllabus: ListChecks };
+const CATEGORY_ICONS: Record<string, LucideIcon> = { notes: NotebookPen, pyq: FileQuestion, tutorial_sheet: BookOpen, syllabus: ListChecks };
 
 function BookmarksContent() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);

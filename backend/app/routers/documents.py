@@ -41,6 +41,7 @@ class DocCategory(str, Enum):
     notes = "notes"
     pyq = "pyq"
     syllabus = "syllabus"
+    tutorial_sheet = "tutorial_sheet"
 
 
 # ---------------------------------------------------------------------------

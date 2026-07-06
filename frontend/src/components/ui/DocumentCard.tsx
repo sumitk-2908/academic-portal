@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks, ThumbsUp, type LucideIcon } from "lucide-react";
+import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks, ThumbsUp, BookOpen, type LucideIcon } from "lucide-react";
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
 import type { DocumentWithAnalytics } from "@/app/lib/document-types";
@@ -10,6 +10,7 @@ import type { DocumentWithAnalytics } from "@/app/lib/document-types";
 const CATEGORY_ICONS: Record<string, LucideIcon> = { 
   notes: NotebookPen, 
   pyq: FileQuestion, 
+  tutorial_sheet: BookOpen,
   syllabus: ListChecks 
 };
 

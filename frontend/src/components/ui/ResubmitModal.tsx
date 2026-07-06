@@ -155,6 +155,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
               >
                 <option value="notes" className="bg-surface text-foreground">Notes</option>
                 <option value="pyq" className="bg-surface text-foreground">PYQ</option>
+                <option value="tutorial_sheet" className="bg-surface text-foreground">Tutorial</option>
                 <option value="syllabus" className="bg-surface text-foreground">Syllabus</option>
               </select>
             </div>
