@@ -240,7 +240,8 @@ export const getStudentBookmarks = async (userId?: string) => {
       .select('created_at, documents!inner(*)') 
       .eq('user_id', userId)
       .eq('documents.status', 'approved')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
       
     if (!bookmarkError && bookmarkData && bookmarkData.length > 0) {
       cloudBookmarks = bookmarkData.map((b: any) => ({

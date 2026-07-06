@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, ListChecks, ThumbsUp, type LucideIcon } from "lucide-react";
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
@@ -65,7 +66,7 @@ export default function DocumentCard({
       {/* Thumbnail with category badge (top-left) and bookmark button (top-right) */}
       <div className="relative mb-4 flex h-32 w-full items-center justify-center overflow-hidden rounded-xl bg-background">
         {doc.thumbnail_url ? (
-          <img src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} className="motion-hover size-full object-cover object-top opacity-90 group-hover:opacity-100" />
+          <Image src={doc.thumbnail_url} alt={`${doc.title} thumbnail`} fill sizes="(max-width: 768px) 100vw, 33vw" className="motion-hover size-full object-cover object-top opacity-90 group-hover:opacity-100" />
         ) : (
           <div className="flex flex-col items-center gap-2 text-muted">
             <Icon size={32} className="opacity-50" />

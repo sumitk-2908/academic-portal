@@ -1,8 +1,8 @@
 import SubjectGrid from "@/components/SubjectGrid";
 import { createClient } from "@/utils/supabase/server";
 
-// Force Next.js to revalidate this page if necessary, though caching is ideal.
-export const revalidate = 3600; // Cache for 1 hour, or remove to make it fully dynamic
+// Force Next.js to not cache this page since it contains user-specific greetings
+export const dynamic = 'force-dynamic';
 
 export default async function SubjectDirectory() {
   const supabase = await createClient();
