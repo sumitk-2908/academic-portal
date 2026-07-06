@@ -1,6 +1,8 @@
 import SubjectGrid from "@/components/SubjectGrid";
 import { createClient } from "@/utils/supabase/server";
 
+import { LandingHero } from "@/components/landing/LandingHero";
+
 // Force Next.js to not cache this page since it contains user-specific greetings
 export const dynamic = 'force-dynamic';
 
@@ -61,27 +63,40 @@ export default async function SubjectDirectory() {
     return a.name.localeCompare(b.name);
   });
 
+  const isAuthenticated = !!session?.user;
+
   return (
     <div className="animate-fade-up mx-auto w-full max-w-6xl">
-      <section className="mb-10 pt-8 text-center">
-        {firstName && (
-          <div className="mb-3 flex justify-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-surface/50 px-3 py-1 text-sm font-semibold tracking-wide text-muted shadow-sm backdrop-blur-sm">
-              <span className="animate-pulse text-xl leading-none">👋</span>
-              Welcome back, {firstName}
-            </span>
+      {!isAuthenticated ? (
+        <LandingHero />
+      ) : (
+        <section className="mb-10 pt-8 text-center">
+          {firstName && (
+            <div className="mb-3 flex justify-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-surface/50 px-3 py-1 text-sm font-semibold tracking-wide text-muted shadow-sm backdrop-blur-sm">
+                <span className="animate-pulse text-xl leading-none">👋</span>
+                Welcome back, {firstName}
+              </span>
+            </div>
+          )}
+          <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-foreground">
+            Academic <span className="text-primary">Resource Hub</span>
+          </h1>
+
+          <p className="mx-auto mb-8 max-w-2xl px-4 text-muted">
+            Select a subject domain below to access modules, notes,
+            assignments, and previous year questions.
+          </p>
+        </section>
+      )}
+
+      <section className={!isAuthenticated ? "border-t border-border pt-12" : ""}>
+        {!isAuthenticated && (
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl font-bold text-foreground">Explore Resources</h2>
+            <p className="text-muted">Browse our collection of academic materials</p>
           </div>
         )}
-        <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-foreground">
-          Academic <span className="text-primary">Resource Hub</span>
-        </h1>
-
-        <p className="mx-auto mb-8 max-w-2xl px-4 text-muted">
-          Select a subject domain below to access modules, notes,
-          assignments, and previous year questions.
-        </p>
-
-        {/* Client Boundary starts here */}
         <SubjectGrid
           subjects={sortedSubjects}
           subjectCounts={counts}

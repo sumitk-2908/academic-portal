@@ -45,7 +45,11 @@ export const TopBar = () => {
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      const isCmdK = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
+      const targetNodeName = (event.target as HTMLElement)?.nodeName;
+      const isSlash = event.key === "/" && targetNodeName !== "INPUT" && targetNodeName !== "TEXTAREA";
+      
+      if (isCmdK || isSlash) {
         event.preventDefault();
         setIsCommandOpen(true);
       }
