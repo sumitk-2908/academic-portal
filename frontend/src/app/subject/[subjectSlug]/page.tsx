@@ -7,7 +7,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subjectSl
   const { subjectSlug } = await params;
   const displayTitle = subjectSlug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   return {
-    title: `${displayTitle} | Academic Hub`,
+    title: displayTitle,
     description: `Modules, notes, and previous year questions for ${displayTitle}.`,
   };
 }

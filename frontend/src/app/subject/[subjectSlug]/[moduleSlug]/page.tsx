@@ -15,7 +15,7 @@ export async function generateMetadata({
   const moduleNumber = parseInt(moduleSlug.replace("module-", "")) || 1;
 
   return {
-    title: `Module ${moduleNumber} - ${subjectName} | Academic Hub`,
+    title: `Module ${moduleNumber} - ${subjectName}`,
     description: `Study materials and documents for Module ${moduleNumber} of ${subjectName}.`,
   };
 }

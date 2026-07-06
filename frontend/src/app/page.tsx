@@ -2,6 +2,11 @@ import SubjectGrid from "@/components/SubjectGrid";
 import { createClient } from "@/utils/supabase/server";
 
 import { LandingHero } from "@/components/landing/LandingHero";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home",
+};
 
 // Force Next.js to not cache this page since it contains user-specific greetings
 export const dynamic = 'force-dynamic';

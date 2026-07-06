@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subjectSl
   const subjectName = subjectSlug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
   return {
-    title: `${documentMeta.title} - ${subjectName} | Academic Hub`,
+    title: `${documentMeta.title} - ${subjectName}`,
     description: `Download or view ${documentMeta.category} uploaded by ${documentMeta.uploader_name || "a student"}.`,
     openGraph: {
       title: documentMeta.title,

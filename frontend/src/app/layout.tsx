@@ -21,7 +21,10 @@ export const viewport: Viewport = {
 
 
 export const metadata: Metadata = {
-  title: "Academic Portal",
+  title: {
+    template: "%s | Academic Portal",
+    default: "Academic Portal",
+  },
   description: "Student Resource and PDF Study Hub",
   manifest: "/manifest.json", 
   appleWebApp: {
