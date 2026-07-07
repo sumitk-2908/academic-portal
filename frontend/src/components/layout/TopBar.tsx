@@ -64,17 +64,24 @@ export const TopBar = () => {
     <div className="mx-auto flex min-h-16 w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3 md:flex-nowrap md:gap-4 md:px-6 md:py-0">
       
       <div className="flex shrink-0 items-center gap-2.5">
-        <button aria-label="Toggle sidebar" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden rounded-xl p-2 text-muted hover:bg-surface-hover lg:inline-flex">
-          {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
+        <button 
+          aria-label={sidebarCollapsed ? "Open sidebar" : "Close sidebar"}
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          className="group relative flex items-center gap-2.5 text-left w-full sm:w-auto"
+        >
+          <div className="relative flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-colors group-hover:bg-surface-hover group-hover:text-foreground">
+            <GraduationCap size={20} className="absolute transition-opacity duration-200 opacity-100 group-hover:opacity-0" />
+            <div className="absolute transition-opacity duration-200 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+              {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
+            </div>
+          </div>
+          <div className="hidden leading-tight sm:block relative h-[36px] w-[120px]">
+            <p className="text-sm font-extrabold tracking-tight absolute top-1/2 -translate-y-1/2 transition-opacity duration-200 opacity-100 group-hover:opacity-0 whitespace-nowrap">Academic Portal</p>
+            <p className="text-sm font-extrabold tracking-tight text-muted absolute top-1/2 -translate-y-1/2 transition-opacity duration-200 opacity-0 group-hover:opacity-100 whitespace-nowrap">
+              {sidebarCollapsed ? "Open sidebar" : "Close sidebar"}
+            </p>
+          </div>
         </button>
-        <Link href="/" aria-label="Home" className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <GraduationCap size={20} />
-          </div>
-          <div className="hidden leading-tight sm:block">
-            <p className="text-sm font-extrabold tracking-tight">Academic Portal</p>
-          </div>
-        </Link>
       </div>
 
       <div className="order-3 flex w-full min-w-0 justify-center md:order-none md:flex-1">

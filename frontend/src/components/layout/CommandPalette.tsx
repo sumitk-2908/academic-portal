@@ -83,7 +83,7 @@ export const CommandPalette = ({ open, onOpenChange, isMac }: { open: boolean; o
       description: isSignedIn ? "Open saved resources" : "Sign in to view saved resources",
       section: "Quick Actions",
       icon: <Bookmark size={16} className="text-warning" aria-hidden="true" />,
-      action: () => isSignedIn ? navigateTo("/bookmarks") : (closePalette(), openAuthPrompt("bookmark")),
+      action: () => isSignedIn ? navigateTo("/bookmarks") : (closePalette(), openAuthPrompt("sidebarBookmark")),
     },
     {
       id: "quick-upload",

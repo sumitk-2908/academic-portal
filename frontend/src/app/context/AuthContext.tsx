@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (authMode === "signup") {
         const { data, error } = await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
-        if (data.session) { await syncUserFromSession(data.session); setAuthPassword(""); handleAuthModalOpenChange(false); }
+        if (data.session) { await syncUserFromSession(data.session); setAuthPassword(""); handleAuthModalOpenChange(false); window.location.reload(); }
         else { showToast("Registration Complete", "Please verify your email.", "success"); setAuthMode("signin"); }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
@@ -181,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await syncUserFromSession(data.session);
         setAuthPassword("");
         handleAuthModalOpenChange(false);
+        window.location.reload();
       }
     } catch (err: any) { showToast("Authentication Error", err.message, "error"); } 
     finally { setAuthLoading(false); }

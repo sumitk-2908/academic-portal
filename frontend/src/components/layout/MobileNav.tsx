@@ -45,7 +45,7 @@ export const MobileNav = () => {
             <Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span>
           </Link>
         ) : (
-          <button type="button" onClick={() => openAuthPrompt("bookmark")} className="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 text-muted transition-colors hover:bg-surface-hover">
+          <button type="button" onClick={() => openAuthPrompt("sidebarBookmark")} className="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-2 text-muted transition-colors hover:bg-surface-hover">
             <Bookmark size={22} /><span className="text-xs font-bold">Bookmarks</span>
           </button>
         )}

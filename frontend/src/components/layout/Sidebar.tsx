@@ -87,7 +87,7 @@ export const SidebarNavigation = () => {
           <button
             type="button"
             title={sidebarCollapsed ? "Bookmarks" : undefined}
-            onClick={() => openAuthPrompt("bookmark")}
+            onClick={() => openAuthPrompt("sidebarBookmark")}
             className="motion-hover motion-active mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-warning"
           >
             <Bookmark size={18} /> {!sidebarCollapsed && "Bookmarks"}

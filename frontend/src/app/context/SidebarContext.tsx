@@ -81,8 +81,17 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   }, [refreshSidebarData]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSidebarCollapsed(!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       refreshSidebarData();
+      if (event === 'SIGNED_IN') {
+        setSidebarCollapsed(false);
+      } else if (event === 'SIGNED_OUT') {
+        setSidebarCollapsed(true);
+      }
     });
     return () => subscription.unsubscribe();
   }, [refreshSidebarData]);

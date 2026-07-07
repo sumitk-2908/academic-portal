@@ -2,6 +2,7 @@
 
 export type AuthPromptFeature =
   | "bookmark"
+  | "sidebarBookmark"
   | "continueStudying"
   | "upload"
   | "contributionHistory"
@@ -17,6 +18,10 @@ export type AuthPromptCopy = {
 export const AUTH_PROMPT_COPY: Record<AuthPromptFeature, AuthPromptCopy> = {
   bookmark: {
     title: "Save this bookmark",
+    description: "Sign in to sync your bookmarks and continue studying across all your devices.",
+  },
+  sidebarBookmark: {
+    title: "Bookmark important resources",
     description: "Sign in to sync your bookmarks and continue studying across all your devices.",
   },
   continueStudying: {

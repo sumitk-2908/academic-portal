@@ -49,20 +49,13 @@ export function FeaturesCarousel({ trendingDocs = [] }: { trendingDocs?: any[] }
       <div className="flex h-full flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
         <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm mb-1">Your Library</h4>
         <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 p-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
-          <Clock size={14} className="text-emerald-500" /> Recently Uploaded
+          <Clock size={14} className="text-emerald-500" /> Continue Studying
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 p-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
-          <Bookmark size={14} className="text-emerald-500" /> Bookmarked
-        </div>
-        <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 p-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer mb-2">
-          <BookOpen size={14} className="text-emerald-500" /> Continue Studying
-        </div>
-        <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm mt-1 mb-1">Subjects</h4>
-        <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 p-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
-          <Folder size={14} className="text-blue-500" /> Mathematics
+          <Bookmark size={14} className="text-emerald-500" /> Bookmarks
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 p-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
-          <Folder size={14} className="text-indigo-500" /> Physics
+          <Upload size={14} className="text-emerald-500" /> Recent Uploads
         </div>
       </div>
     )

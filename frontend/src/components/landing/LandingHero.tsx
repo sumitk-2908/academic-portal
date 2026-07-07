@@ -51,7 +51,7 @@ export function LandingHero({ stats, trendingDocs = [] }: { stats?: PlatformStat
             onClick={handleSignUp}
             className="motion-hover motion-active rounded-full bg-primary px-8 py-4 text-lg font-bold text-primary-foreground shadow-lg hover:opacity-90 hover:shadow-primary/25"
           >
-            Get Started for Free
+            Join the Community
           </button>
         </div>
       </div>
