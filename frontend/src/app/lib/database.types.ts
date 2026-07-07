@@ -309,16 +309,22 @@ export type Database = {
           favorite_subjects: string[] | null
           id: string
           preferred_branch: string | null
+          full_name: string | null
+          academic_year: string | null
         }
         Insert: {
           favorite_subjects?: string[] | null
           id: string
           preferred_branch?: string | null
+          full_name?: string | null
+          academic_year?: string | null
         }
         Update: {
           favorite_subjects?: string[] | null
           id?: string
           preferred_branch?: string | null
+          full_name?: string | null
+          academic_year?: string | null
         }
         Relationships: []
       }

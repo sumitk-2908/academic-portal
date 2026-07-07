@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, updateDocumentStatus, deleteDocument, getFlaggedDocuments, dismissDocumentFlags } from "../../../lib/api";
+import { supabase, updateDocumentStatus, deleteDocument, getFlaggedDocuments, dismissDocumentFlags, getSubjects } from "../../../lib/api";
 import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, X, Flag, ShieldAlert, MessageSquareWarning, Upload } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -17,6 +17,18 @@ function AdminInboxAuditingContent() {
   const [pendingDocs, setPendingDocs] = useState<DocumentWithAnalytics[]>([]);
   const [flaggedDocs, setFlaggedDocs] = useState<FlaggedDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // F1 Pagination & Filtering
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedSubject, setSelectedSubject] = useState<string>("All");
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [pendingTotalCount, setPendingTotalCount] = useState(0);
+
+  // F3 Bulk Actions
+  const [selectedDocs, setSelectedDocs] = useState<Set<number>>(new Set());
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+  const [isBulkRejecting, setIsBulkRejecting] = useState(false);
   
   const [rejectingDocId, setRejectingDocId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -34,13 +46,34 @@ function AdminInboxAuditingContent() {
   const loadInbox = async () => {
     setLoading(true);
     
+    // Fetch Subjects for Filter
+    if (subjects.length === 0) {
+      const subjData = await getSubjects();
+      setSubjects(subjData.map(s => s.name));
+    }
+
     // Fetch Pending Approvals
-    const { data: pending } = await supabase
+    let query = supabase
       .from('documents')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
+
+    if (selectedSubject !== 'All') {
+      query = query.eq('subject', selectedSubject);
+    }
+
+    const pageSize = 20;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+
+    const { data: pending, count } = await query;
     if (pending) setPendingDocs(pending);
+    if (count !== null) {
+      setTotalPages(Math.ceil(count / pageSize));
+      setPendingTotalCount(count);
+    }
 
     // Fetch Flagged Content
     const flagged = await getFlaggedDocuments();
@@ -51,11 +84,53 @@ function AdminInboxAuditingContent() {
 
   useEffect(() => {
     loadInbox();
-  }, []);
+  }, [page, selectedSubject]);
 
   const handleApprove = async (id: number) => {
     await updateDocumentStatus(id, 'approved');
     setPendingDocs(prev => prev.filter(d => d.id !== id));
+    setPendingTotalCount(prev => Math.max(0, prev - 1));
+  };
+
+  const toggleDocSelection = (id: number) => {
+    const next = new Set(selectedDocs);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedDocs(next);
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedDocs.size === 0) return;
+    setIsBulkApproving(true);
+    try {
+      const ids = Array.from(selectedDocs);
+      await Promise.all(ids.map(id => updateDocumentStatus(id, 'approved')));
+      setPendingDocs(prev => prev.filter(d => !selectedDocs.has(d.id)));
+      setPendingTotalCount(prev => Math.max(0, prev - ids.length));
+      setSelectedDocs(new Set());
+      setToast({ open: true, message: `Successfully approved ${ids.length} documents.`, type: "success" });
+    } catch (e) {
+      setToast({ open: true, message: "Bulk approval failed.", type: "error" });
+    } finally {
+      setIsBulkApproving(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedDocs.size === 0) return;
+    setIsBulkRejecting(true);
+    try {
+      const ids = Array.from(selectedDocs);
+      await Promise.all(ids.map(id => updateDocumentStatus(id, 'rejected', "Bulk rejected by admin")));
+      setPendingDocs(prev => prev.filter(d => !selectedDocs.has(d.id)));
+      setPendingTotalCount(prev => Math.max(0, prev - ids.length));
+      setSelectedDocs(new Set());
+      setToast({ open: true, message: `Successfully rejected ${ids.length} documents.`, type: "success" });
+    } catch (e) {
+      setToast({ open: true, message: "Bulk rejection failed.", type: "error" });
+    } finally {
+      setIsBulkRejecting(false);
+    }
   };
 
   const handleRejectClick = (id: number) => {
@@ -71,7 +146,11 @@ function AdminInboxAuditingContent() {
       await updateDocumentStatus(rejectingDocId, 'rejected', rejectReason);
       
       // Remove from UI depending on which tab we are on
-      setPendingDocs(prev => prev.filter(d => d.id !== rejectingDocId));
+      setPendingDocs(prev => {
+        const isPending = prev.some(d => d.id === rejectingDocId);
+        if (isPending) setPendingTotalCount(count => Math.max(0, count - 1));
+        return prev.filter(d => d.id !== rejectingDocId);
+      });
       setFlaggedDocs(prev => prev.filter(d => d.id !== rejectingDocId));
       
       setRejectingDocId(null);
@@ -101,9 +180,14 @@ function AdminInboxAuditingContent() {
 
   return (
     <main className="animate-fade-up mx-auto w-full max-w-6xl space-y-6 pb-12">
-      <Link href="/" className="motion-hover inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary">
+      <div className="flex items-center justify-between">
+        <Link href="/" className="motion-hover inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary">
           <ArrowLeft size={14} /> Back to Hub
         </Link>
+        <Link href="/portal-admin/analytics" className="motion-hover inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/20">
+          View Analytics
+        </Link>
+      </div>
 
         <section className={`premium-transition flex items-center gap-4 rounded-3xl border p-6 ${activeTab === 'pending' ? 'border-warning/20 bg-warning/5' : 'border-destructive/20 bg-destructive/5'}`}>
           <div className={`premium-transition flex size-12 shrink-0 items-center justify-center rounded-xl text-primary-foreground ${activeTab === 'pending' ? 'bg-warning' : 'bg-destructive'}`}>
@@ -117,20 +201,33 @@ function AdminInboxAuditingContent() {
           </div>
         </section>
 
-        {/* TABS */}
-        <div className="flex gap-2 border-b border-border pb-2">
-          <button 
-            onClick={() => setActiveTab('pending')}
-            className={`motion-hover motion-active rounded-xl px-4 py-2 text-sm font-bold ${activeTab === 'pending' ? 'bg-foreground text-background' : 'text-muted hover:bg-surface-hover'}`}
-          >
-            Pending Audits ({pendingDocs.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('flagged')}
-            className={`motion-hover motion-active flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold ${activeTab === 'flagged' ? 'bg-destructive text-destructive-foreground' : 'text-muted hover:bg-destructive/10 hover:text-destructive'}`}
-          >
-            <Flag size={16} /> Flagged Content ({flaggedDocs.length})
-          </button>
+        {/* TABS & FILTERS */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+          <div className="flex gap-2">
+            <button 
+              onClick={() => { setActiveTab('pending'); setPage(1); }}
+              className={`motion-hover motion-active rounded-xl px-4 py-2 text-sm font-bold ${activeTab === 'pending' ? 'bg-foreground text-background' : 'text-muted hover:bg-surface-hover'}`}
+            >
+              Pending Audits ({activeTab === 'pending' ? pendingTotalCount : pendingDocs.length})
+            </button>
+            <button 
+              onClick={() => setActiveTab('flagged')}
+              className={`motion-hover motion-active flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold ${activeTab === 'flagged' ? 'bg-destructive text-destructive-foreground' : 'text-muted hover:bg-destructive/10 hover:text-destructive'}`}
+            >
+              <Flag size={16} /> Flagged Content ({flaggedDocs.length})
+            </button>
+          </div>
+          
+          {activeTab === 'pending' && (
+            <select
+              value={selectedSubject}
+              onChange={(e) => { setSelectedSubject(e.target.value); setPage(1); }}
+              className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground outline-none"
+            >
+              <option value="All">All Subjects</option>
+              {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
         </div>
 
         {loading ? (
@@ -144,8 +241,16 @@ function AdminInboxAuditingContent() {
               return (
                 <article key={doc.id} className="flex flex-col rounded-2xl border border-warning/20 bg-surface p-4 shadow-sm">
                   <div className="flex items-start justify-between">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
-                      <FileText size={16} />
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="checkbox" 
+                        className="size-5 rounded border-border text-primary focus:ring-primary"
+                        checked={selectedDocs.has(doc.id)}
+                        onChange={() => toggleDocSelection(doc.id)}
+                      />
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
+                        <FileText size={16} />
+                      </div>
                     </div>
                     <span className="rounded-full bg-warning/10 px-2.5 py-1 text-xs font-extrabold tracking-wider text-warning uppercase">PENDING</span>
                   </div>
@@ -221,6 +326,41 @@ function AdminInboxAuditingContent() {
                 </Link>
               </div>
             )}
+          </div>
+        )}
+
+        {/* PAGINATION */}
+        {activeTab === 'pending' && totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-hover disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-semibold text-muted">Page {page} of {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-hover disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
+
+        {/* BULK ACTION BAR */}
+        {activeTab === 'pending' && selectedDocs.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-surface/90 px-6 py-3 shadow-xl backdrop-blur-md">
+            <span className="text-sm font-bold text-foreground">{selectedDocs.size} selected</span>
+            <div className="h-6 w-px bg-border"></div>
+            <button onClick={handleBulkApprove} disabled={isBulkApproving} className="flex items-center gap-2 rounded-xl bg-success px-4 py-1.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50">
+              {isBulkApproving ? <InlineSpinner label="Approving" size={14} /> : <CheckCircle size={14} />} Approve Selected
+            </button>
+            <button onClick={handleBulkReject} disabled={isBulkRejecting} className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-1.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50">
+              {isBulkRejecting ? <InlineSpinner label="Rejecting" size={14} /> : <Trash2 size={14} />} Reject Selected
+            </button>
           </div>
         )}
 
