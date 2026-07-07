@@ -48,7 +48,7 @@ export const UploadModal = () => {
               <div className="text-center">
                 <Upload className="mx-auto mb-2 size-6 text-muted" />
                 <p className="text-sm font-semibold text-foreground">{file ? file.name : "Choose a PDF file or drag & drop it here"}</p>
-                <p className="mt-1 text-xs text-muted">PDFs only (Max 10MB)</p>
+                <p className="mt-1 text-xs text-muted">PDFs only (Max 50MB)</p>
               </div>
               <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed" disabled={uploadState === "uploading" || uploadState === "processing"} />
             </div>
