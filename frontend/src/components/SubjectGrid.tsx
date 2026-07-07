@@ -44,6 +44,7 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
         <div className="relative w-full sm:w-64">
           <Filter className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <select
+            aria-label="Filter subjects"
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
             className="motion-hover motion-focus h-11 w-full appearance-none cursor-pointer rounded-xl border border-border/60 bg-surface pl-10 pr-10 text-sm font-semibold text-foreground shadow-sm outline-none transition-colors hover:border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
@@ -88,7 +89,7 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
               <Link 
                 key={sub.slug} 
                 href={`/subject/${sub.slug}`}
-                role="gridcell"
+                role="listitem"
                 ref={(el) => { if (el) elementsRef.current[index] = el; }}
                 tabIndex={activeIndex === index ? 0 : -1}
                 onKeyDown={(e) => handleKeyDown(e, index)}
@@ -104,7 +105,7 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
                 
                 <div className="mt-6">
                   {count > 0 ? (
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-500">
+                    <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-400">
                       <FileText size={14} />
                       <span>{count} resource{count !== 1 ? 's' : ''}</span>
                     </div>

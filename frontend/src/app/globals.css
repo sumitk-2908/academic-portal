@@ -16,10 +16,10 @@
   --surface: #ffffff;
   --surface-hover: #f4f4f5;
   --border: #e4e4e7;
-  --muted: #71717a;
+  --muted: #52525b;
 
   /* Primary brand accent (Strict Indigo-500) */
-  --primary: #6366f1;
+  --primary: #4f46e5;
   --primary-foreground: #ffffff;
   --accent: #eef2ff;
   
@@ -38,11 +38,11 @@
   --surface: #111113;
   --surface-hover: #18181b;
   --border: #27272a;
-  --muted: #52525b;
+  --muted: #a1a1aa;
 
   /* Adjusted Indigo for dark mode contrast */
   --primary: #818cf8;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #09090b;
   --accent: #312e81;
 
   /* Semantic adjustments for dark contrast */

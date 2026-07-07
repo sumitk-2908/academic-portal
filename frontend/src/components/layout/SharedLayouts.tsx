@@ -48,7 +48,7 @@ export const CardGrid = ({ children, cols = "auto" }: { children: React.ReactNod
     "4": "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4",
     "5": "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4",
   }[cols];
-  return <div role="grid" className={colClasses}>{children}</div>;
+  return <div role="list" className={colClasses}>{children}</div>;
 };
 
 /** 

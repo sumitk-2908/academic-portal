@@ -64,10 +64,10 @@ export const TopBar = () => {
     <div className="mx-auto flex min-h-16 w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3 md:flex-nowrap md:gap-4 md:px-6 md:py-0">
       
       <div className="flex shrink-0 items-center gap-2.5">
-        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden rounded-xl p-2 text-muted hover:bg-surface-hover lg:inline-flex">
+        <button aria-label="Toggle sidebar" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden rounded-xl p-2 text-muted hover:bg-surface-hover lg:inline-flex">
           {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
         </button>
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href="/" aria-label="Home" className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <GraduationCap size={20} />
           </div>
@@ -82,13 +82,13 @@ export const TopBar = () => {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <button onClick={toggleTheme} className="motion-hover motion-active flex size-9 items-center justify-center rounded-xl border border-border text-foreground hover:bg-surface-hover">
+        <button aria-label="Toggle theme" onClick={toggleTheme} className="motion-hover motion-active flex size-9 items-center justify-center rounded-xl border border-border text-foreground hover:bg-surface-hover">
           {mounted ? (isDarkMode ? <Sun size={18} /> : <Moon size={18} />) : <Moon size={18} className="text-muted opacity-50" />}
         </button>
         
         {(isAdmin || isStudent) && (
           <div className="relative">
-            <button onClick={() => setShowNotifications(!showNotifications)} className="relative flex size-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-surface-hover">
+            <button aria-label="Notifications" onClick={() => setShowNotifications(!showNotifications)} className="relative flex size-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-surface-hover">
               <Bell size={18} className="text-muted" />
               {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white shadow-sm ring-2 ring-surface">{unreadCount > 9 ? "9+" : unreadCount}</span>}
             </button>

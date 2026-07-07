@@ -34,7 +34,7 @@ export function LandingHero() {
           <div className="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <BookOpen size={24} />
           </div>
-          <h3 className="mb-2 text-lg font-bold text-foreground">Curated Materials</h3>
+          <h2 className="mb-2 text-lg font-bold text-foreground">Curated Materials</h2>
           <p className="text-sm text-muted">Access structured notes, tutorials, and PYQs organized by subject and module.</p>
         </div>
         
@@ -42,7 +42,7 @@ export function LandingHero() {
           <div className="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-success/10 text-success">
             <Share2 size={24} />
           </div>
-          <h3 className="mb-2 text-lg font-bold text-foreground">Contribute</h3>
+          <h2 className="mb-2 text-lg font-bold text-foreground">Contribute</h2>
           <p className="text-sm text-muted">Upload your own study materials and help your peers succeed.</p>
         </div>
         
@@ -50,7 +50,7 @@ export function LandingHero() {
           <div className="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-warning/10 text-warning">
             <Search size={24} />
           </div>
-          <h3 className="mb-2 text-lg font-bold text-foreground">Lightning Fast</h3>
+          <h2 className="mb-2 text-lg font-bold text-foreground">Lightning Fast</h2>
           <p className="text-sm text-muted">Find exactly what you need with our global fuzzy search and command palette.</p>
         </div>
       </div>
