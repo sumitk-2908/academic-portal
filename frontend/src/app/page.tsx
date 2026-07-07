@@ -2,6 +2,7 @@ import SubjectGrid from "@/components/SubjectGrid";
 import { createClient } from "@/utils/supabase/server";
 
 import { LandingHero } from "@/components/landing/LandingHero";
+import { TrendingCarousel } from "@/components/landing/TrendingCarousel";
 import { Metadata } from "next";
 import { Suspense } from "react";
 import { HomeSkeleton } from "@/components/layout/SharedLayouts";
@@ -78,10 +79,36 @@ async function SubjectGridFetcher({ session }: { session: any }) {
 
   const isAuthenticated = !!session?.user;
 
+  let globalStats = { subjects: 0, modules: 0, views: 0, downloads: 0 };
+  let trendingDocs: any[] = [];
+
+  if (!isAuthenticated) {
+    const [{ count: modulesCount }, { data: analytics }, { data: recentDocs }] = await Promise.all([
+      supabase.from("modules").select("*", { count: "exact", head: true }),
+      supabase.from("document_analytics").select("view_count, download_count"),
+      supabase.from("documents")
+        .select("*, document_analytics(upvotes, view_count, download_count)")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(8)
+    ]);
+
+    globalStats = {
+      subjects: subjects.length,
+      modules: modulesCount || 0,
+      views: analytics?.reduce((acc, curr) => acc + (curr.view_count || 0), 0) || 0,
+      downloads: analytics?.reduce((acc, curr) => acc + (curr.download_count || 0), 0) || 0,
+    };
+    trendingDocs = recentDocs || [];
+  }
+
   return (
     <>
       {!isAuthenticated ? (
-        <LandingHero />
+        <>
+          <LandingHero stats={globalStats} />
+          <TrendingCarousel documents={trendingDocs} />
+        </>
       ) : (
         <section className="mb-10 pt-8 text-center">
           {firstName && (
@@ -106,8 +133,8 @@ async function SubjectGridFetcher({ session }: { session: any }) {
       <section className={!isAuthenticated ? "border-t border-border pt-12" : ""}>
         {!isAuthenticated && (
           <div className="mb-8 text-center">
-            <h2 className="text-2xl font-bold text-foreground">Explore Resources</h2>
-            <p className="text-muted">Browse our collection of academic materials</p>
+            <h2 className="text-2xl font-bold text-foreground">Browse All Subjects</h2>
+            <p className="text-muted">Explore our complete collection of academic materials by domain</p>
           </div>
         )}
         <SubjectGrid
