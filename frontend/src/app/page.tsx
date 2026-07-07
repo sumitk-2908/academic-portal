@@ -106,7 +106,7 @@ async function SubjectGridFetcher({ session }: { session: any }) {
     <>
       {!isAuthenticated ? (
         <>
-          <LandingHero stats={globalStats} />
+          <LandingHero stats={globalStats} trendingDocs={trendingDocs} />
           <TrendingCarousel documents={trendingDocs} />
         </>
       ) : (

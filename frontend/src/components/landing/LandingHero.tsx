@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/app/context/AuthContext";
-import { BookOpen, Share2, ArrowRight, Download, Eye, FileText, CheckCircle2 } from "lucide-react";
+import { GraduationCap, ShieldCheck, Cloud, Zap, Users } from "lucide-react";
+import { FeaturesCarousel } from "./FeaturesCarousel";
 
 export interface PlatformStats {
   subjects: number;
@@ -10,7 +11,7 @@ export interface PlatformStats {
   downloads: number;
 }
 
-export function LandingHero({ stats }: { stats?: PlatformStats }) {
+export function LandingHero({ stats, trendingDocs = [] }: { stats?: PlatformStats, trendingDocs?: any[] }) {
   const { setAuthMode, setShowAuthModal } = useAuth();
 
   const handleSignUp = () => {
@@ -19,106 +20,107 @@ export function LandingHero({ stats }: { stats?: PlatformStats }) {
   };
 
   return (
-    <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24">
+    <div className="relative mx-auto max-w-full px-4 pt-16 sm:pt-24 pb-12 overflow-hidden">
       {/* Background Gradients */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-1/2 left-1/2 -z-10 aspect-[1155/678] w-[36.125rem] max-w-none -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary/20 to-success/20 opacity-30 sm:left-[calc(50%-40rem)] sm:w-[72.1875rem]"></div>
+        <div className="absolute top-0 left-1/2 -z-10 aspect-[1155/678] w-[36.125rem] max-w-none -translate-x-1/2 bg-gradient-to-tr from-primary/10 to-transparent opacity-40 sm:w-[72.1875rem] blur-3xl"></div>
       </div>
 
-      <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
-        {/* Left Column: Value Prop */}
-        <div className="text-center lg:text-left">
-          <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl">
-            Your Academic <span className="text-primary">Companion</span>
-          </h1>
-          <p className="mb-8 text-lg leading-relaxed text-muted sm:text-xl">
-            Access, share, and organize course materials. Join your peers and study smarter with crowd-sourced notes, tutorials, and previous year questions.
-          </p>
-          
-          <div className="mb-12 flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
-            <button
-              onClick={handleSignUp}
-              className="motion-hover motion-active flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 font-bold text-primary-foreground shadow-sm hover:opacity-90 sm:w-auto"
-            >
-              Get Started for Free <ArrowRight size={18} />
-            </button>
-          </div>
-
-          {/* Real Analytics / Social Proof */}
-          {stats && (
-            <div className="flex flex-wrap justify-center gap-8 lg:justify-start">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-surface text-muted">
-                  <FileText size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-xl font-bold text-foreground">{stats.subjects}+</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">Subjects</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-surface text-muted">
-                  <Download size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-xl font-bold text-foreground">{stats.downloads.toLocaleString()}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">Downloads</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-surface text-muted">
-                  <Eye size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-xl font-bold text-foreground">{stats.views.toLocaleString()}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">Views</p>
-                </div>
-              </div>
-            </div>
-          )}
+      <div className="flex flex-col items-center text-center">
+        {/* Top Badge */}
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary dark:bg-primary/20">
+          <GraduationCap size={16} />
+          Built for Students, by Students
         </div>
 
-        {/* Right Column: Dynamic Mockup */}
-        <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-          <div className="animate-fade-up relative rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-black/20">
-            {/* Mockup Header */}
-            <div className="mb-6 flex items-center justify-between border-b border-border/40 pb-4">
-              <div className="flex items-center gap-4">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-primary/20 text-primary shadow-inner">
-                  <BookOpen size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-foreground">Data Structures Notes</h3>
-                  <p className="text-sm text-muted">Module 1 • High Quality</p>
-                </div>
-              </div>
-              <div className="hidden rounded-full bg-success/20 px-4 py-1.5 text-xs font-bold text-success sm:block">
-                Approved
-              </div>
-            </div>
+        {/* Headline */}
+        <h1 className="mb-6 max-w-4xl text-5xl font-extrabold tracking-tight text-foreground sm:text-7xl">
+          Everything You Need to <br className="hidden sm:block" />
+          Study <span className="text-primary">Smarter</span>
+        </h1>
 
-            {/* Mockup Content (Fake PDF/Notes) */}
-            <div className="space-y-4 p-2">
-              <div className="h-4 w-3/4 rounded-md bg-border/60"></div>
-              <div className="h-4 w-full rounded-md bg-border/60"></div>
-              <div className="h-4 w-5/6 rounded-md bg-border/60"></div>
-              <div className="h-24 w-full rounded-xl bg-border/60"></div>
-              <div className="h-4 w-2/3 rounded-md bg-border/60"></div>
-              <div className="h-4 w-4/5 rounded-md bg-border/60"></div>
-            </div>
+        {/* Subtitle */}
+        <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
+          Explore the powerful features designed to help you access, organize, and
+          make the most of your academic journey.
+        </p>
 
-            {/* Floating Badges */}
-            <div className="absolute -right-6 -top-6 flex animate-bounce items-center gap-2 rounded-2xl border border-white/20 bg-white/40 px-5 py-3 shadow-xl backdrop-blur-xl dark:bg-black/50" style={{ animationDuration: '3s' }}>
-              <CheckCircle2 className="text-success" size={20} />
-              <span className="text-sm font-bold tracking-tight text-foreground">Verified Resource</span>
+        {/* CTA (Optional but good for conversions, not explicitly in the cropped screenshot but typically below subtitle) */}
+        <div className="mb-16">
+          <button
+            onClick={handleSignUp}
+            className="motion-hover motion-active rounded-full bg-primary px-8 py-4 text-lg font-bold text-primary-foreground shadow-lg hover:opacity-90 hover:shadow-primary/25"
+          >
+            Get Started for Free
+          </button>
+        </div>
+      </div>
+
+      {/* Carousel Section */}
+      <div className="mb-20">
+        <FeaturesCarousel trendingDocs={trendingDocs} />
+      </div>
+
+      {/* Bottom Features Row */}
+      <div className="mx-auto max-w-6xl">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 px-4">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+              <ShieldCheck size={24} />
             </div>
-            
-            <div className="absolute -bottom-6 -left-6 flex items-center gap-2 rounded-2xl border border-white/20 bg-white/40 px-5 py-3 shadow-xl backdrop-blur-xl dark:bg-black/50">
-              <Share2 className="text-primary" size={20} />
-              <span className="text-sm font-bold tracking-tight text-foreground">Community Driven</span>
+            <div>
+              <h4 className="font-bold text-foreground">Trusted & Secure</h4>
+              <p className="text-sm text-muted">Your data and privacy are always protected.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400">
+              <Cloud size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-foreground">Cloud Sync</h4>
+              <p className="text-sm text-muted">Access your library from anywhere, anytime.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
+              <Zap size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-foreground">Fast & Lightweight</h4>
+              <p className="text-sm text-muted">Optimized for speed and a smooth experience.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">
+              <Users size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-foreground">Built for Students</h4>
+              <p className="text-sm text-muted">Made with ❤️ to support your academic success.</p>
             </div>
           </div>
         </div>
+
+        {/* Real Analytics / Social Proof */}
+        {stats && (
+          <div className="mt-16 border-t border-border/50 pt-10">
+            <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+              <div className="text-center">
+                <p className="text-3xl font-extrabold text-primary">{stats.subjects}+</p>
+                <p className="text-sm font-semibold uppercase tracking-wider text-muted mt-1">Subjects</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-extrabold text-foreground">{stats.downloads.toLocaleString()}</p>
+                <p className="text-sm font-semibold uppercase tracking-wider text-muted mt-1">Downloads</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-extrabold text-foreground">{stats.views.toLocaleString()}</p>
+                <p className="text-sm font-semibold uppercase tracking-wider text-muted mt-1">Views</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
