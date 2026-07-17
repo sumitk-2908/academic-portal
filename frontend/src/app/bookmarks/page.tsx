@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { supabase, getStudentBookmarks, trackDocumentStat } from "../lib/api";
-import { withOptimisticUpdate } from "../lib/optimistic";
+import { supabase } from "../lib/api/core";
+import { useBookmarks, useToggleBookmarkMutation } from "../hooks/useBookmarks";
+import { trackDocumentStat } from "../lib/api/analytics";
 import { dispatchToast } from "../lib/toast";
 import { Bookmark, Download, Eye, FileText, NotebookPen, FileQuestion, ListChecks, BookOpen, type LucideIcon } from "lucide-react";
 import Link from "next/link";
@@ -17,104 +18,55 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 const CATEGORY_ICONS: Record<string, LucideIcon> = { notes: NotebookPen, pyq: FileQuestion, tutorial_sheet: BookOpen, syllabus: ListChecks };
 
 function BookmarksContent() {
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
   const [isSignedOut, setIsSignedOut] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: sess }) => {
+      if (sess?.session?.user) {
+        setUserId(sess.session.user.id);
+        setIsSignedOut(false);
+      } else {
+        setIsSignedOut(true);
+      }
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        setIsSignedOut(false);
+      } else {
+        setUserId("");
+        setIsSignedOut(true);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const { data: documents = [], isLoading: loading } = useBookmarks(userId);
+  const toggleBookmarkMutation = useToggleBookmarkMutation();
+
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
   const downloadingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
-    let isMounted = true;
+    if (!loading && !isSignedOut) {
+      setShowContributionPrompt(shouldShowContributionPrompt(documents.length));
+    }
+  }, [documents.length, loading, isSignedOut]);
 
-    const fetchBookmarks = async (silent = false) => {
-      if (!silent) setLoading(true); 
-      
-      const { data: sess } = await supabase.auth.getSession();
-      const currentUserId = sess?.session?.user?.id;
-      
-      if (!currentUserId) {
-        if (isMounted) {
-          setUserId("");
-          setDocuments([]);
-          setIsSignedOut(true);
-          if (!silent) setLoading(false);
-        }
-        return;
-      }
-
-      if (isMounted) {
-        setIsSignedOut(false);
-        setUserId(currentUserId);
-        
-      }
-
-      const userBookmarks = await getStudentBookmarks(currentUserId);
-      if (isMounted) {
-        setDocuments(userBookmarks);
-        setShowContributionPrompt(shouldShowContributionPrompt(userBookmarks.length));
-        if (!silent) setLoading(false);
-      }
-    };
-
-    // Initial fetch
-    fetchBookmarks();
-
-    const handleUpdate = () => fetchBookmarks(true);
-
-    window.addEventListener("sidebar_update", handleUpdate);
-    window.addEventListener("focus", handleUpdate);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("sidebar_update", handleUpdate);
-      window.removeEventListener("focus", handleUpdate);
-    };
-  }, []);
-
-  const toggleBookmark = async (id: number) => {
-    const docToRemove = documents.find(d => d.id === id);
-    const snapshotDocuments = [...documents];
-    const snapshotLocalStorage = localStorage.getItem("portal_bookmarks");
-
-    const applyOptimistic = () => {
-      const nextDocs = documents.filter(d => d.id !== id);
-      setDocuments(nextDocs);
-      setShowContributionPrompt(shouldShowContributionPrompt(nextDocs.length));
-      const nextIds = nextDocs.map(d => d.id);
-      localStorage.setItem("portal_bookmarks", JSON.stringify(nextIds));
-      window.dispatchEvent(new Event("sidebar_update"));
-    };
-
-    const revertOptimistic = () => {
-      setDocuments(snapshotDocuments);
-      setShowContributionPrompt(shouldShowContributionPrompt(snapshotDocuments.length));
-      if (snapshotLocalStorage) {
-        localStorage.setItem("portal_bookmarks", snapshotLocalStorage);
-      } else {
-        localStorage.removeItem("portal_bookmarks");
-      }
-      window.dispatchEvent(new Event("sidebar_update"));
-      dispatchToast("Error", "Failed to remove bookmark", "error");
-    };
-
-    const serverMutation = async () => {
-      if (docToRemove?.file_url) {
-        manageOfflinePdf(docToRemove.file_url, 'REMOVE_PDF').catch(console.error);
-      }
-      if (userId) {
-        const { error } = await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
-        if (error) throw error;
-      }
-    };
-
-    await withOptimisticUpdate(
-      applyOptimistic,
-      null, // not using current state in apply function directly
-      serverMutation,
-      revertOptimistic
-    );
+  const toggleBookmark = (id: number) => {
+    if (!userId) return;
+    const doc = documents.find((d: DocumentRecord) => d.id === id);
+    if (!doc) return;
+    
+    if (doc.file_url) {
+      manageOfflinePdf(doc.file_url, 'REMOVE_PDF').catch(console.error);
+    }
+    
+    toggleBookmarkMutation.mutate({ userId, documentId: id, isAdding: false });
   };
 
   const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord | DocumentWithAnalytics) => {
@@ -186,7 +138,7 @@ function BookmarksContent() {
               Save Bookmarks
             </button>
           </div>
-        ) : documents.map(doc => (
+        ) : documents.map((doc: DocumentRecord) => (
           <DocumentCard
             key={doc.id}
             doc={doc as DocumentWithAnalytics}

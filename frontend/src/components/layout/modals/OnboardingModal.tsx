@@ -3,12 +3,13 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Search } from "lucide-react";
-import { SUBJECTS_LIST } from "@/app/lib/subject-config";
+import { useSubjects } from "@/app/hooks/useSubjects";
 import { useAuth } from "@/app/context/AuthContext";
-import { supabase } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
 
 export const OnboardingModal = () => {
   const { currentUserEmail, showOnboardingModal, setShowOnboardingModal, updateUserProfile } = useAuth();
+  const { data: subjects = [] } = useSubjects();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [branch, setBranch] = useState("");
@@ -115,7 +116,7 @@ export const OnboardingModal = () => {
                 </div>
                 {subjectQuery.trim() && favoriteSubjects.length < 5 && (
                   <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
-                    {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).map(subject => (
+                    {subjects.map(s => s.name).filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).map(subject => (
                       <button
                         key={subject}
                         type="button"
@@ -128,7 +129,7 @@ export const OnboardingModal = () => {
                         {subject}
                       </button>
                     ))}
-                    {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).length === 0 && (
+                    {subjects.map(s => s.name).filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).length === 0 && (
                       <div className="px-3 py-2 text-xs text-muted">No subjects found.</div>
                     )}
                   </div>

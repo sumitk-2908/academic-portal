@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import {
-  supabase,
-  getStudentBookmarks,
-  getFullStudyHistory,
-  getSubjects,
-  getStudyStreak,
-  getAchievements,
-  getEnhancedContributions,
-} from "@/app/lib/api";
+import { useEffect, useState } from "react";
+import { supabase } from "@/app/lib/api/core";
+import { useBookmarks } from "@/app/hooks/useBookmarks";
+import { useFullStudyHistory } from "@/app/hooks/useStudyHistory";
+import { useSubjects } from "@/app/hooks/useSubjects";
+import { useStudyStreak, useAchievements, useEnhancedContributions } from "@/app/hooks/useProfile";
 import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileStats from "@/components/profile/ProfileStats";
@@ -17,106 +13,33 @@ import ProfileTabs from "@/components/profile/ProfileTabs";
 import { Activity, Flame, Upload, User as UserIcon } from "lucide-react";
 import { ProfileSkeleton } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import { DocumentWithAnalytics } from "@/app/lib/document-types";
-import { Tables } from "@/app/lib/database.types";
 import { User } from "@supabase/supabase-js";
 
 function ProfileContent() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const [stats, setStats] = useState({
-    subjects: 0,
-    bookmarks: 0,
-    uploads: 0,
-    downloads: 0,
-  });
-
-  const [history, setHistory] = useState<DocumentWithAnalytics[]>([]);
-  const [bookmarks, setBookmarks] = useState<DocumentWithAnalytics[]>([]);
-  const [uploads, setUploads] = useState<DocumentWithAnalytics[]>([]);
-
-  // New Phase 3 States
-  const [streak, setStreak] = useState<Tables<'study_streaks'> | null>(null);
-  const [achievements, setAchievements] = useState<Tables<'user_achievements'>[]>([]);
-
-  const lastFetchTime = useRef(0);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    supabase.auth.getSession().then(({ data: sess }) => {
+      setUser(sess?.session?.user || null);
+      setIsAuthLoading(false);
+    });
 
-    const fetchDashboardData = async () => {
-      const now = Date.now();
-      if (now - lastFetchTime.current < 2000) return;
-      lastFetchTime.current = now;
-      // 1. Get Auth Session
-      const { data: sess } = await supabase.auth.getSession();
-      const currentUser = sess?.session?.user;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
 
-      if (isMounted) {
-        setUser(currentUser || null);
-      }
-
-      if (!currentUser) {
-        setLoading(false);
-        return;
-      }
-
-      // 2. Fetch All Data Concurrently (Performance Optimized)
-      const [
-        userBookmarks,
-        userHistory,
-        allSubjects,
-        userUploads,
-        userStreak,
-        userAchievements,
-      ] = await Promise.all([
-        getStudentBookmarks(currentUser.id),
-        getFullStudyHistory(currentUser.id),
-        getSubjects(),
-        getEnhancedContributions(currentUser.id),
-        getStudyStreak(currentUser.id),
-        getAchievements(currentUser.id),
-      ]);
-
-      // 3. Update states only if the component is still mounted
-      if (isMounted) {
-        setBookmarks(userBookmarks || []);
-        setHistory(userHistory || []);
-        setUploads(userUploads || []);
-        setStreak(userStreak);
-        setAchievements(userAchievements || []);
-
-        const totalImpact = (userUploads || []).reduce(
-          (acc: number, u: any) => {
-            return acc + (u.document_analytics?.download_count || 0);
-          },
-          0
-        );
-
-        setStats({
-          subjects: allSubjects?.length || 0,
-          bookmarks: userBookmarks?.length || 0,
-          uploads: userUploads?.length || 0,
-          downloads: totalImpact,
-        });
-
-        setLoading(false);
-      }
-    };
-
-    // Initial fetch
-    fetchDashboardData();
-
-    window.addEventListener("sidebar_update", fetchDashboardData);
-    window.addEventListener("focus", fetchDashboardData);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("sidebar_update", fetchDashboardData);
-      window.removeEventListener("focus", fetchDashboardData);
-    };
+    return () => subscription.unsubscribe();
   }, []);
+
+  const { data: bookmarks = [], isLoading: loadingBookmarks } = useBookmarks(user?.id);
+  const { data: history = [], isLoading: loadingHistory } = useFullStudyHistory(user?.id);
+  const { data: subjects = [], isLoading: loadingSubjects } = useSubjects();
+  const { data: streak = null, isLoading: loadingStreak } = useStudyStreak(user?.id);
+  const { data: achievements = [], isLoading: loadingAchievements } = useAchievements(user?.id);
+  const { data: uploads = [], isLoading: loadingUploads } = useEnhancedContributions(user?.id);
+
+  const loading = isAuthLoading || (user && (loadingBookmarks || loadingHistory || loadingSubjects || loadingStreak || loadingAchievements || loadingUploads));
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -163,18 +86,30 @@ function ProfileContent() {
     );
   }
 
+  const totalImpact = (uploads || []).reduce(
+    (acc: number, u: any) => {
+      return acc + (u.document_analytics?.download_count || 0);
+    },
+    0
+  );
+
+  const stats = {
+    subjects: subjects?.length || 0,
+    bookmarks: bookmarks?.length || 0,
+    uploads: uploads?.length || 0,
+    downloads: totalImpact,
+  };
+
   return (
     <div className="mx-auto w-full max-w-4xl pb-12">
       <h1 className="mb-6 hidden text-2xl font-extrabold tracking-tight text-foreground sm:block">
         Student Profile
       </h1>
 
-      {/* Passing the new streak state to the Header */}
       <ProfileHeader user={user} streak={streak} />
 
       <ProfileStats stats={stats} />
 
-      {/* Passing new states to Tabs so they can render the Heatmap, Timeline, and Achievements */}
       <ProfileTabs
         user={user}
         history={history}

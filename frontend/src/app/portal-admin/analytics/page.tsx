@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
 import { BarChart2, FileText, Download, ShieldAlert, CheckCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
@@ -23,48 +23,13 @@ function AdminAnalyticsContent() {
     const fetchAnalytics = async () => {
       setLoading(true);
 
-      // Fetch Document counts by status
-      const { data: docData } = await supabase
-        .from("documents")
-        .select("status");
+      const { data, error } = await supabase.rpc("get_admin_analytics_stats");
 
-      let total = 0, approved = 0, pending = 0, rejected = 0;
-      if (docData) {
-        total = docData.length;
-        docData.forEach((d: any) => {
-          if (d.status === "approved") approved++;
-          if (d.status === "pending") pending++;
-          if (d.status === "rejected") rejected++;
-        });
+      if (!error && data) {
+        setStats(data as any);
+      } else {
+        console.error("Error fetching analytics stats:", error);
       }
-
-      // Fetch analytics counts
-      const { data: analyticsData } = await supabase
-        .from("document_analytics")
-        .select("download_count, view_count");
-
-      let downloads = 0, views = 0;
-      if (analyticsData) {
-        analyticsData.forEach((a: any) => {
-          downloads += a.download_count || 0;
-          views += a.view_count || 0;
-        });
-      }
-
-      // Fetch flags count
-      const { count: flagsCount } = await supabase
-        .from("document_flags")
-        .select("*", { count: 'exact', head: true });
-
-      setStats({
-        totalDocs: total,
-        approvedDocs: approved,
-        pendingDocs: pending,
-        rejectedDocs: rejected,
-        totalDownloads: downloads,
-        totalViews: views,
-        totalFlags: flagsCount || 0,
-      });
 
       setLoading(false);
     };
@@ -85,6 +50,9 @@ function AdminAnalyticsContent() {
       <div className="flex items-center justify-between">
         <Link href="/subject/admin/inbox" className="motion-hover inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary">
           <ArrowLeft size={14} /> Back to Inbox
+        </Link>
+        <Link href="/subject/admin/subjects" className="motion-hover inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/20">
+          Manage Content
         </Link>
       </div>
 

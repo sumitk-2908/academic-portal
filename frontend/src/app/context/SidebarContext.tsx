@@ -2,8 +2,11 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { supabase, getTrendingDocuments, searchDocuments } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
+import { getTrendingDocuments } from "@/app/lib/api/analytics";
+import { searchDocuments } from "@/app/lib/api/documents";
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { dispatchToast as showToast } from "@/app/lib/toast";
 import { DocumentWithAnalytics } from "@/app/lib/document-types";
 
 interface SidebarContextType {
@@ -37,7 +40,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [globalSearchResults, setGlobalSearchResults] = useState<DocumentWithAnalytics[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const { data: trendingDocs = [] } = useQuery({
+  const { data: trendingDocs = [] as DocumentWithAnalytics[] } = useQuery({
     queryKey: ['trendingDocuments'],
     queryFn: getTrendingDocuments,
     placeholderData: keepPreviousData,
@@ -52,9 +55,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     if (count !== null) setPendingCount(count);
   }, []);
 
-  const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
-    window.dispatchEvent(new CustomEvent("portal_toast", { detail: { title, message, type } }));
-  };
 
   useEffect(() => {
     setIsOffline(!navigator.onLine);
@@ -71,21 +71,14 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       setSidebarLoading(false);
     };
     initializeData();
-
-    const handleUpdate = async () => {
-      await refreshSidebarData();
-    };
-
-    window.addEventListener("sidebar_update", handleUpdate);
-    return () => window.removeEventListener("sidebar_update", handleUpdate);
   }, [refreshSidebarData]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
       setSidebarCollapsed(!session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       refreshSidebarData();
       if (event === 'SIGNED_IN') {
         setSidebarCollapsed(false);

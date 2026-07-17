@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/api";
+import { supabase } from "../lib/api/core";
 import { useRouter } from "next/navigation";
 import { Shield, KeyRound, QrCode } from "lucide-react";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
@@ -108,6 +108,8 @@ function AdminPortalLoginContent() {
                 <input
                   required
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={6}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
@@ -137,6 +139,8 @@ function AdminPortalLoginContent() {
                 required
                 autoFocus
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 maxLength={6}
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}

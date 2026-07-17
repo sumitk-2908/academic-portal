@@ -7,7 +7,7 @@ import Fuse from "fuse.js";
 import { 
   Search, Clock, Bookmark, Upload, User, FileText, Command, X, ArrowRight, CornerDownLeft, FolderOpen
 } from "lucide-react";
-import { SUBJECTS_LIST, isNonModuleSubject } from "@/app/lib/subject-config";
+import { useSubjects } from "@/app/hooks/useSubjects";
 import { useSidebar } from "@/app/context/SidebarContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
@@ -32,6 +32,7 @@ export const CommandPalette = ({ open, onOpenChange, isMac }: { open: boolean; o
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const { data: subjects = [] } = useSubjects();
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -103,7 +104,8 @@ export const CommandPalette = ({ open, onOpenChange, isMac }: { open: boolean; o
     },
   ], [closePalette, openAuthPrompt, isSignedIn, navigateTo]);
 
-  const allSubjectItems = useMemo<CommandItem[]>(() => SUBJECTS_LIST.flatMap((subject) => {
+  const allSubjectItems = useMemo<CommandItem[]>(() => subjects.flatMap((subjectObj) => {
+    const subject = subjectObj.name;
     const slug = subjectSlug(subject);
     const base: CommandItem = {
       id: `subject-${slug}`,
@@ -113,7 +115,7 @@ export const CommandPalette = ({ open, onOpenChange, isMac }: { open: boolean; o
       icon: <FolderOpen size={16} className="text-primary" aria-hidden="true" />,
       action: () => navigateTo(`/subject/${slug}`),
     };
-    const modules: CommandItem[] = isNonModuleSubject(subject) ? [] : [1, 2, 3, 4, 5].map((module) => ({
+    const modules: CommandItem[] = subjectObj.is_non_module ? [] : [1, 2, 3, 4, 5].map((module) => ({
       id: `subject-${slug}-module-${module}`,
       label: `${subject} - Module ${module}`,
       description: "Open module resources",
@@ -122,7 +124,7 @@ export const CommandPalette = ({ open, onOpenChange, isMac }: { open: boolean; o
       action: () => navigateTo(`/subject/${slug}/module-${module}`),
     }));
     return [base, ...modules];
-  }), [navigateTo]);
+  }), [navigateTo, subjects]);
 
   const subjectItems = useMemo<CommandItem[]>(() => {
     if (!normalizedQuery) return [];

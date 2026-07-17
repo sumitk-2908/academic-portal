@@ -6,6 +6,7 @@ import { Download, Eye, Bookmark, Trash2, FileText, NotebookPen, FileQuestion, L
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
 import type { DocumentWithAnalytics } from "@/app/lib/document-types";
+import { subjectSlug as generateSlug } from "@/components/layout/utils";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = { 
   notes: NotebookPen, 
@@ -54,12 +55,12 @@ export default function DocumentCard({
   isDownloading = false
 }: DocumentCardProps) {
   
-  const slug = subjectSlug || doc.subject?.toLowerCase().replace(/ /g, '-') || "default";
+  const slug = subjectSlug || (doc.subject ? generateSlug(doc.subject) : "default");
   const ui = SUBJECT_UI_MAP[slug] || SUBJECT_UI_MAP["default"];
   const accentBorderColor = ui.border ? ui.border.replace('border-', 'border-l-') : 'border-l-muted';
   
   const Icon = CATEGORY_ICONS[doc.category] || FileText;
-  const targetSubjectSlug = subjectSlug || doc.subject?.toLowerCase().replace(/ /g, '-');
+  const targetSubjectSlug = subjectSlug || (doc.subject ? generateSlug(doc.subject) : "default");
 
   return (
     <article className={`group flex flex-col rounded-2xl border border-l-[3px] ${accentBorderColor} motion-hover p-5 shadow-sm hover:-translate-y-1 hover:shadow-md ${
@@ -112,9 +113,19 @@ export default function DocumentCard({
         </h3>
         
         <div className="mt-1 flex items-center gap-1.5">
-          <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
-            {doc.uploader_name || 'Anonymous'}
-          </span>
+          {doc.uploaded_by && doc.uploader_name ? (
+            <Link 
+              href={`/contributor/${doc.uploaded_by}`}
+              className="truncate text-xs font-bold tracking-wider text-primary uppercase hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {doc.uploader_name}
+            </Link>
+          ) : (
+            <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
+              {doc.uploader_name || 'Anonymous'}
+            </span>
+          )}
         </div>
         
         {/* Metadata */}

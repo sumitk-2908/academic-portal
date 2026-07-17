@@ -1,93 +1,80 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { 
-  supabase, 
-  getRecentStudyActivity, 
-  trackDocumentStat, 
-  getSuggestedNextSteps, 
-  getTrendingDocuments,
-  getProfilePreferences 
-} from "../lib/api";
+import { supabase } from "../lib/api/core";
+import { trackDocumentStat, getTrendingDocuments } from "../lib/api/analytics";
+import { getSuggestedNextSteps } from "../lib/api/profile";
 import { requestAuthPrompt } from "../lib/auth-prompts";
 import { recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
-import { Clock, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Sparkles, BookOpen } from "lucide-react";
+import { Clock, Sparkles, NotebookPen, FileQuestion, ListChecks, BookOpen } from "lucide-react";
 import Link from "next/link";
-import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
+import { DocumentGridSkeleton } from "@/components/layout/SharedLayouts";
 import DocumentCard from "@/components/ui/DocumentCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DocumentWithAnalytics } from "@/app/lib/document-types";
-
-// Added tutorial_sheet to match the doccategory ENUM in database.types.ts
-const CATEGORY_ICONS: Record<string, any> = { 
-  notes: NotebookPen, 
-  pyq: FileQuestion, 
-  syllabus: ListChecks,
-  tutorial_sheet: BookOpen 
-};
+import { useRecentStudyHistory } from "@/app/hooks/useStudyHistory";
+import { useProfilePreferences } from "@/app/hooks/useProfile";
+import { useQuery } from '@tanstack/react-query';
+import { User } from "@supabase/supabase-js";
 
 function ContinueStudyingContent() {
-  const [documents, setDocuments] = useState<DocumentWithAnalytics[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = localStorage.getItem("portal_study_history");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: sess }) => {
+      setUser(sess?.session?.user || null);
+      setIsAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const isSignedOut = !isAuthLoading && !user;
+
+  const { data: history = [], isLoading: loadingHistory } = useRecentStudyHistory(user?.id);
+  const { data: profile = null } = useProfilePreferences(user?.id);
+  const { data: trending = [] } = useQuery({
+    queryKey: ['trendingDocuments'],
+    queryFn: getTrendingDocuments,
   });
+
   const [suggestions, setSuggestions] = useState<DocumentWithAnalytics[]>([]);
-  const [loading, setLoading] = useState(documents.length === 0);
-  const [isSignedOut, setIsSignedOut] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
   const downloadingRef = useRef<Set<number>>(new Set());
 
+  const loading = isAuthLoading || (user && loadingHistory);
+
   useEffect(() => {
-    const fetchHistoryAndSuggestions = async () => {
-      // Don't show skeleton if we have optimistic local data
-      if (documents.length === 0) setLoading(true);
-      
-      const { data: sess } = await supabase.auth.getSession();
-      const currentUserId = sess?.session?.user?.id;
+    if (!user && !isAuthLoading) {
+      setSuggestions([]);
+      return;
+    }
 
-      if (!currentUserId) {
-        setDocuments([]);
-        setSuggestions([]);
-        setIsSignedOut(true);
-        setLoading(false);
-        return;
-      }
+    if (loading || !history || !trending) return;
 
-      setIsSignedOut(false);
-      
-      // 1. Fetch User History
-      const history = await getRecentStudyActivity(currentUserId);
-      const safeHistory = Array.isArray(history) ? history : [];
-      setDocuments(safeHistory);
+    let isMounted = true;
+
+    const generateSuggestions = async () => {
+      setSuggestionsLoading(true);
       setShowContributionPrompt(shouldShowContributionPrompt(0));
+
+      const safeHistory = Array.isArray(history) ? history : [];
       const historyIds = new Set(safeHistory.map((d: any) => d.id));
 
-      // 2. Fetch User Profile Preferences (Favorites & Branch)
-      let userFavs: string[] = [];
-      let userBranch: string | null = null;
-      
-      if (currentUserId) {
-        try {
-          const profile = await getProfilePreferences(currentUserId);
-          if (profile?.favorite_subjects) userFavs = profile.favorite_subjects;
-          if (profile?.preferred_branch) userBranch = profile.preferred_branch; // Fixed schema property
-        } catch (e) {
-          console.error("Failed to fetch profile preferences", e);
-        }
-      }
+      let userFavs: string[] = profile?.favorite_subjects || [];
+      let userBranch: string | null = profile?.preferred_branch || null;
 
-      // 3. Build Recommendation Candidate Pools
       let candidates: any[] = [];
 
       try {
         // Pool A: Popular/Trending (Acts as base and fallback)
-        const trending = await getTrendingDocuments();
         candidates = [...candidates, ...trending.map((d: any) => ({ ...d, recSource: 'trending' }))];
 
         // Pool B: History-based (Related to last document)
@@ -132,7 +119,7 @@ function ContinueStudyingContent() {
         // Contextual Boosts
         if (userFavs.includes(doc.subject)) score += 5;
         
-        // Branch match boost (Fuzzy match since documents table lacks a branch column)
+        // Branch match boost
         if (userBranch && (
           doc.subject?.toLowerCase().includes(userBranch.toLowerCase()) || 
           doc.title?.toLowerCase().includes(userBranch.toLowerCase())
@@ -140,7 +127,7 @@ function ContinueStudyingContent() {
           score += 5; 
         }
         
-        // Popularity Tie-breaker using correct view_count field
+        // Popularity Tie-breaker
         const popularityBonus = doc.view_count ? Math.min(doc.view_count / 50, 3) : 0;
         score += popularityBonus;
 
@@ -157,12 +144,18 @@ function ContinueStudyingContent() {
         .sort((a, b) => b.score - a.score)
         .slice(0, 3);
 
-      setSuggestions(finalRecommendations);
-      setLoading(false);
+      if (isMounted) {
+        setSuggestions(finalRecommendations);
+        setSuggestionsLoading(false);
+      }
     };
 
-    fetchHistoryAndSuggestions();
-  }, []);
+    generateSuggestions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isAuthLoading, loading, history, profile, trending]);
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {
     e.preventDefault();
@@ -187,7 +180,7 @@ function ContinueStudyingContent() {
     }
   };
 
-  const safeDocuments = Array.isArray(documents) ? documents : [];
+  const safeDocuments = Array.isArray(history) ? history : [];
 
   return (
     <div className="animate-fade-up mx-auto max-w-6xl space-y-10">
@@ -261,7 +254,7 @@ function ContinueStudyingContent() {
       )}
 
       {/* SUGGESTIONS SECTION */}
-      {!loading && suggestions.length > 0 && (
+      {!loading && !suggestionsLoading && suggestions.length > 0 && (
         <section className="space-y-6 border-t border-gray-100 pt-4 dark:border-gray-800">
            <div className="flex items-center gap-3 px-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">

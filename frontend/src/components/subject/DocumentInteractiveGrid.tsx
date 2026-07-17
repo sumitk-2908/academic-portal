@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Eye, FileQuestion, Upload } from "lucide-react";
-import { trackDocumentStat, deleteDocument, supabase, getPaginatedDocumentsByModule, toggleUpvote, getUserUpvotes } from "@/app/lib/api";
+import { trackDocumentStat, toggleUpvote, getUserUpvotes } from "@/app/lib/api/analytics";
+import { deleteDocument, getPaginatedDocumentsByModule } from "@/app/lib/api/documents";
+import { supabase } from "@/app/lib/api/core";
 import { manageOfflinePdf } from "@/app/lib/offline-manager";
 import { requestAuthPrompt } from "@/app/lib/auth-prompts";
 import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "@/app/lib/student-prompts";
@@ -11,6 +13,7 @@ import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { useInfiniteQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { withOptimisticUpdate } from "@/app/lib/optimistic";
 import { dispatchToast } from "@/app/lib/toast";
+import { useBookmarks, useToggleBookmarkMutation } from "@/app/hooks/useBookmarks";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { DocumentGridSkeleton, EmptyState, CenteredSpinner } from "@/components/layout/SharedLayouts";
 import DocumentCard from "@/components/ui/DocumentCard";
@@ -19,6 +22,8 @@ import type { DocumentWithAnalytics, InfiniteDocumentsData, StoredBookmark } fro
 export interface PaginationConfig {
   queryKey: string[];
   moduleId: number;
+  category?: string;
+  sortBy?: string;
 }
 
 export default function DocumentInteractiveGrid({ 
@@ -34,7 +39,6 @@ export default function DocumentInteractiveGrid({
 }) {
   const queryClient = useQueryClient();
   const [deletedIds, setDeletedIds] = useState<number[]>([]);
-  const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [upvotes, setUpvotes] = useState<number[]>([]);
   const [upvoteCounts, setUpvoteCounts] = useState<Record<number, number>>({});
   const [isAdmin, setIsAdmin] = useState(false);
@@ -46,13 +50,17 @@ export default function DocumentInteractiveGrid({
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: paginationConfig ? paginationConfig.queryKey : ['static-grid'],
-    queryFn: ({ pageParam = 1 }) => getPaginatedDocumentsByModule(paginationConfig!.moduleId, pageParam, 20),
+    queryFn: ({ pageParam = 1 }) => getPaginatedDocumentsByModule(paginationConfig!.moduleId, pageParam, 20, paginationConfig?.category, paginationConfig?.sortBy),
     initialPageParam: 1,
     enabled: !!paginationConfig,
     initialData: paginationConfig ? { pages: [{ data: initialDocuments, nextCursor: 2, total: 0 }], pageParams: [1] } : undefined,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
     placeholderData: keepPreviousData,
   });
+
+  const { data: bookmarkedDocs } = useBookmarks(userId || undefined);
+  const bookmarks = useMemo(() => bookmarkedDocs?.map((d: any) => d.id) || [], [bookmarkedDocs]);
+  const toggleBookmarkMutation = useToggleBookmarkMutation();
 
   const displayDocuments = useMemo(() => {
     const documents = paginationConfig
@@ -63,12 +71,11 @@ export default function DocumentInteractiveGrid({
   }, [data?.pages, deletedIds, initialDocuments, paginationConfig]);
 
   useEffect(() => {
-    const initClientState = async () => {
-      const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]") as StoredBookmark[];
-      const bookmarkIds = rawBookmarks.map((b) => typeof b === 'object' ? b.id : b);
-      setBookmarks(bookmarkIds);
-      setShowContributionPrompt(shouldShowContributionPrompt(bookmarkIds.length));
+    setShowContributionPrompt(shouldShowContributionPrompt(bookmarks.length));
+  }, [bookmarks.length]);
 
+  useEffect(() => {
+    const initClientState = async () => {
       const { data: sess } = await supabase.auth.getSession();
       if (sess?.session?.user) {
         setUserId(sess.session.user.id);
@@ -117,56 +124,15 @@ export default function DocumentInteractiveGrid({
     }
 
     const isBookmarked = bookmarks.includes(id);
-    const snapshotBookmarks = [...bookmarks];
-    const snapshotLocalStorage = localStorage.getItem("portal_bookmarks");
     const targetDoc = displayDocuments.find(d => d.id === id);
 
-    const applyOptimistic = () => {
-      const nextB = isBookmarked ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
-      setBookmarks(nextB);
-      if (!isBookmarked) setShowContributionPrompt(shouldShowContributionPrompt(nextB.length));
-
-      const currentStorage = JSON.parse(snapshotLocalStorage || "[]");
-      let newStorage;
-      if (isBookmarked) {
-        newStorage = (currentStorage as StoredBookmark[]).filter((b) => (typeof b === 'object' ? b.id : b) !== id);
-      } else {
-        newStorage = [...currentStorage, { id, bookmarked_at: new Date().toISOString() }];
-      }
-      localStorage.setItem("portal_bookmarks", JSON.stringify(newStorage));
-      window.dispatchEvent(new Event("sidebar_update"));
-    };
-
-    const revertOptimistic = () => {
-      setBookmarks(snapshotBookmarks);
-      if (!isBookmarked) setShowContributionPrompt(shouldShowContributionPrompt(snapshotBookmarks.length));
-      if (snapshotLocalStorage) {
-        localStorage.setItem("portal_bookmarks", snapshotLocalStorage);
-      } else {
-        localStorage.removeItem("portal_bookmarks");
-      }
-      window.dispatchEvent(new Event("sidebar_update"));
-      dispatchToast("Error", "Failed to update bookmark", "error");
-    };
-
-    const serverMutation = async () => {
-      if (isBookmarked) {
-        if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'REMOVE_PDF').catch(console.error);
-        const { error } = await supabase.from('student_bookmarks').delete().match({ user_id: userId, document_id: id });
-        if (error) throw error;
-      } else {
-        if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'CACHE_PDF').catch(console.error);
-        const { error } = await supabase.from('student_bookmarks').insert({ user_id: userId, document_id: id });
-        if (error) throw error;
-      }
-    };
-
-    await withOptimisticUpdate(
-      applyOptimistic,
-      null,
-      serverMutation,
-      revertOptimistic
-    );
+    if (isBookmarked) {
+      if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'REMOVE_PDF').catch(console.error);
+    } else {
+      if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'CACHE_PDF').catch(console.error);
+    }
+    
+    toggleBookmarkMutation.mutate({ userId, documentId: id, isAdding: !isBookmarked });
   };
 
   const handleToggleUpvote = async (id: number) => {
@@ -305,7 +271,6 @@ export default function DocumentInteractiveGrid({
         };
       });
     }
-    window.dispatchEvent(new Event("sidebar_update"));
     setDocumentToDelete(null);
   };
 

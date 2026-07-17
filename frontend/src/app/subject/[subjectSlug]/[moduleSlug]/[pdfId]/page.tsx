@@ -1,16 +1,16 @@
-import { supabase } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
 import { Metadata } from "next";
 // Standard import of the wrapper component
 import PDFViewerWrapper from "@/components/pdf/PDFViewerWrapper";
 
 // Generate dynamic SEO tags for Google/Social Previews
-export async function generateMetadata({ params }: { params: Promise<{ subjectSlug: string, pdfId: string }> }): Promise<Metadata> {
-  const { subjectSlug, pdfId } = await params;
+export async function generateMetadata({ params }: { params: Promise<{ subjectSlug: string, moduleSlug: string, pdfId: string }> }): Promise<Metadata> {
+  const { subjectSlug, moduleSlug, pdfId } = await params;
 
   const { data: documentMeta } = await supabase
     .from("documents")
     .select("title, category, uploader_name")
-    .eq("id", pdfId)
+    .eq("id", parseInt(pdfId, 10))
     .single();
 
   if (!documentMeta) return { title: "Document Not Found" };
@@ -24,6 +24,12 @@ export async function generateMetadata({ params }: { params: Promise<{ subjectSl
       title: documentMeta.title,
       description: `View this document for ${subjectName}.`,
       type: "article",
+      url: `/subject/${subjectSlug}/${moduleSlug}/${pdfId}`,
+      images: [{ url: "/icon-512x512.png" }],
+    },
+    twitter: {
+      title: documentMeta.title,
+      description: `View this document for ${subjectName}.`,
     }
   };
 }
@@ -38,7 +44,7 @@ export default async function PDFViewerPage({ params }: { params: Promise<{ pdfI
   const { data: documentMeta } = await supabase
     .from("documents")
     .select("*, document_analytics(upvotes, view_count, download_count)")
-    .eq("id", pdfId)
+    .eq("id", parseInt(pdfId, 10))
     .single();
 
   if (!documentMeta) {

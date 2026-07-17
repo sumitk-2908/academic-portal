@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
 import { KeyRound, ArrowRight } from "lucide-react";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";

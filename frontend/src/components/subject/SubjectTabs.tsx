@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Layers, FileText } from "lucide-react";
-import { searchDocuments, type Module, type Subject } from "@/app/lib/api";
+import { Layers, FileText, ArrowDownUp } from "lucide-react";
+import { searchDocuments } from "@/app/lib/api/documents";
+import { type Module, type Subject } from "@/app/lib/api/subjects";
 import DocumentInteractiveGrid from "./DocumentInteractiveGrid";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import type { DocumentRecord } from "@/app/lib/document-types";
@@ -20,6 +21,7 @@ export default function SubjectTabs({
   subjectSlug: string;
 }) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "tutorial_sheet" | "syllabus">("dashboard");
+  const [sortBy, setSortBy] = useState<"created_at" | "upvotes" | "download_count">("created_at");
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -31,6 +33,7 @@ export default function SubjectTabs({
       const response = await searchDocuments({
         subject: subjectDetails.name,
         category: activeTab,
+        sortBy: sortBy,
         limit: 50
       });
       setDocuments(response.data);
@@ -39,25 +42,44 @@ export default function SubjectTabs({
     };
 
     fetchTabData();
-  }, [activeTab, subjectDetails.name]);
+  }, [activeTab, sortBy, subjectDetails.name]);
 
   return (
     <>
-      <div className="flex gap-1 overflow-x-auto border-b border-border pb-1">
-        {(["dashboard", "notes", "pyq", "tutorial_sheet", "syllabus"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`border-b-2 px-4 py-2 text-xs font-bold capitalize transition-colors ${
-              activeTab === tab
-                ? "border-primary text-primary"
-                : "border-transparent text-muted hover:text-foreground"
-            }`}
-            
-          >
-            {tab === "tutorial_sheet" ? "Tutorial" : tab}
-          </button>
-        ))}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between border-b border-border pb-1">
+        <div className="flex gap-1 overflow-x-auto">
+          {(["dashboard", "notes", "pyq", "tutorial_sheet", "syllabus"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`border-b-2 px-4 py-2 text-xs font-bold capitalize transition-colors ${
+                activeTab === tab
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted hover:text-foreground"
+              }`}
+              
+            >
+              {tab === "tutorial_sheet" ? "Tutorial" : tab}
+            </button>
+          ))}
+        </div>
+        {activeTab !== "dashboard" && (
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto pb-1 sm:pb-0">
+            <label htmlFor="subject-sort" className="text-xs font-bold text-muted flex items-center gap-1.5">
+              <ArrowDownUp size={14} /> Sort by
+            </label>
+            <select
+              id="subject-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="appearance-none rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-bold text-foreground outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary pr-8 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em] bg-no-repeat bg-[right_0.5rem_center]"
+            >
+              <option value="created_at">Newest</option>
+              <option value="upvotes">Most Upvoted</option>
+              <option value="download_count">Most Downloaded</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {activeTab === "dashboard" && !subjectDetails?.is_non_module ? (

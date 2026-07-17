@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Eye, Download, BookOpen, Clock, Sparkles, Upload } from "lucide-react";
+import { Eye, Download, BookOpen, Clock, Sparkles, Upload, Settings, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { 
   trackDocumentStat, 
-  triggerStreakUpdate, 
-  logStudySession,
-  getSuggestedNextSteps, 
   getTrendingDocuments   
-} from "@/app/lib/api";
+} from "@/app/lib/api/analytics";
+import { triggerStreakUpdate, getSuggestedNextSteps, deleteUserAccount } from "@/app/lib/api/profile";
+import { supabase } from "@/app/lib/api/core";
+import { dispatchToast } from "@/app/lib/toast";
 import ActivityHeatmap from "./ActivityHeatmap";
 import AchievementsList from "./AchievementsList";
 import ActivityTimeline from "./ActivityTimeline";
@@ -19,6 +19,9 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DocumentWithAnalytics } from "@/app/lib/document-types";
 import { Tables } from "@/app/lib/database.types";
 import { User } from "@supabase/supabase-js";
+import { useLogStudySessionMutation } from "@/app/hooks/useStudyHistory";
+import { useQueryClient } from "@tanstack/react-query";
+import { subjectSlug } from "@/components/layout/utils";
 
 interface ProfileTabsProps {
   user: User | null;
@@ -33,13 +36,16 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
   const [suggestions, setSuggestions] = useState<DocumentWithAnalytics[]>([]);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const downloadingRef = useRef<Set<number>>(new Set());
+  const logStudySessionMutation = useLogStudySessionMutation();
+  const queryClient = useQueryClient();
   
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "library", label: "My Library" },
     { id: "contributions", label: "Contributions" },
     { id: "achievements", label: "Achievements" },
-    { id: "activity", label: "Activity" }
+    { id: "activity", label: "Activity" },
+    { id: "settings", label: "Settings" }
   ];
    
   useEffect(() => {
@@ -85,7 +91,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
     await trackDocumentStat(docId, 'view');
     if (user?.id) {
       await triggerStreakUpdate(user.id);
-      await logStudySession(user.id, docId);
+      logStudySessionMutation.mutate({ userId: user.id, documentId: docId });
     }
   };
 
@@ -153,7 +159,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
                   <p className="truncate text-xs text-muted capitalize">{item.subject} • {item.category}</p>
                 </div>
                 <Link 
-                  href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
+                  href={`/subject/${item.subject ? subjectSlug(item.subject) : 'unknown'}/module-${item.module_id || 1}/${item.id}`}
                   onClick={() => handleViewDocument(item.id)}
                   className="motion-hover motion-active flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground uppercase hover:opacity-90"
                 >
@@ -212,7 +218,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
                       <p className="truncate text-xs text-muted capitalize">{item.subject} • {item.category}</p>
                     </div>
                     <Link 
-                      href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
+                      href={`/subject/${item.subject ? subjectSlug(item.subject) : 'unknown'}/module-${item.module_id || 1}/${item.id}`}
                       onClick={() => handleViewDocument(item.id)}
                       className="motion-hover motion-active flex shrink-0 items-center gap-1.5 rounded-lg bg-warning px-3 py-1.5 text-xs font-bold text-white uppercase hover:opacity-90"
                     >
@@ -238,7 +244,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
                
                <div className="flex shrink-0 items-center gap-2">
                  <Link 
-                   href={`/subject/${item.subject?.toLowerCase().replace(/ /g, '-') || 'unknown'}/module-${item.module_id || 1}/${item.id}`}
+                   href={`/subject/${item.subject ? subjectSlug(item.subject) : 'unknown'}/module-${item.module_id || 1}/${item.id}`}
                    onClick={() => handleViewDocument(item.id)}
                    className="motion-hover motion-active flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground uppercase hover:opacity-90"
                  >
@@ -284,7 +290,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
              <UserDocumentCard 
                key={idx} 
                item={item} 
-               onRefresh={() => window.dispatchEvent(new Event("sidebar_update"))} 
+               onRefresh={() => queryClient.invalidateQueries()} 
              />
            )) : (
              <div className="rounded-2xl border border-dashed border-success/30 bg-success/5 p-8 text-center">
@@ -311,6 +317,42 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
            <ErrorBoundary title="Timeline could not load" message="The activity timeline hit an unexpected problem.">
              <ActivityTimeline history={history} bookmarks={bookmarks} uploads={uploads} />
            </ErrorBoundary>
+        </div>
+      )}
+
+      {activeTab === "settings" && (
+        <div className="animate-fade-up space-y-6">
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                <Trash2 size={24} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-extrabold tracking-tight text-foreground">Danger Zone</h3>
+                <p className="mt-1 text-sm leading-6 font-medium text-muted">
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </p>
+                
+                <button 
+                  onClick={async () => {
+                    if (window.confirm("Are you absolutely sure you want to delete your account? This action is permanent and cannot be undone.")) {
+                      try {
+                        await deleteUserAccount();
+                        await supabase.auth.signOut();
+                        dispatchToast("Account Deleted", "Your account has been permanently deleted.", "success");
+                        window.location.href = "/";
+                      } catch (error) {
+                        dispatchToast("Error", "Failed to delete account. Please try again.", "error");
+                      }
+                    }
+                  }}
+                  className="motion-hover motion-active mt-4 flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-white hover:opacity-90"
+                >
+                  <Trash2 size={16} /> Delete My Account
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

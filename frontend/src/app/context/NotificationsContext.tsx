@@ -1,8 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useRef } from "react";
-import { supabase, getAchievements } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
+import { getAchievements } from "@/app/lib/api/profile";
 import { Tables } from "@/app/lib/database.types";
+import { dispatchToast } from "@/app/lib/toast";
 
 interface NotificationsContextType {
   notifications: Tables<'notifications'>[];
@@ -29,14 +31,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   
   const earnedBadgesRef = useRef<Set<string>>(new Set());
 
-  const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
-    setGlobalToast({ open: true, title, message, type });
-  };
-
   useEffect(() => {
     const handlePortalToast = (event: Event) => {
       const detail = (event as CustomEvent).detail;
-      if (detail) showToast(detail.title, detail.message, detail.type);
+      if (detail) {
+        setGlobalToast({ open: true, title: detail.title, message: detail.message, type: detail.type });
+      }
     };
 
     window.addEventListener("portal_toast", handlePortalToast);
@@ -61,12 +61,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
       if (notifs) {
         setNotifications(notifs);
-        setUnreadCount(notifs.filter(n => !n.is_read).length);
+        setUnreadCount(notifs.filter((n: any) => !n.is_read).length);
       }
 
       achieveChannel = supabase
         .channel(`achievements-${userId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_achievements', filter: `user_id=eq.${userId}` }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_achievements', filter: `user_id=eq.${userId}` }, (payload: any) => {
             const newBadgeId = payload.new.badge_id;
             if (!earnedBadgesRef.current.has(newBadgeId)) {
               earnedBadgesRef.current.add(newBadgeId); 
@@ -85,7 +85,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
       notifChannel = supabase
         .channel(`notifications-${userId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload: any) => {
             setNotifications(prev => [payload.new as Tables<'notifications'>, ...prev]);
             setUnreadCount(prev => prev + 1);
             setActiveToast({ title: payload.new.title, description: payload.new.message });
@@ -94,7 +94,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
       notifUpdateChannel = supabase
         .channel(`notifications-update-${userId}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload: any) => {
             setNotifications(prev => {
               const updatedList = prev.map(n => n.id === payload.new.id ? payload.new as Tables<'notifications'> : n);
               setUnreadCount(updatedList.filter(n => !n.is_read).length);
@@ -123,7 +123,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     handleSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       cleanupListeners();
       if (session?.user) {
         setupDataAndListeners(session.user.id);
@@ -156,7 +156,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       console.error("Failed to mark as read, rolling back:", error);
       setNotifications(snapshotNotifications);
       setUnreadCount(snapshotUnreadCount);
-      showToast("Error", "Failed to mark notification as read", "error");
+      dispatchToast("Error", "Failed to mark notification as read", "error");
     }
   };
 

@@ -5,7 +5,7 @@ import { DocumentWithAnalytics } from "@/app/lib/document-types";
 import { Flame, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef } from "react";
-import { trackDocumentStat } from "@/app/lib/api";
+import { trackDocumentStat } from "@/app/lib/api/analytics";
 
 interface TrendingCarouselProps {
   documents: DocumentWithAnalytics[];

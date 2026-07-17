@@ -524,9 +524,47 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      weekly_trending_documents: {
+        Row: {
+          id: number
+          title: string
+          category: string
+          file_url: string
+          uploaded_by: string
+          created_at: string | null
+          module_id: number | null
+          subject: string
+          status: string | null
+          file_size: number | null
+          page_count: number | null
+          thumbnail_url: string | null
+          uploader_name: string | null
+          fts: unknown | null
+          moderated_by: string | null
+          rejection_reason: string | null
+          updated_at: string | null
+          resubmission_count: number | null
+          weekly_views: number | null
+          all_time_view_count: number | null
+          upvotes: number | null
+          downvotes: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_admin_analytics_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          totalDocs: number
+          approvedDocs: number
+          pendingDocs: number
+          rejectedDocs: number
+          totalDownloads: number
+          totalViews: number
+          totalFlags: number
+        }
+      }
       get_subject_counts: {
         Args: never
         Returns: {
@@ -534,11 +572,19 @@ export type Database = {
           subject: string
         }[]
       }
+      get_module_counts: {
+        Args: { p_subject_id: number }
+        Returns: {
+          count: number
+          module_id: number
+        }[]
+      }
       increment_doc_stat: {
         Args: { doc_id: number; stat_type: string }
         Returns: undefined
       }
       update_study_streak: { Args: { p_user_id: string }; Returns: undefined }
+      toggle_upvote: { Args: { p_document_id: number; p_user_id: string }; Returns: boolean }
     }
     Enums: {
       doccategory: "pyq" | "tutorial_sheet" | "notes" | "syllabus"

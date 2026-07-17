@@ -14,7 +14,7 @@ import { useNotifications } from "@/app/context/NotificationsContext";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { CommandPalette } from "@/components/layout/CommandPalette";
-import { supabase } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
 
 const SearchTrigger = ({ onOpen, isMac }: { onOpen: () => void; isMac: boolean }) => (
   <button

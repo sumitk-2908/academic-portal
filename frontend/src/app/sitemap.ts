@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@/utils/supabase/server';
+import { subjectSlug as generateFallbackSlug } from '@/components/layout/utils';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -13,6 +14,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
   ];
+
+  // Fetch subjects to map names to actual URL slugs
+  const { data: subjectsData } = await supabase.from('subjects').select('name, slug');
+  const subjectSlugMap = new Map<string, string>();
+  if (subjectsData) {
+    subjectsData.forEach((sub) => subjectSlugMap.set(sub.name, sub.slug));
+  }
 
   // Fetch approved documents to extract subjects, modules, and document IDs
   const { data: documents } = await supabase
@@ -36,9 +44,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           modulesBySubject.get(doc.subject)!.add(doc.module_id);
         }
         
+        const currentSlug = subjectSlugMap.get(doc.subject) || generateFallbackSlug(doc.subject);
+
         // Add individual document route
         routes.push({
-          url: `${baseUrl}/subject/${doc.subject}/module-${doc.module_id}/${doc.id}`,
+          url: `${baseUrl}/subject/${currentSlug}/module-${doc.module_id}/${doc.id}`,
           lastModified: new Date(doc.updated_at || Date.now()),
           changeFrequency: 'weekly',
           priority: 0.6,
@@ -48,8 +58,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Add subject routes
     subjects.forEach((subject) => {
+      const currentSlug = subjectSlugMap.get(subject) || generateFallbackSlug(subject);
+      
       routes.push({
-        url: `${baseUrl}/subject/${subject}`,
+        url: `${baseUrl}/subject/${currentSlug}`,
         lastModified: new Date(),
         changeFrequency: 'weekly',
         priority: 0.8,
@@ -60,7 +72,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (modules) {
         modules.forEach((moduleId) => {
           routes.push({
-            url: `${baseUrl}/subject/${subject}/module-${moduleId}`,
+            url: `${baseUrl}/subject/${currentSlug}/module-${moduleId}`,
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.7,

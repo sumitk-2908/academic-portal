@@ -1,4 +1,5 @@
-import { supabase, getModulesBySubject } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
+import { getModulesBySubject } from "@/app/lib/api/subjects";
 import SubjectTabs from "@/components/subject/SubjectTabs";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { Metadata } from "next";
@@ -8,9 +9,20 @@ import { SubjectPageSkeleton } from "@/components/layout/SharedLayouts";
 export async function generateMetadata({ params }: { params: Promise<{ subjectSlug: string }> }): Promise<Metadata> {
   const { subjectSlug } = await params;
   const displayTitle = subjectSlug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const description = `Modules, notes, and previous year questions for ${displayTitle}.`;
+  
   return {
     title: displayTitle,
-    description: `Modules, notes, and previous year questions for ${displayTitle}.`,
+    description: description,
+    openGraph: {
+      title: displayTitle,
+      description: description,
+      url: `/subject/${subjectSlug}`,
+    },
+    twitter: {
+      title: displayTitle,
+      description: description,
+    }
   };
 }
 
@@ -30,7 +42,7 @@ async function SubjectTabsFetcher({ subjectSlug, displayTitle }: { subjectSlug: 
   if (dbSubject && !dbSubject.is_non_module) {
     modules = await getModulesBySubject(dbSubject.id);
 
-    const { data: countData } = await supabase.rpc('get_module_counts', { p_subject: dbSubject.name });
+    const { data: countData } = await supabase.rpc('get_module_counts', { p_subject_id: dbSubject.id } as any);
 
     if (countData) {
       countData.forEach((row: any) => {
@@ -43,7 +55,7 @@ async function SubjectTabsFetcher({ subjectSlug, displayTitle }: { subjectSlug: 
 
   return (
     <SubjectTabs
-      subjectDetails={dbSubject || { name: displayTitle, is_non_module: false }}
+      subjectDetails={dbSubject ? { ...dbSubject, is_non_module: dbSubject.is_non_module ?? false } : { id: 0, created_at: null, slug: subjectSlug, name: displayTitle, is_non_module: false }}
       modules={modules}
       moduleCounts={moduleCounts}
       subjectSlug={subjectSlug}

@@ -1,6 +1,5 @@
 "use client";
 
-import { StudyHistoryProvider } from "@/app/context/StudyHistoryContext";
 import * as Toast from "@radix-ui/react-toast";
 import { ThemeProvider } from "@/app/context/ThemeContext";
 import { NotificationsProvider } from "@/app/context/NotificationsContext";
@@ -19,33 +18,31 @@ import { ProfileGateModal } from "@/components/layout/modals/ProfileGateModal";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
-    <StudyHistoryProvider>
-      <ThemeProvider>
-        <NotificationsProvider>
-          <AuthProvider>
-            <SidebarProvider>
-              <UploadProvider>
-                <Toast.Provider swipeDirection="right">
-                  <AppShell>
-                    <TopBar />
-                    <div className="mx-auto flex w-full max-w-[1600px] flex-1">
-                      <Sidebar />
-                      <ContentArea>{children}</ContentArea>
-                    </div>
-                    <MobileNav />
-                    <AuthModal />
-                    <UploadModal />
-                    <BannersAndToasts />
-                    <OnboardingModal />
-                    <ProfileGateModal />
-                  </AppShell>
-                  <Toast.Viewport className="fixed right-0 bottom-0 z-[150] flex w-full flex-col gap-2 p-6 outline-none md:max-w-[400px]" />
-                </Toast.Provider>
-              </UploadProvider>
-            </SidebarProvider>
-          </AuthProvider>
-        </NotificationsProvider>
-      </ThemeProvider>
-    </StudyHistoryProvider>
+    <ThemeProvider>
+      <NotificationsProvider>
+        <AuthProvider>
+          <SidebarProvider>
+            <UploadProvider>
+              <Toast.Provider swipeDirection="right">
+                <AppShell>
+                  <TopBar />
+                  <div className="mx-auto flex w-full max-w-[1600px] flex-1">
+                    <Sidebar />
+                    <ContentArea>{children}</ContentArea>
+                  </div>
+                  <MobileNav />
+                  <AuthModal />
+                  <UploadModal />
+                  <BannersAndToasts />
+                  <OnboardingModal />
+                  <ProfileGateModal />
+                </AppShell>
+                <Toast.Viewport className="fixed right-0 bottom-0 z-[150] flex w-full flex-col gap-2 p-6 outline-none md:max-w-[400px]" />
+              </Toast.Provider>
+            </UploadProvider>
+          </SidebarProvider>
+        </AuthProvider>
+      </NotificationsProvider>
+    </ThemeProvider>
   );
 }

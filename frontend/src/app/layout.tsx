@@ -16,11 +16,12 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  
+  viewportFit: "cover",
 };
 
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://academic-portal-blush.vercel.app"),
   title: {
     template: "%s | Academic Portal",
     default: "Academic Portal",
@@ -34,6 +35,25 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Academic Portal",
+    locale: "en_IN",
+    images: [
+      {
+        url: "/icon-512x512.png",
+        width: 512,
+        height: 512,
+        alt: "Academic Portal",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Academic Portal",
+    description: "Student Resource and PDF Study Hub",
+    images: ["/icon-512x512.png"],
   },
 };
 

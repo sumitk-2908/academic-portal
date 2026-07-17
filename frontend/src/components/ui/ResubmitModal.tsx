@@ -3,7 +3,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { UploadCloud, XCircle, AlertCircle, FileText } from "lucide-react";
-import { supabase, uploadWithProgress, UploadState } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
+import { uploadWithProgress, UploadState } from "@/app/lib/api/documents";
 import UploadProgressBar from "./UploadProgressBar";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";

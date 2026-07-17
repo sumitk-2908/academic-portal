@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, updateDocumentStatus, deleteDocument, getFlaggedDocuments, dismissDocumentFlags, getSubjects } from "../../../lib/api";
+import { supabase } from "@/app/lib/api/core";
+import { updateDocumentStatus, getFlaggedDocuments, dismissDocumentFlags } from "@/app/lib/api/moderation";
+import { deleteDocument } from "@/app/lib/api/documents";
+import { getSubjects } from "@/app/lib/api/subjects";
 import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, X, Flag, ShieldAlert, MessageSquareWarning, Upload } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -49,7 +52,7 @@ function AdminInboxAuditingContent() {
     // Fetch Subjects for Filter
     if (subjects.length === 0) {
       const subjData = await getSubjects();
-      setSubjects(subjData.map(s => s.name));
+      setSubjects(subjData.map((s: any) => s.name));
     }
 
     // Fetch Pending Approvals
@@ -184,9 +187,14 @@ function AdminInboxAuditingContent() {
         <Link href="/" className="motion-hover inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary">
           <ArrowLeft size={14} /> Back to Hub
         </Link>
-        <Link href="/portal-admin/analytics" className="motion-hover inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/20">
-          View Analytics
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/subject/admin/subjects" className="motion-hover inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/20">
+            Manage Content
+          </Link>
+          <Link href="/portal-admin/analytics" className="motion-hover inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/20">
+            View Analytics
+          </Link>
+        </div>
       </div>
 
         <section className={`premium-transition flex items-center gap-4 rounded-3xl border p-6 ${activeTab === 'pending' ? 'border-warning/20 bg-warning/5' : 'border-destructive/20 bg-destructive/5'}`}>

@@ -1,3 +1,5 @@
+import { dispatchToast } from "@/app/lib/toast";
+
 export const checkStorageLimit = async (): Promise<boolean> => {
   if ('storage' in navigator && 'estimate' in navigator.storage) {
     try {
@@ -21,7 +23,7 @@ export const manageOfflinePdf = async (url: string, action: 'CACHE_PDF' | 'REMOV
   if (action === 'CACHE_PDF') {
     const hasSpace = await checkStorageLimit();
     if (!hasSpace) {
-      alert("Device storage is almost full. Cannot save PDF for offline viewing.");
+      dispatchToast("Storage Full", "Device storage is almost full. Cannot save PDF for offline viewing.", "error");
       return false;
     }
   }

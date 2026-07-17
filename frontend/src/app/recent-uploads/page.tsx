@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { trackDocumentStat, searchDocuments, supabase } from "../lib/api";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { trackDocumentStat } from "../lib/api/analytics";
+import { searchDocuments } from "../lib/api/documents";
+import { supabase } from "../lib/api/core";
 import { Upload, Eye, Download, FileText, NotebookPen, FileQuestion, ListChecks, Bookmark, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { getUploadPromptCopy, recordStudentDownload, requestUploadPrompt, shouldShowContributionPrompt, dismissContributionPrompt } from "../lib/student-prompts";
@@ -11,6 +13,7 @@ import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedL
 import DocumentCard from "@/components/ui/DocumentCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { DocumentWithAnalytics } from "@/app/lib/document-types";
+import { useBookmarks, useToggleBookmarkMutation } from "@/app/hooks/useBookmarks";
 
 const CATEGORY_ICONS: Record<string, any> = { notes: NotebookPen, pyq: FileQuestion, tutorial_sheet: BookOpen, syllabus: ListChecks };
 
@@ -18,19 +21,18 @@ function RecentUploadsContent() {
   const [documents, setDocuments] = useState<DocumentWithAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
-  const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
 
   const downloadingRef = useRef<Set<number>>(new Set());
 
+  const { data: bookmarkedDocs } = useBookmarks(userId || undefined);
+  const bookmarks = useMemo(() => bookmarkedDocs?.map((d: any) => d.id) || [], [bookmarkedDocs]);
+  const toggleBookmarkMutation = useToggleBookmarkMutation();
+
   useEffect(() => {
     const fetchRecent = async () => {
       setLoading(true);
-      const rawBookmarks = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
-      const bookmarkIds = rawBookmarks.map((b: any) => typeof b === "object" ? b.id : b);
-      setBookmarks(bookmarkIds);
-      setShowContributionPrompt(shouldShowContributionPrompt(bookmarkIds.length));
 
       const { data: sess } = await supabase.auth.getSession();
       setUserId(sess?.session?.user?.id || null);
@@ -42,6 +44,10 @@ function RecentUploadsContent() {
     fetchRecent();
   }, []);
 
+  useEffect(() => {
+    setShowContributionPrompt(shouldShowContributionPrompt(bookmarks.length));
+  }, [bookmarks.length]);
+
   const toggleBookmark = async (doc: any) => {
     if (!userId) {
       requestAuthPrompt("bookmark");
@@ -49,26 +55,14 @@ function RecentUploadsContent() {
     }
 
     const isBookmarked = bookmarks.includes(doc.id);
-    const nextBookmarks = isBookmarked ? bookmarks.filter(id => id !== doc.id) : [...bookmarks, doc.id];
-    setBookmarks(nextBookmarks);
-
-    const currentStorage = JSON.parse(localStorage.getItem("portal_bookmarks") || "[]");
-    const nextStorage = isBookmarked
-      ? currentStorage.filter((b: any) => (typeof b === "object" ? b.id : b) !== doc.id)
-      : [...currentStorage, { id: doc.id, bookmarked_at: new Date().toISOString() }];
-
-    localStorage.setItem("portal_bookmarks", JSON.stringify(nextStorage));
 
     if (isBookmarked) {
       if (doc.file_url) manageOfflinePdf(doc.file_url, "REMOVE_PDF").catch(console.error);
-      await supabase.from("student_bookmarks").delete().match({ user_id: userId, document_id: doc.id });
     } else {
       if (doc.file_url) manageOfflinePdf(doc.file_url, "CACHE_PDF").catch(console.error);
-      await supabase.from("student_bookmarks").insert({ user_id: userId, document_id: doc.id });
-      setShowContributionPrompt(shouldShowContributionPrompt(nextBookmarks.length));
     }
 
-    window.dispatchEvent(new Event("sidebar_update"));
+    toggleBookmarkMutation.mutate({ userId, documentId: doc.id, isAdding: !isBookmarked });
   };
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {

@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Upload } from "lucide-react";
-import { SUBJECTS_LIST, isNonModuleSubject } from "@/app/lib/subject-config";
+import { useSubjects, getIsNonModuleSubject } from "@/app/hooks/useSubjects";
 import { useUpload } from "@/app/context/UploadContext";
 import { useAuth } from "@/app/context/AuthContext";
 import UploadProgressBar from "@/components/ui/UploadProgressBar";
@@ -16,6 +16,7 @@ export const UploadModal = () => {
     uploadProgress, uploadErrorMsg, handleUpload 
   } = useUpload();
   const { isAdmin } = useAuth();
+  const { data: subjects = [] } = useSubjects();
 
   return (
   <Dialog.Root open={showUploadForm} onOpenChange={setShowUploadForm}>
@@ -31,11 +32,11 @@ export const UploadModal = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Subject</label>
-              <select value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none">{SUBJECTS_LIST.map(sub => <option key={sub} value={sub}>{sub}</option>)}</select>
+              <select value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none">{subjects.map(sub => <option key={sub.name} value={sub.name}>{sub.name}</option>)}</select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Module</label>
-              <select value={uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} disabled={uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none disabled:cursor-not-allowed disabled:opacity-50">
+              <select value={uploadModule} onChange={(e) => setUploadModule(Number(e.target.value))} disabled={uploadCategory === "syllabus" || getIsNonModuleSubject(subjects, uploadSubject)} className="motion-focus h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none disabled:cursor-not-allowed disabled:opacity-50">
                 {[1, 2, 3, 4, 5].map(m => <option key={m} value={m}>Module {m}</option>)}
               </select>
             </div>
@@ -50,7 +51,7 @@ export const UploadModal = () => {
                 <p className="text-sm font-semibold text-foreground">{file ? file.name : "Choose a PDF file or drag & drop it here"}</p>
                 <p className="mt-1 text-xs text-muted">PDFs only (Max 50MB)</p>
               </div>
-              <input required type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed" disabled={uploadState === "uploading" || uploadState === "processing"} />
+              <input required type="file" accept="application/pdf, .pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed" disabled={uploadState === "uploading" || uploadState === "processing"} />
             </div>
           </div>
           <UploadProgressBar state={uploadState} progress={uploadProgress} fileName={file?.name} errorMessage={uploadErrorMsg} />

@@ -2,9 +2,10 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/app/lib/api";
+import { supabase } from "@/app/lib/api/core";
 import type { AuthPromptFeature } from "@/app/lib/auth-prompts";
 import { useRouter } from 'next/navigation';
+import { dispatchToast as showToast } from "@/app/lib/toast";
 
 export interface UserProfile {
   full_name: string | null;
@@ -67,9 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [showProfileGate, setShowProfileGate] = useState(false);
   const [uploadedBy, setUploadedBy] = useState("");
 
-  const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
-    window.dispatchEvent(new CustomEvent("portal_toast", { detail: { title, message, type } }));
-  };
 
   const openAuthPrompt = useCallback((feature: AuthPromptFeature) => {
     setAuthPromptContext(feature);
@@ -201,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.resend({ type: 'signup', email: currentUserEmail, options: { emailRedirectTo: window.location.origin } });
       if (error) throw error;
       showToast("Email Sent", "Verification email sent! Please check your inbox.", "success");
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { showToast("Authentication Error", err.message, "error"); }
   };
 
   return (

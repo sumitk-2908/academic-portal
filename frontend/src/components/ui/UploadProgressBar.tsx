@@ -1,7 +1,7 @@
 "use client";
 
 import { UploadCloud, CheckCircle, AlertCircle, ServerCog } from "lucide-react";
-import { UploadState } from "@/app/lib/api";
+import { UploadState } from "@/app/lib/api/documents";
 
 interface UploadProgressBarProps {
   state: UploadState;

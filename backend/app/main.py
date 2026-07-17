@@ -9,8 +9,15 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # Import the optimized documents router
-from app.routers import documents
+from app.routers import documents, users
 from app.config import settings
+import sentry_sdk
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=1.0,
+    )
 
 # Force Python to read your .env file locally (Render will use its own environment variables)
 load_dotenv()
@@ -35,12 +42,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins, 
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
-# Mount the router
+# Mount the routers
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 
 @app.get("/health", tags=["Health"])
 @limiter.limit("20/minute")

@@ -1,9 +1,6 @@
-import SubjectGrid from "@/components/SubjectGrid";
 import { createClient } from "@/utils/supabase/server";
-
-import { LandingHero } from "@/components/landing/LandingHero";
-import { TrendingCarousel } from "@/components/landing/TrendingCarousel";
 import { Metadata } from "next";
+import HomeClient from "./HomeClient";
 import { Suspense } from "react";
 import { HomeSkeleton } from "@/components/layout/SharedLayouts";
 
@@ -12,39 +9,29 @@ export const metadata: Metadata = {
     absolute: "Academic Resource Hub — Notes, PYQs & Study Materials for Engineering",
   },
   description: "Free notes, previous year questions, and study materials for 18+ engineering subjects. Crowd-sourced and peer-reviewed.",
+  openGraph: {
+    title: "Academic Resource Hub — Notes, PYQs & Study Materials for Engineering",
+    description: "Free notes, previous year questions, and study materials for 18+ engineering subjects. Crowd-sourced and peer-reviewed.",
+    url: "/",
+  },
+  twitter: {
+    title: "Academic Resource Hub — Notes, PYQs & Study Materials for Engineering",
+    description: "Free notes, previous year questions, and study materials for 18+ engineering subjects.",
+  }
 };
 
-// Force Next.js to not cache this page since it contains user-specific greetings
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
-async function SubjectGridFetcher({ session }: { session: any }) {
+export default async function Page() {
   const supabase = await createClient();
 
-  let userFavs: string[] = [];
-  let firstName = "";
-
-  if (session?.user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("favorite_subjects, full_name")
-      .eq("id", session.user.id)
-      .single();
-
-    if (profile?.favorite_subjects) {
-      userFavs = profile.favorite_subjects;
-    }
-    if (profile?.full_name) {
-      firstName = profile.full_name.split(" ")[0];
-    }
-  }
-
-  // 2. Fetch subjects
+  // 1. Fetch subjects
   const { data: dbSubjects } = await supabase
     .from("subjects")
     .select("*")
     .order("name");
 
-  // 3. Fetch item counts mapped to each subject
+  // 2. Fetch item counts mapped to each subject
   const { data: countData } = await supabase.rpc("get_subject_counts");
 
   const counts: Record<string, number> = {};
@@ -59,106 +46,35 @@ async function SubjectGridFetcher({ session }: { session: any }) {
 
   const subjects = dbSubjects || [];
 
-  // 4. Server-Side Sorting: Favorites first, then resource count descending, then alphabetical
-  const sortedSubjects = [...subjects].sort((a, b) => {
-    const aIsFav = userFavs.includes(a.name);
-    const bIsFav = userFavs.includes(b.name);
+  // 3. Fetch stats and trending globally (cacheable)
+  const [{ count: modulesCount }, { data: analytics }, { data: recentDocs }] = await Promise.all([
+    supabase.from("modules").select("*", { count: "exact", head: true }),
+    supabase.from("document_analytics").select("view_count, download_count"),
+    supabase.from("documents")
+      .select("*, document_analytics(upvotes, view_count, download_count)")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(8)
+  ]);
 
-    if (aIsFav && !bIsFav) return -1;
-    if (!aIsFav && bIsFav) return 1;
-
-    const aCount = counts[a.name.toUpperCase()] || 0;
-    const bCount = counts[b.name.toUpperCase()] || 0;
-
-    if (aCount > 0 && bCount === 0) return -1;
-    if (aCount === 0 && bCount > 0) return 1;
-    if (aCount !== bCount) return bCount - aCount;
-
-    return a.name.localeCompare(b.name);
-  });
-
-  const isAuthenticated = !!session?.user;
-
-  let globalStats = { subjects: 0, modules: 0, views: 0, downloads: 0 };
-  let trendingDocs: any[] = [];
-
-  if (!isAuthenticated) {
-    const [{ count: modulesCount }, { data: analytics }, { data: recentDocs }] = await Promise.all([
-      supabase.from("modules").select("*", { count: "exact", head: true }),
-      supabase.from("document_analytics").select("view_count, download_count"),
-      supabase.from("documents")
-        .select("*, document_analytics(upvotes, view_count, download_count)")
-        .eq("status", "approved")
-        .order("created_at", { ascending: false })
-        .limit(8)
-    ]);
-
-    globalStats = {
-      subjects: subjects.length,
-      modules: modulesCount || 0,
-      views: analytics?.reduce((acc, curr) => acc + (curr.view_count || 0), 0) || 0,
-      downloads: analytics?.reduce((acc, curr) => acc + (curr.download_count || 0), 0) || 0,
-    };
-    trendingDocs = recentDocs || [];
-  }
-
-  return (
-    <>
-      {!isAuthenticated ? (
-        <>
-          <LandingHero stats={globalStats} trendingDocs={trendingDocs} />
-          <TrendingCarousel documents={trendingDocs} />
-        </>
-      ) : (
-        <section className="mb-10 pt-8 text-center">
-          {firstName && (
-            <div className="mb-3 flex justify-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-surface/50 px-3 py-1 text-sm font-semibold tracking-wide text-muted shadow-sm backdrop-blur-sm">
-                <span className="animate-pulse text-xl leading-none">👋</span>
-                Welcome back, {firstName}
-              </span>
-            </div>
-          )}
-          <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-foreground">
-            Academic <span className="text-primary">Resource Hub</span>
-          </h1>
-
-          <p className="mx-auto mb-8 max-w-2xl px-4 text-muted">
-            Select a subject domain below to access modules, notes,
-            assignments, and previous year questions.
-          </p>
-        </section>
-      )}
-
-      <section className={!isAuthenticated ? "border-t border-border pt-12" : ""}>
-        {!isAuthenticated && (
-          <div className="mb-8 text-center">
-            <h2 className="text-2xl font-bold text-foreground">Browse All Subjects</h2>
-            <p className="text-muted">Explore our complete collection of academic materials by domain</p>
-          </div>
-        )}
-        <SubjectGrid
-          subjects={sortedSubjects}
-          subjectCounts={counts}
-        />
-      </section>
-    </>
-  );
-}
-
-export default async function SubjectDirectory() {
-  const supabase = await createClient();
-
-  // 1. Fetch authenticated user securely on the server
-  // This is fast since it just reads the cookie and verifies locally in the client creation
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const globalStats = {
+    subjects: subjects.length,
+    modules: modulesCount || 0,
+    views: analytics?.reduce((acc, curr) => acc + (curr.view_count || 0), 0) || 0,
+    downloads: analytics?.reduce((acc, curr) => acc + (curr.download_count || 0), 0) || 0,
+  };
+  
+  const trendingDocs = recentDocs || [];
 
   return (
     <div className="animate-fade-up mx-auto w-full max-w-6xl">
       <Suspense fallback={<HomeSkeleton />}>
-        <SubjectGridFetcher session={session} />
+        <HomeClient 
+          initialSubjects={subjects} 
+          counts={counts} 
+          globalStats={globalStats} 
+          trendingDocs={trendingDocs} 
+        />
       </Suspense>
     </div>
   );

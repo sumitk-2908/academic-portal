@@ -7,22 +7,24 @@ import {
   ThumbsUp, ThumbsDown, Flag, X 
 } from "lucide-react";
 import { usePathname, useRouter } from 'next/navigation';
-import { supabase, trackDocumentStat, logStudySession, triggerStreakUpdate, toggleUpvote, getUserUpvotes } from "@/app/lib/api"; 
-import { useStudyHistory } from "@/app/context/StudyHistoryContext";
+import { supabase } from "@/app/lib/api/core";
+import { trackDocumentStat, toggleUpvote, getUserUpvotes } from "@/app/lib/api/analytics";
+import { triggerStreakUpdate } from "@/app/lib/api/profile"; 
+import { useLogStudySessionMutation } from "@/app/hooks/useStudyHistory";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { InlineSpinner, SkeletonBlock } from "@/components/layout/SharedLayouts";
-import { useNotifications } from "@/app/context/NotificationsContext";
+import { dispatchToast as showToast } from "@/app/lib/toast";
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function PDFViewerClient({ documentMeta }: { documentMeta: any }) {
   const router = useRouter();
-  const { addDocumentToHistory } = useStudyHistory();
+  const logStudySessionMutation = useLogStudySessionMutation();
 
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
@@ -34,11 +36,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   const hasTrackedView = useRef(false);
   const isDownloading = useRef(false);
 
-  const { setGlobalToast } = useNotifications();
 
-  const showToast = (title: string, message: string, type: "error" | "success") => {
-    setGlobalToast({ open: true, title, message, type });
-  };
 
   const [userRating, setUserRating] = useState<boolean | null>(null);
   const [upvotesCount, setUpvotesCount] = useState(() => {
@@ -46,7 +44,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
     return analyticsObj?.upvotes || 0;
   });
   const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
-  const [flagReason, setFlagReason] = useState('incorrect');
+  const [flagReason, setFlagReason] = useState<'incorrect' | 'duplicate' | 'low_quality' | 'other'>('incorrect');
   const [flagDescription, setFlagDescription] = useState('');
   const [isSubmittingQuality, setIsSubmittingQuality] = useState(false);
 
@@ -73,22 +71,24 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
       if (!hasTrackedView.current && documentMeta) {
         hasTrackedView.current = true; 
         
-        addDocumentToHistory({
-          ...documentMeta,
-          accessed_at: new Date().toISOString()
-        });
-
         await trackDocumentStat(documentMeta.id, 'view');
 
         const { data: sess } = await supabase.auth.getSession();
         if (sess?.session?.user?.id) {
-          await logStudySession(sess.session.user.id, documentMeta.id);
+          logStudySessionMutation.mutate({ 
+            userId: sess.session.user.id, 
+            documentId: documentMeta.id,
+            doc: {
+              ...documentMeta,
+              accessed_at: new Date().toISOString()
+            }
+          });
           await triggerStreakUpdate(sess.session.user.id);
         }
       }
     };
     trackAnalytics();
-  }, [documentMeta, addDocumentToHistory]);
+  }, [documentMeta]);
 
   useEffect(() => {
     const updateWidth = () => {
@@ -130,7 +130,14 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
       await trackDocumentStat(documentMeta.id, 'download');
       const { data: sess } = await supabase.auth.getSession();
       if (sess?.session?.user?.id) {
-        await logStudySession(sess.session.user.id, documentMeta.id);
+        logStudySessionMutation.mutate({ 
+          userId: sess.session.user.id, 
+          documentId: documentMeta.id,
+          doc: {
+            ...documentMeta,
+            accessed_at: new Date().toISOString()
+          }
+        });
         await triggerStreakUpdate(sess.session.user.id);
       }
     } catch (error) {
@@ -298,7 +305,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
             <form onSubmit={handleSubmitFlag} className="space-y-4 p-4">
               <div>
                 <label htmlFor="flag-reason" className="mb-1 block text-xs font-bold tracking-[0.06em] text-muted uppercase">Issue Type</label>
-                <select id="flag-reason" value={flagReason} onChange={(e) => setFlagReason(e.target.value)} className="motion-focus w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-primary">
+                <select id="flag-reason" value={flagReason} onChange={(e) => setFlagReason(e.target.value as 'incorrect' | 'duplicate' | 'low_quality' | 'other')} className="motion-focus w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-primary">
                   <option value="incorrect" className="bg-surface">Incorrect/Outdated Content</option>
                   <option value="duplicate" className="bg-surface">Duplicate Document</option>
                   <option value="low_quality" className="bg-surface">Poor Quality / Unreadable</option>

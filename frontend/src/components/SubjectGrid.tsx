@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Subject } from "@/app/lib/api"; 
+import { motion } from "framer-motion";
+import { Subject } from "@/app/lib/api/subjects"; 
 import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { CardGrid, EmptyState } from "@/components/layout/SharedLayouts";
 import { BookOpen, Upload, FileText, Filter, ChevronDown } from "lucide-react";
@@ -86,14 +87,14 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
             const count = subjectCounts[sub.name.toUpperCase()] || 0;
           
           return (
+            <motion.div layout key={sub.slug} className="flex w-full">
               <Link 
-                key={sub.slug} 
                 href={`/subject/${sub.slug}`}
                 role="listitem"
                 ref={(el) => { if (el) elementsRef.current[index] = el; }}
                 tabIndex={activeIndex === index ? 0 : -1}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className="group motion-hover motion-active relative flex flex-col items-start justify-between overflow-hidden rounded-2xl border border-border bg-surface p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                className="group motion-hover motion-active relative flex w-full flex-col items-start justify-between overflow-hidden rounded-2xl border border-border bg-surface p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
               >
                 <div className={`absolute left-0 top-0 h-1 w-full ${ui.topBar || ui.color.replace('text-', 'bg-')}`} />
                 <div className="w-full">
@@ -117,6 +118,7 @@ export default function SubjectGrid({ subjects, subjectCounts }: SubjectGridProp
                   )}
                 </div>
               </Link>
+            </motion.div>
             );
           })}
         </CardGrid>

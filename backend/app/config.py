@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     CORS_ORIGINS: list[str] = ["http://localhost:3000",
     "https://academic-portal-blush.vercel.app","https://academic-portal-git-beta-sumitk2408-s-projects.vercel.app"]
+    SENTRY_DSN: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

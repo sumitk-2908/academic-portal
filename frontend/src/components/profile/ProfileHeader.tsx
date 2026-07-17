@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Edit, GraduationCap, BookOpen, X, Flame, Search } from "lucide-react";
-import { getProfilePreferences, updateProfilePreferences } from "@/app/lib/api";
+import { getProfilePreferences, updateProfilePreferences } from "@/app/lib/api/profile";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
-import { SUBJECTS_LIST } from "@/app/lib/subject-config";
+import { useSubjects } from "@/app/hooks/useSubjects";
 import { useRouter, useSearchParams } from "next/navigation";
+import { dispatchToast } from "@/app/lib/toast";
 
 export default function ProfileHeader({ user, streak }: { user: any, streak?: any }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const { data: subjects = [] } = useSubjects();
   
   const email = user?.email || "No email provided";
   const avatarUrl = user?.user_metadata?.avatar_url;
@@ -134,7 +136,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
       
       setIsEditModalOpen(false);
     } catch (error) {
-      alert("Failed to save preferences.");
+      dispatchToast("Error", "Failed to save preferences.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -267,7 +269,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                     </div>
                     {subjectQuery.trim() && favoriteSubjects.length < 5 && (
                       <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
-                        {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).map(subject => (
+                        {subjects.map(s => s.name).filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).map(subject => (
                           <button
                             key={subject}
                             type="button"
@@ -280,7 +282,7 @@ export default function ProfileHeader({ user, streak }: { user: any, streak?: an
                             {subject}
                           </button>
                         ))}
-                        {SUBJECTS_LIST.filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).length === 0 && (
+                        {subjects.map(s => s.name).filter(s => s.toLowerCase().includes(subjectQuery.toLowerCase()) && !favoriteSubjects.includes(s)).length === 0 && (
                           <div className="px-3 py-2 text-xs text-muted">No subjects found.</div>
                         )}
                       </div>

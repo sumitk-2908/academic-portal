@@ -1,9 +1,11 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { uploadDocument, UploadState } from "@/app/lib/api";
-import { isNonModuleSubject } from "@/app/lib/subject-config";
+import { uploadDocument, UploadState } from "@/app/lib/api/documents";
+import { useSubjects, getIsNonModuleSubject } from "@/app/hooks/useSubjects";
 import { useAuth } from "@/app/context/AuthContext";
+import { dispatchToast as showToast } from "@/app/lib/toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface UploadContextType {
   showUploadForm: boolean;
@@ -30,21 +32,26 @@ const UploadContext = createContext<UploadContextType | undefined>(undefined);
 
 export function UploadProvider({ children }: { children: React.ReactNode }) {
   const { isAdmin, isStudent, uploadedBy, openAuthPrompt } = useAuth();
+  const queryClient = useQueryClient();
   
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState("notes");
-  const [uploadSubject, setUploadSubject] = useState("MATHS 1");
+  const [uploadSubject, setUploadSubject] = useState("");
   const [uploadModule, setUploadModule] = useState(1);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadErrorMsg, setUploadErrorMsg] = useState("");
 
-  const showToast = (title: string, message: string, type: "default" | "error" | "success" = "default") => {
-    window.dispatchEvent(new CustomEvent("portal_toast", { detail: { title, message, type } }));
-  };
+  const { data: subjects = [] } = useSubjects();
+
+  useEffect(() => {
+    if (subjects.length > 0 && !uploadSubject) {
+      setUploadSubject(subjects[0].name);
+    }
+  }, [subjects, uploadSubject]);
 
   useEffect(() => {
     const handleUploadPrompt = () => {
@@ -58,12 +65,13 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) return;
     if (!file) {
       showToast("Upload Error", "Please map a PDF resource!", "error");
       return;
     }
     if (file.size > 52428800) {
-      alert("Upload blocked: File size exceeds the 50MB limit.");
+      showToast("Upload Blocked", "File size exceeds the 50MB limit.", "error");
       return;
     }
 
@@ -78,7 +86,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     formData.append('title', uploadTitle); 
     formData.append('uploader_name', authorName); 
     formData.append("category", uploadCategory); 
-    const isModuleDisabled = uploadCategory === "syllabus" || isNonModuleSubject(uploadSubject);
+    const isModuleDisabled = uploadCategory === "syllabus" || getIsNonModuleSubject(subjects, uploadSubject);
     formData.append("module_id", isModuleDisabled ? "null" : String(uploadModule));
     formData.append("uploaded_by", authorName); 
     formData.append("subject", uploadSubject); 
@@ -92,7 +100,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         setShowUploadForm(false); 
         setUploadState("idle"); 
         setUploading(false);
-        window.dispatchEvent(new Event("sidebar_update"));
+        queryClient.invalidateQueries();
         if (!isAdmin) showToast("Success", "Notes submitted! Pending admin approval.", "success");
       }, 1500);
     } catch (err: any) {
