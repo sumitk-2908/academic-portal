@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import {
+import { 
   ArrowLeft, Loader2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
   Share2, Link as LinkIcon, Check, Maximize,
-  ThumbsUp, Flag, X, FileQuestion
+  ThumbsUp, ThumbsDown, Flag, X 
 } from "lucide-react";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from "@/app/lib/api/core";
 import { trackDocumentStat, toggleUpvote, getUserUpvotes } from "@/app/lib/api/analytics";
-import { triggerStreakUpdate } from "@/app/lib/api/profile";
+import { triggerStreakUpdate } from "@/app/lib/api/profile"; 
 import { useLogStudySessionMutation } from "@/app/hooks/useStudyHistory";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -34,7 +34,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   const [scale, setScale] = useState<number>(1.0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
-
+  
   const rowVirtualizer = useVirtualizer({
     count: numPages,
     getScrollElement: () => containerRef.current,
@@ -44,7 +44,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
   const virtualItems = rowVirtualizer.getVirtualItems();
   const currentPage = virtualItems.length > 0 ? virtualItems[0].index + 1 : 1;
-
+  
   const [copied, setCopied] = useState(false);
   const hasTrackedView = useRef(false);
   const isDownloading = useRef(false);
@@ -81,17 +81,15 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
   useEffect(() => {
     const trackAnalytics = async () => {
-      const sessionKey = `viewed_${documentMeta.id}`;
-      if (!hasTrackedView.current && documentMeta && !sessionStorage.getItem(sessionKey)) {
-        hasTrackedView.current = true;
-        sessionStorage.setItem(sessionKey, '1');
-
+      if (!hasTrackedView.current && documentMeta) {
+        hasTrackedView.current = true; 
+        
         await trackDocumentStat(documentMeta.id, 'view');
 
         const { data: sess } = await supabase.auth.getSession();
         if (sess?.session?.user?.id) {
-          logStudySessionMutation.mutate({
-            userId: sess.session.user.id,
+          logStudySessionMutation.mutate({ 
+            userId: sess.session.user.id, 
             documentId: documentMeta.id,
             doc: {
               ...documentMeta,
@@ -116,26 +114,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
-
-    // Restore previous page if exists
-    const savedPage = localStorage.getItem(`pdf_page_${documentMeta.id}`);
-    if (savedPage) {
-      const pageNum = parseInt(savedPage, 10);
-      if (!isNaN(pageNum) && pageNum > 0 && pageNum <= numPages) {
-        // Use timeout to ensure virtualizer is ready
-        setTimeout(() => {
-          rowVirtualizer.scrollToIndex(pageNum - 1, { align: 'start' });
-        }, 100);
-      }
-    }
   }
-
-  // Save page position when it changes
-  useEffect(() => {
-    if (currentPage > 1) {
-      localStorage.setItem(`pdf_page_${documentMeta.id}`, currentPage.toString());
-    }
-  }, [currentPage, documentMeta.id]);
 
   function changePage(offset: number) {
     const newPage = Math.min(Math.max(currentPage + offset, 1), numPages);
@@ -176,28 +155,24 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   };
 
   const handleDownloadClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isDownloading.current) return;
-
+    e.preventDefault(); 
+    if (isDownloading.current) return; 
+    
     isDownloading.current = true;
 
     try {
-      const sessionKey = `downloaded_${documentMeta.id}`;
-      if (!sessionStorage.getItem(sessionKey)) {
-        sessionStorage.setItem(sessionKey, '1');
-        await trackDocumentStat(documentMeta.id, 'download');
-        const { data: sess } = await supabase.auth.getSession();
-        if (sess?.session?.user?.id) {
-          logStudySessionMutation.mutate({
-            userId: sess.session.user.id,
-            documentId: documentMeta.id,
-            doc: {
-              ...documentMeta,
-              accessed_at: new Date().toISOString()
-            }
-          });
-          await triggerStreakUpdate(sess.session.user.id);
-        }
+      await trackDocumentStat(documentMeta.id, 'download');
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess?.session?.user?.id) {
+        logStudySessionMutation.mutate({ 
+          userId: sess.session.user.id, 
+          documentId: documentMeta.id,
+          doc: {
+            ...documentMeta,
+            accessed_at: new Date().toISOString()
+          }
+        });
+        await triggerStreakUpdate(sess.session.user.id);
       }
     } catch (error) {
       console.error("Tracking failed:", error);
@@ -209,7 +184,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
   const handleToggleUpvote = async () => {
     if (!documentMeta) return;
-
+    
     const isUpvoted = userRating === true;
     try {
       const { data: sess } = await supabase.auth.getSession();
@@ -217,10 +192,10 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
       setUserRating(!isUpvoted); // optimistic
       setUpvotesCount((prev: number) => isUpvoted ? Math.max(0, prev - 1) : prev + 1);
-
+      
       const result = await toggleUpvote(documentMeta.id);
       if (result === null) throw new Error("Failed to toggle upvote");
-
+      
     } catch (error) {
       setUserRating(isUpvoted); // revert
       setUpvotesCount(isUpvoted ? upvotesCount + 1 : Math.max(0, upvotesCount - 1)); // revert
@@ -237,10 +212,10 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
       if (!sess?.session?.user?.id) return showToast("Action Required", "Please log in to flag content.", "error");
 
       const { error } = await supabase.from('document_flags').insert({
-        document_id: documentMeta.id,
-        user_id: sess.session.user.id,
-        reason: flagReason,
-        description: flagDescription
+          document_id: documentMeta.id,
+          user_id: sess.session.user.id,
+          reason: flagReason,
+          description: flagDescription
       });
 
       if (error && error.code === '23505') {
@@ -260,15 +235,15 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
   return (
     <div className="flex h-[calc(100vh-8rem)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
-
+      
       {/* 1. Header: w-full ensures it takes full width for flex distributions */}
       <div className="flex min-h-[3.5rem] w-full shrink-0 flex-col justify-between gap-3 border-b border-border bg-surface-hover p-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-2">
-
+        
         <button onClick={() => router.back()} className="motion-hover motion-active flex shrink-0 items-center gap-1.5 self-start rounded-xl px-2 py-1.5 text-sm font-bold text-muted hover:bg-surface-hover sm:gap-2 sm:self-auto sm:px-3">
           <ArrowLeft size={16} /> <span className="hidden sm:inline">Go Back</span><span className="sm:hidden">Back</span>
         </button>
-
-        {/* 2. Text Container: items-center and text-center applied universally */}
+        
+       {/* 2. Text Container: items-center and text-center applied universally */}
         <div className="flex w-full min-w-0 flex-1 flex-col items-center justify-center px-1 sm:px-4">
           <h1 className="w-full text-center text-base leading-tight font-extrabold break-words whitespace-normal text-foreground sm:text-sm">
             {documentMeta.title}
@@ -277,10 +252,10 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
             Uploaded by {documentMeta.uploader_name || 'Anonymous'}
           </p>
         </div>
-
+        
         {/* 3. Action Icons: Labels added for Report and Share to fill space evenly */}
         <div className="mt-2 flex w-full shrink-0 items-center justify-between gap-1 text-muted sm:mt-0 sm:w-auto sm:justify-end sm:gap-2">
-
+          
           <div className="flex shrink-0 items-center gap-1 border-r border-border pr-2 sm:mr-2 sm:pr-3">
             <button onClick={handleToggleUpvote} className={`motion-hover motion-active flex items-center gap-1.5 rounded-lg p-1.5 font-bold ${userRating === true ? 'bg-success/10 text-success' : 'text-muted hover:bg-success/10 hover:text-success'}`}>
               <ThumbsUp size={16} className={userRating === true ? 'fill-current' : ''} />
@@ -290,7 +265,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
           <button onClick={() => setIsFlagModalOpen(true)} className="motion-hover motion-active flex shrink-0 items-center gap-1.5 rounded-lg p-1.5 text-muted hover:bg-destructive/10 hover:text-destructive sm:mr-1">
             <Flag size={16} /> <span className="text-sm font-bold">Report</span>
-          </button>
+          </button> 
 
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -305,7 +280,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
                   {copied ? 'Copied!' : 'Copy Link'}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item onClick={handleWhatsAppShare} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-success outline-none hover:bg-success/10">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1  8 8v.5z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1  8 8v.5z"/></svg>
                   WhatsApp
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
@@ -313,7 +288,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
           </DropdownMenu.Root>
 
           <a href={documentMeta.file_url} target="_blank" rel="noopener noreferrer" onClick={handleDownloadClick} className="motion-hover motion-active flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm font-bold text-primary hover:bg-primary/10 sm:px-3">
-            <span className="hidden sm:inline">Open full screen</span> <Maximize size={14} />
+             <span className="hidden sm:inline">FullScreen</span> <Maximize size={14} />
           </a>
         </div>
       </div>
@@ -327,21 +302,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
         <div className="flex items-center gap-2">
           <button aria-label="Previous Page" onClick={() => changePage(-1)} disabled={currentPage <= 1} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronLeft size={18} aria-hidden="true" /></button>
-          <div className="flex items-center gap-1 text-sm font-bold text-muted tabular-nums">
-            <span className="sr-only">Page</span>
-            <input
-              type="number"
-              min={1}
-              max={numPages || 1}
-              value={currentPage}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (!isNaN(val)) rowVirtualizer.scrollToIndex(Math.min(Math.max(val - 1, 0), numPages - 1), { align: 'start' });
-              }}
-              className="w-10 rounded border border-border bg-surface px-1 py-0.5 text-center text-foreground outline-none focus:border-primary"
-            />
-            <span>of {numPages || '--'}</span>
-          </div>
+          <span className="text-sm font-bold text-muted tabular-nums" aria-hidden="true">Page {currentPage} of {numPages || '--'}</span>
           <button aria-label="Next Page" onClick={() => changePage(1)} disabled={currentPage >= numPages} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronRight size={18} aria-hidden="true" /></button>
         </div>
         {/* ARIA Live region for screen readers to announce page changes */}
@@ -351,21 +312,7 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
       </div>
 
       <div ref={containerRef} className="custom-scrollbar flex flex-1 justify-center overflow-auto bg-surface-hover p-4">
-        <Document
-          file={documentMeta.file_url}
-          onLoadSuccess={onDocumentLoadSuccess}
-          loading={<Loader2 className="mt-10 animate-spin text-primary" size={32} />}
-          error={
-            <div className="mt-10 flex flex-col items-center gap-4 rounded-3xl border border-destructive/20 bg-destructive/5 p-8 text-center max-w-md">
-              <FileQuestion size={48} className="text-destructive opacity-80" />
-              <h3 className="text-lg font-bold text-foreground">Failed to load document</h3>
-              <p className="text-sm text-muted">The PDF could not be loaded. Please check your internet connection or try downloading it directly.</p>
-              <a href={documentMeta.file_url} target="_blank" rel="noopener noreferrer" className="mt-2 rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:opacity-90">
-                Download PDF Instead
-              </a>
-            </div>
-          }
-        >
+        <Document file={documentMeta.file_url} onLoadSuccess={onDocumentLoadSuccess} loading={<Loader2 className="mt-10 animate-spin text-primary" size={32} />} error={<p className="mt-10 text-xs text-destructive">Failed to load PDF. Please ensure CORS is configured in Supabase.</p>}>
           {containerWidth > 0 && numPages > 0 && (
             <div
               style={{
@@ -389,13 +336,13 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
                   }}
                 >
                   <div className="mb-4 shadow-lg ring-1 ring-foreground/5 h-fit">
-                    <Page
-                      pageNumber={virtualRow.index + 1}
-                      scale={scale}
-                      width={containerWidth * 0.95}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={true}
-                      loading={<SkeletonBlock className="h-[500px] w-full rounded-none" />}
+                    <Page 
+                      pageNumber={virtualRow.index + 1} 
+                      scale={scale} 
+                      width={containerWidth * 0.95} 
+                      renderTextLayer={true} 
+                      renderAnnotationLayer={true} 
+                      loading={<SkeletonBlock className="h-[500px] w-full rounded-none" />} 
                     />
                   </div>
                 </div>

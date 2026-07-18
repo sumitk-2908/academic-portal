@@ -281,27 +281,16 @@ export default function DocumentInteractiveGrid({
   if (displayDocuments.length === 0 && !hasNextPage) {
     const uploadCopy = getUploadPromptCopy(displayDocuments.length);
 
-    const hasFilters = paginationConfig?.category && paginationConfig.category !== "all" || paginationConfig?.sortBy && paginationConfig.sortBy !== "created_at";
-
     return (
       <EmptyState
-        title={hasFilters ? "No matches found" : uploadCopy.title}
-        message={hasFilters ? "Try adjusting your filters or search terms." : uploadCopy.message}
+        title={uploadCopy.title}
+        message={uploadCopy.message}
         icon={FileQuestion}
         action={
           <>
-            {hasFilters ? (
-              <button 
-                onClick={() => window.location.href = window.location.pathname}
-                className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90"
-              >
-                Clear Filters
-              </button>
-            ) : (
-              <button onClick={requestUploadPrompt} className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
-                <Upload size={15} /> Upload Notes
-              </button>
-            )}
+            <button onClick={requestUploadPrompt} className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
+              <Upload size={15} /> Upload Notes
+            </button>
             <Link href="/recent-uploads" className="motion-hover motion-active inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-hover">
               <Eye size={15} /> Start Studying
             </Link>

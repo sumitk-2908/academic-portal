@@ -33,8 +33,9 @@ export default async function Page() {
   const counts = await getCachedSubjectCounts();
 
   // 3. Fetch stats and trending globally (cacheable)
-  const [{ data: statsData }, { data: recentDocs }] = await Promise.all([
-    supabase.rpc("get_public_platform_stats"),
+  const [{ count: modulesCount }, { data: analytics }, { data: recentDocs }] = await Promise.all([
+    supabase.from("modules").select("*", { count: "exact", head: true }),
+    supabase.from("document_analytics").select("view_count, download_count"),
     supabase.from("documents")
       .select("*, document_analytics(upvotes, view_count, download_count)")
       .eq("status", "approved")
@@ -43,10 +44,10 @@ export default async function Page() {
   ]);
 
   const globalStats = {
-    subjects: statsData?.subjects || subjects.length,
-    modules: statsData?.modules || 0,
-    views: statsData?.views || 0,
-    downloads: statsData?.downloads || 0,
+    subjects: subjects.length,
+    modules: modulesCount || 0,
+    views: analytics?.reduce((acc, curr) => acc + (curr.view_count || 0), 0) || 0,
+    downloads: analytics?.reduce((acc, curr) => acc + (curr.download_count || 0), 0) || 0,
   };
   
   const trendingDocs = recentDocs || [];

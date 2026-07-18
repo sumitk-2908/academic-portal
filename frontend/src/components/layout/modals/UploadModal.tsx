@@ -25,7 +25,7 @@ export const UploadModal = () => {
       <Dialog.Content className="motion-modal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-[100] w-full max-w-lg translate-[-50%] rounded-3xl border border-border bg-surface p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between">
           <Dialog.Title className="text-lg font-extrabold text-foreground">{isAdmin ? "Admin Database Upload" : "Student Contribution"}</Dialog.Title>
-          <Dialog.Close asChild><button aria-label="Close" className="text-muted transition-opacity hover:opacity-80"><X size={20} /></button></Dialog.Close>
+          <Dialog.Close asChild><button className="text-muted transition-opacity hover:opacity-80"><X size={20} /></button></Dialog.Close>
         </div>
         <Dialog.Description className="sr-only">Upload a PDF document to the portal.</Dialog.Description>
         <form onSubmit={handleUpload} className="space-y-4">

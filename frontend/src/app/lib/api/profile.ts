@@ -34,14 +34,14 @@ export const getEnhancedContributions = async (userId: string) => {
   try {
     const { data: docs, error } = await supabase
       .from('documents')
-      .select('*, document_analytics(*), document_revisions(*)')
+      .select('*, document_analytics(*)')
       .eq('uploaded_by', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     if (!docs || docs.length === 0) return [];
 
-    return docs.map((doc: any) => {
+    return docs.map((doc: DocumentWithAnalytics) => {
       const analytics = Array.isArray(doc.document_analytics) 
         ? doc.document_analytics[0] 
         : doc.document_analytics;

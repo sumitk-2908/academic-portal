@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Layers, FileText, ArrowDownUp } from "lucide-react";
 import { searchDocuments } from "@/app/lib/api/documents";
@@ -21,37 +20,10 @@ export default function SubjectTabs({
   moduleCounts: Record<number, number>;
   subjectSlug: string;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
-
-  const tabParam = searchParams.get("tab") as any;
-  const activeTab = ["dashboard", "notes", "pyq", "tutorial_sheet", "syllabus"].includes(tabParam) 
-    ? tabParam 
-    : "dashboard";
-
-  const sortParam = searchParams.get("sort") as any;
-  const sortBy = ["created_at", "upvotes", "download_count"].includes(sortParam)
-    ? sortParam
-    : "created_at";
-
+  const [activeTab, setActiveTab] = useState<"dashboard" | "notes" | "pyq" | "tutorial_sheet" | "syllabus">("dashboard");
+  const [sortBy, setSortBy] = useState<"created_at" | "upvotes" | "download_count">("created_at");
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const setActiveTab = (tab: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (tab === "dashboard") params.delete("tab");
-    else params.set("tab", tab);
-    startTransition(() => router.replace(`${pathname}?${params.toString()}`, { scroll: false }));
-  };
-
-  const setSortBy = (sort: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (sort === "created_at") params.delete("sort");
-    else params.set("sort", sort);
-    startTransition(() => router.replace(`${pathname}?${params.toString()}`, { scroll: false }));
-  };
 
   useEffect(() => {
     const fetchTabData = async () => {

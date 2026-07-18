@@ -50,16 +50,12 @@ export const dismissDocumentFlags = async (documentId: number) => {
 export const updateDocumentStatus = async (
   id: number, 
   status: 'approved' | 'rejected', 
-  reason?: string,
-  rejection_reason_code?: string
+  reason?: string 
 ) => {
   try {
-    const payload: any = { status };
+    const payload: { status: string; reason?: string } = { status };
     if (reason) {
       payload.reason = reason;
-    }
-    if (rejection_reason_code) {
-      payload.rejection_reason_code = rejection_reason_code;
     }
     
     const response = await api.patch(`/api/v1/documents/${id}/status`, payload);
@@ -74,16 +70,12 @@ export const updateDocumentStatus = async (
 export const bulkUpdateDocumentStatus = async (
   ids: number[], 
   status: 'approved' | 'rejected', 
-  reason?: string,
-  rejection_reason_code?: string
+  reason?: string 
 ) => {
   try {
-    const payload: any = { document_ids: ids, status };
+    const payload: { document_ids: number[]; status: string; reason?: string } = { document_ids: ids, status };
     if (reason) {
       payload.reason = reason;
-    }
-    if (rejection_reason_code) {
-      payload.rejection_reason_code = rejection_reason_code;
     }
     
     const response = await api.patch(`/api/v1/documents/bulk-status`, payload);

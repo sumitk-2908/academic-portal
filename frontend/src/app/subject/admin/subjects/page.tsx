@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getSubjects, getModulesBySubject, createSubject, updateSubject, deleteSubject, createModule, updateModule, deleteModule, Subject, Module } from "@/app/lib/api/subjects";
 import { revalidateContentCache } from "@/app/actions/cache";
 import { ArrowLeft, Plus, Pencil, Trash2, X, BookOpen, Layers } from "lucide-react";
@@ -32,13 +32,12 @@ function AdminSubjectsContent() {
   const [moduleForm, setModuleForm] = useState({ name: "", module_number: 1 });
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<
-    | { type: "subject"; subject: Subject }
-    | { type: "module"; module: Module }
-    | null
-  >(null);
 
-  const loadSubjects = useCallback(async () => {
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  const loadSubjects = async () => {
     setLoadingSubjects(true);
     try {
       const data = await getSubjects();
@@ -48,11 +47,7 @@ function AdminSubjectsContent() {
     } finally {
       setLoadingSubjects(false);
     }
-  }, []);
-
-  useEffect(() => {
-    loadSubjects();
-  }, [loadSubjects]);
+  };
 
   const handleSelectSubject = async (subject: Subject) => {
     setSelectedSubject(subject);
@@ -92,6 +87,7 @@ function AdminSubjectsContent() {
   };
 
   const handleDeleteSubject = async (subject: Subject) => {
+    if (!confirm(`Are you sure you want to delete ${subject.name}?`)) return;
     setIsProcessing(true);
     try {
       await deleteSubject(subject.id, subject.name);
@@ -106,7 +102,6 @@ function AdminSubjectsContent() {
       setToast({ open: true, message: e.message || "Failed to delete subject", type: "error" });
     } finally {
       setIsProcessing(false);
-      setDeleteTarget(null);
     }
   };
 
@@ -149,6 +144,7 @@ function AdminSubjectsContent() {
 
   const handleDeleteModule = async (module: Module) => {
     if (!selectedSubject) return;
+    if (!confirm(`Are you sure you want to delete Module ${module.module_number}?`)) return;
     setIsProcessing(true);
     try {
       await deleteModule(module.id, selectedSubject.name, module.module_number);
@@ -159,16 +155,6 @@ function AdminSubjectsContent() {
       setToast({ open: true, message: e.message || "Failed to delete module", type: "error" });
     } finally {
       setIsProcessing(false);
-      setDeleteTarget(null);
-    }
-  };
-
-  const confirmDeleteTarget = () => {
-    if (!deleteTarget) return;
-    if (deleteTarget.type === "subject") {
-      void handleDeleteSubject(deleteTarget.subject);
-    } else {
-      void handleDeleteModule(deleteTarget.module);
     }
   };
 
@@ -238,7 +224,7 @@ function AdminSubjectsContent() {
                     <button onClick={(e) => openEditSubject(subject, e)} className="p-2 text-muted hover:text-primary motion-hover" title="Edit">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "subject", subject }); }} className="p-2 text-muted hover:text-destructive motion-hover" title="Delete">
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSubject(subject); }} className="p-2 text-muted hover:text-destructive motion-hover" title="Delete">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -282,7 +268,7 @@ function AdminSubjectsContent() {
                     <button onClick={() => openEditModule(module)} className="p-2 text-muted hover:text-primary motion-hover" title="Edit">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => setDeleteTarget({ type: "module", module })} className="p-2 text-muted hover:text-destructive motion-hover" title="Delete">
+                    <button onClick={() => handleDeleteModule(module)} className="p-2 text-muted hover:text-destructive motion-hover" title="Delete">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -394,35 +380,6 @@ function AdminSubjectsContent() {
                 </button>
               </div>
             </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-
-      <Dialog.Root open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="motion-modal fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-          <Dialog.Content className="motion-modal fixed top-[50%] left-[50%] z-50 w-[calc(100vw-2rem)] max-w-md translate-[-50%] rounded-2xl border border-border bg-surface p-6 shadow-2xl">
-            <Dialog.Title className="text-xl font-bold text-foreground">
-              {deleteTarget?.type === "subject" ? "Delete subject" : "Delete module"}
-            </Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm leading-6 text-muted">
-              {deleteTarget?.type === "subject"
-                ? `Delete ${deleteTarget.subject.name}? Documents tied to this subject may become harder to organize.`
-                : `Delete Module ${deleteTarget?.module.module_number}? Documents assigned to this module may need review.`}
-            </Dialog.Description>
-            <div className="mt-6 flex justify-end gap-3 border-t border-border pt-4">
-              <Dialog.Close asChild>
-                <button type="button" className="motion-hover rounded-xl bg-surface-hover px-4 py-2 text-sm font-bold text-foreground">Cancel</button>
-              </Dialog.Close>
-              <button
-                type="button"
-                onClick={confirmDeleteTarget}
-                disabled={isProcessing}
-                className="motion-hover motion-active flex items-center gap-2 rounded-xl bg-destructive px-5 py-2 text-sm font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-50"
-              >
-                {isProcessing ? <InlineSpinner label="Deleting" size={16} /> : <Trash2 size={16} />} Delete
-              </button>
-            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

@@ -86,17 +86,18 @@ function ProfileContent() {
     );
   }
 
-  const approvedUploads = uploads?.filter((u: any) => u.status === 'approved').length || 0;
-  
-  const totalRevisions = uploads?.reduce((acc: number, u: any) => {
-    return acc + (Array.isArray(u.document_revisions) ? u.document_revisions.length : 0);
-  }, 0) || 0;
+  const totalImpact = (uploads || []).reduce(
+    (acc: number, u: any) => {
+      return acc + (u.document_analytics?.download_count || 0);
+    },
+    0
+  );
 
   const stats = {
-    streak: streak?.current_streak || 0,
-    contributions: uploads?.length || 0,
-    approved: approvedUploads,
-    revisions: totalRevisions,
+    subjects: subjects?.length || 0,
+    bookmarks: bookmarks?.length || 0,
+    uploads: uploads?.length || 0,
+    downloads: totalImpact,
   };
 
   return (

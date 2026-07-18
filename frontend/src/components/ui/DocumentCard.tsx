@@ -149,10 +149,10 @@ export default function DocumentCard({
         </div>
       </div>
       
-      {/* Bottom action row: Download, View, Upvote */}
+      {/* Bottom action row: DL · View · Upvote */}
       <div className="mt-4 flex gap-2 border-t border-border pt-4">
         <button onClick={(e) => onDownload(e, doc)} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-hover py-2 text-sm font-bold text-foreground hover:border-primary/50">
-          {isDownloading ? <InlineSpinner label="Downloading" size={13} /> : <Download size={13} />} Download
+          {isDownloading ? <InlineSpinner label="Downloading" size={13} /> : <Download size={13} />} DL
         </button>
         
         <Link href={`/subject/${targetSubjectSlug}/module-${doc.module_id || 1}/${doc.id}`} className="motion-hover motion-active inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent bg-primary py-2 text-sm font-bold text-primary-foreground hover:opacity-90">

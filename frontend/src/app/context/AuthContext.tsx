@@ -16,7 +16,6 @@ export interface UserProfile {
 }
 
 interface AuthContextType {
-  userId: string | null;
   isAdmin: boolean;
   isStudent: boolean;
   emailConfirmed: boolean;
@@ -56,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStudent, setIsStudent] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [emailConfirmed, setEmailConfirmed] = useState(true); 
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -86,7 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const syncUserFromSession = useCallback(async (session: Session | null) => {
     if (session?.user) {
-      setUserId(session.user.id);
       setEmailConfirmed(!!session.user.email_confirmed_at);
       setCurrentUserEmail(session.user.email || "");
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
@@ -114,7 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       setIsAdmin(false); setIsStudent(false);
-      setUserId(null);
       setUserProfile({ full_name: null, preferred_branch: null, favorite_subjects: null, academic_year: null });
       setUploadedBy("");
     }
@@ -198,17 +194,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    
-    // CLEARED: Auth state and sensitive user-specific cached data
     sessionStorage.removeItem("admin_portal_auth");
     localStorage.removeItem("portal_bookmarks");
     localStorage.removeItem("portal_study_history");
-    
-    // PRESERVED: UI state (theme, search filters, sorting preferences)
-    // These are intentionally kept to provide a smooth experience if the user continues browsing as a guest.
-    
     setIsAdmin(false); setIsStudent(false);
-    setUserId(null);
     router.push('/');
   };
 
@@ -222,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      userId, isAdmin, isStudent, emailConfirmed, currentUserEmail, showAuthModal, authPromptContext, authMode, authEmail, authPassword, authLoading, googleLoading, userProfile, showOnboardingModal, showProfileGate, uploadedBy,
+      isAdmin, isStudent, emailConfirmed, currentUserEmail, showAuthModal, authPromptContext, authMode, authEmail, authPassword, authLoading, googleLoading, userProfile, showOnboardingModal, showProfileGate, uploadedBy,
       setShowAuthModal, setAuthMode, setAuthEmail, setAuthPassword, setShowOnboardingModal, setShowProfileGate, openAuthPrompt, handleAuthModalOpenChange, updateUserProfile, handleGoogleLogin, handleAuthSubmit, handleLogout, sendVerificationEmail
     }}>
       {children}

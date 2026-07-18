@@ -24,27 +24,43 @@ export const getPaginatedDocumentsByModule = async (
   sortBy: string = "created_at",
   subjectName?: string
 ): Promise<DocumentsPage> => {
-  const options: SearchOptions = {
-    page,
-    limit,
-    sortBy: sortBy as any,
-    moduleId,
-  };
-  
+  const fromIndex = (page - 1) * limit;
+  const toIndex = fromIndex + limit - 1;
+
+  let query = supabase
+    .from('documents')
+    .select('*, document_analytics(upvotes, download_count)', { count: 'exact' })
+    .eq('module_id', moduleId)
+    .eq('status', 'approved');
+
   if (category && category !== 'all') {
-    options.category = category;
-  }
-  if (subjectName) {
-    options.subject = subjectName;
+    query = query.eq('category', category);
   }
 
-  const { data, totalPages, totalItems } = await searchDocuments(options);
-  
-  const hasMore = page < totalPages;
+  if (subjectName) {
+    query = query.ilike('subject', subjectName);
+  }
+
+  if (sortBy === 'upvotes' || sortBy === 'download_count') {
+    query = query.order(sortBy, { foreignTable: 'document_analytics', ascending: false });
+  } else {
+    query = query.order(sortBy || 'created_at', { ascending: false });
+  }
+
+  const { data, count, error } = await query.range(fromIndex, toIndex);
+
+  if (error) {
+    if (error.code !== 'PGRST103') {
+      console.error("Fetch Paginated Error:", error);
+    }
+    return { data: [], nextCursor: null, total: 0 };
+  }
+
+  const hasMore = count ? fromIndex + (data?.length || 0) < count : false;
   return { 
-    data, 
+    data: (data as unknown as DocumentWithAnalytics[]) || [], 
     nextCursor: hasMore ? page + 1 : null,
-    total: totalItems 
+    total: count || 0
   };
 };
 
@@ -56,7 +72,6 @@ export interface SearchOptions {
   sortOrder?: 'asc' | 'desc';
   category?: string;
   subject?: string;
-  moduleId?: number;
 }
 
 export const searchDocuments = async (options: SearchOptions = {}) => {
@@ -67,8 +82,7 @@ export const searchDocuments = async (options: SearchOptions = {}) => {
     sortBy = "created_at",
     sortOrder = "desc",
     category,
-    subject,
-    moduleId
+    subject
   } = options;
 
   const params = new URLSearchParams({
@@ -81,7 +95,6 @@ export const searchDocuments = async (options: SearchOptions = {}) => {
   if (query) params.append("query", query);
   if (category) params.append("category", category);
   if (subject) params.append("subject", subject);
-  if (moduleId !== undefined) params.append("module_id", moduleId.toString());
 
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/search?${params.toString()}`);

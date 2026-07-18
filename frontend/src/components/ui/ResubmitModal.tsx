@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { UploadCloud, XCircle, AlertCircle, FileText, X } from "lucide-react";
+import { UploadCloud, XCircle, AlertCircle, FileText } from "lucide-react";
 import { supabase } from "@/app/lib/api/core";
 import { uploadWithProgress, UploadState } from "@/app/lib/api/documents";
 import UploadProgressBar from "./UploadProgressBar";
@@ -44,7 +43,20 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
   const [newFile, setNewFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Lock body scroll when the modal is open
+  useEffect(() => {
+    if (isOpen) {
+      window.document.body.style.overflow = "hidden";
+    } else {
+      window.document.body.style.overflow = "unset";
+    }
 
+    return () => {
+      window.document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,27 +100,20 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content 
-          aria-describedby="resubmit-dialog-description"
-          className="fixed left-[50%] top-[50%] z-50 w-full max-w-md translate-x-[-50%] translate-y-[-50%] rounded-2xl border border-border bg-surface p-6 shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
-        >
-          {/* Header */}
-          <div className="mb-4 flex items-center justify-between">
-            <Dialog.Title className="text-xl font-bold text-foreground">Edit & Resubmit</Dialog.Title>
-            <Dialog.Close asChild>
-              <button 
-                aria-label="Close"
-                disabled={uploadState === "uploading" || uploadState === "processing"} 
-                className="text-muted transition-colors hover:text-destructive disabled:opacity-50"
-              >
-                <X size={20} />
-              </button>
-            </Dialog.Close>
-          </div>
-          <p id="resubmit-dialog-description" className="sr-only">Make changes to your document submission and resubmit it for approval.</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
+        
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-foreground">Edit & Resubmit</h2>
+          <button 
+            onClick={onClose} 
+            disabled={uploadState === "uploading" || uploadState === "processing"} 
+            className="text-muted transition-colors hover:text-destructive disabled:opacity-50"
+          >
+            <XCircle size={24} />
+          </button>
+        </div>
 
         {/* Rejection Note */}
         {document.rejection_reason && (
@@ -203,8 +208,7 @@ export default function ResubmitModal({ document, isOpen, onClose, onSuccess }: 
             </button>
           </form>
         </ErrorBoundary>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </div>
+    </div>
   );
 }
