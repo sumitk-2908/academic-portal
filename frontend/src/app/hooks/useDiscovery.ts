@@ -12,18 +12,30 @@ export function useDiscovery(featureKey: DiscoveryFeature) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const state: DiscoveryState = stored ? JSON.parse(stored) : {};
-      
-      // If the feature hasn't been dismissed, it should be visible
-      if (!state[featureKey]) {
-        setIsVisible(true);
+    const checkState = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const state: DiscoveryState = stored ? JSON.parse(stored) : {};
+        
+        if (featureKey === 'command_palette') {
+          setIsVisible(!state['command_palette']);
+        } else if (featureKey === 'upload_button') {
+          setIsVisible(!!state['command_palette'] && !state['upload_button']);
+        } else if (featureKey === 'bookmark_button') {
+          setIsVisible(!!state['upload_button'] && !state['bookmark_button']);
+        }
+      } catch (e) {
+        console.error('Failed to parse discovery state from localStorage', e);
+        if (featureKey === 'command_palette') {
+          setIsVisible(true);
+        }
       }
-    } catch (e) {
-      console.error('Failed to parse discovery state from localStorage', e);
-      setIsVisible(true);
-    }
+    };
+    
+    checkState();
+    
+    window.addEventListener('discovery_state_changed', checkState);
+    return () => window.removeEventListener('discovery_state_changed', checkState);
   }, [featureKey]);
 
   const dismiss = () => {
@@ -33,6 +45,7 @@ export function useDiscovery(featureKey: DiscoveryFeature) {
       const state: DiscoveryState = stored ? JSON.parse(stored) : {};
       state[featureKey] = true;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      window.dispatchEvent(new Event('discovery_state_changed'));
     } catch (e) {
       console.error('Failed to save discovery state to localStorage', e);
     }

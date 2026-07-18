@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Home, User, Bookmark, Menu, X, Upload, FileText, Settings, LogOut, Plus } from "lucide-react";
+import { Home, User, Bookmark, Menu, X, Upload, FileText, Settings, LogOut, Plus, Inbox } from "lucide-react";
 import { useSidebar } from "@/app/context/SidebarContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
@@ -60,6 +60,11 @@ export const MobileNav = () => {
             <div className="mb-6 flex items-center justify-between"><h2 className="text-xl font-extrabold text-foreground">More Options</h2><button onClick={() => setShowMobileMenu(false)} className="rounded-full bg-surface-hover p-2 text-muted"><X size={20} /></button></div>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-3">
+                {isAdmin && (
+                  <Link href="/subject/admin/inbox" onClick={() => setShowMobileMenu(false)} className="col-span-2 motion-hover motion-active flex items-center justify-center gap-3 rounded-xl bg-warning/10 p-4 text-sm font-bold text-warning transition-colors hover:bg-warning/20">
+                    <Inbox size={20} /> Admin Inbox
+                  </Link>
+                )}
                 <Link href="/recent-uploads" onClick={() => setShowMobileMenu(false)} className="motion-hover motion-active flex items-center gap-3 rounded-xl bg-surface-hover p-4 text-sm font-bold text-foreground transition-colors hover:bg-primary/10 hover:text-primary"><Upload size={20} /> Uploads</Link>
                 <Link href="/continue-studying" onClick={() => setShowMobileMenu(false)} className="motion-hover motion-active flex items-center gap-3 rounded-xl bg-surface-hover p-4 text-sm font-bold text-foreground transition-colors hover:bg-primary/10 hover:text-primary"><FileText size={20} /> History</Link>
                 <button type="button" onClick={() => { setShowMobileMenu(false); requestUploadPrompt(); }} className="motion-hover motion-active flex items-center gap-3 rounded-xl bg-surface-hover p-4 text-sm font-bold text-foreground transition-colors hover:bg-primary/10 hover:text-primary"><Plus size={20} /> Contribute</button>

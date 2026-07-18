@@ -38,6 +38,7 @@ export interface DocumentCardProps {
   onToggleUpvote?: (id: number) => void;
   onDelete?: (id: number) => void;
   isDownloading?: boolean;
+  showBookmarkTooltip?: boolean;
 }
 
 export default function DocumentCard({ 
@@ -53,7 +54,8 @@ export default function DocumentCard({
   onToggleBookmark, 
   onToggleUpvote,
   onDelete,
-  isDownloading = false
+  isDownloading = false,
+  showBookmarkTooltip = false
 }: DocumentCardProps) {
   
   const slug = subjectSlug || (doc.subject ? generateSlug(doc.subject) : "default");
@@ -62,6 +64,20 @@ export default function DocumentCard({
   
   const Icon = CATEGORY_ICONS[doc.category] || FileText;
   const targetSubjectSlug = subjectSlug || (doc.subject ? generateSlug(doc.subject) : "default");
+
+  const bookmarkButton = onToggleBookmark ? (
+    <button
+      onClick={(e) => { e.preventDefault(); onToggleBookmark(doc.id); }}
+      className={`motion-hover motion-active absolute top-2 right-2 rounded-lg border p-1.5 shadow-sm backdrop-blur-md ${
+        isBookmarked
+          ? "border-warning bg-warning text-white"
+          : "border-border/60 bg-background/70 text-warning hover:bg-warning/10"
+      }`}
+      aria-label={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
+    >
+      <Bookmark size={13} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
+    </button>
+  ) : null;
 
   return (
     <article className={`group flex flex-col rounded-2xl border border-l-[3px] ${accentBorderColor} motion-hover p-5 shadow-sm hover:-translate-y-1 hover:shadow-md ${
@@ -92,20 +108,12 @@ export default function DocumentCard({
           {doc.category}
         </span>
         {/* Bookmark Button: top-right */}
-        {onToggleBookmark && (
+        {showBookmarkTooltip && bookmarkButton ? (
           <DiscoveryTooltip featureKey="bookmark_button" text="Save this document for later" side="left" align="center">
-            <button
-              onClick={(e) => { e.preventDefault(); onToggleBookmark(doc.id); }}
-              className={`motion-hover motion-active absolute top-2 right-2 rounded-lg border p-1.5 shadow-sm backdrop-blur-md ${
-                isBookmarked
-                  ? "border-warning bg-warning text-white"
-                  : "border-border/60 bg-background/70 text-warning hover:bg-warning/10"
-              }`}
-              aria-label={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
-            >
-              <Bookmark size={13} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
-            </button>
+            {bookmarkButton}
           </DiscoveryTooltip>
+        ) : (
+          bookmarkButton
         )}
       </div>
 

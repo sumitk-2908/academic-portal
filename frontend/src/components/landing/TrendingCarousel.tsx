@@ -63,7 +63,7 @@ export function TrendingCarousel({ documents }: TrendingCarouselProps) {
 
       <div className="relative -mx-4 sm:mx-0">
         <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-8 sm:px-0 [&::-webkit-scrollbar]:hidden">
-          {documents.map((doc) => (
+          {documents.map((doc, index) => (
             <div key={doc.id} className="w-[85vw] shrink-0 snap-start sm:w-[350px]">
               <DocumentCard
                 doc={doc}
@@ -71,6 +71,7 @@ export function TrendingCarousel({ documents }: TrendingCarouselProps) {
                 onDownload={handleDownload}
                 onToggleBookmark={() => toggleBookmark(doc)}
                 isDownloading={downloadingIds.includes(doc.id)}
+                showBookmarkTooltip={index === 0}
               />
             </div>
           ))}

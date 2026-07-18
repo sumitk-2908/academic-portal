@@ -62,12 +62,12 @@ export default async function PDFViewerPage({ params }: { params: Promise<{ pdfI
   return (
     <div className="mx-auto flex max-w-[90rem] flex-col space-y-4">
       <Breadcrumb />
-      <div className="flex flex-col items-start gap-6 lg:flex-row">
-        <div className="w-full flex-1 min-w-0">
+      <div className="flex flex-col gap-6">
+        <div className="w-full min-w-0">
           <PDFViewerWrapper documentMeta={documentMeta} />
         </div>
         <div 
-          className="w-full shrink-0 lg:sticky lg:top-[5.5rem] lg:w-[400px] xl:w-[450px]" 
+          className="w-full shrink-0" 
           style={{ height: 'calc(100vh - 6.5rem)' }}
         >
           <CommentSection documentId={documentMeta.id} />

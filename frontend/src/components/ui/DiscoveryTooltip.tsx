@@ -37,7 +37,7 @@ export function DiscoveryTooltip({
           side={side}
           align={align}
           sideOffset={8}
-          className="z-[100] animate-in fade-in zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 max-w-[250px] overflow-hidden rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-semibold shadow-xl ring-1 ring-black/5"
+          className="z-[100] animate-in fade-in zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 max-w-[250px] overflow-hidden rounded-xl bg-amber-500 text-white px-4 py-3 text-sm font-semibold shadow-xl ring-1 ring-black/5"
         >
           <div className="flex items-start gap-3">
             <div className="flex-1 leading-tight">{text}</div>
@@ -47,13 +47,13 @@ export function DiscoveryTooltip({
                 e.stopPropagation();
                 dismiss();
               }}
-              className="mt-0.5 rounded-full p-0.5 hover:bg-primary-foreground/20 text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+              className="mt-0.5 rounded-full p-0.5 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
               aria-label="Dismiss tooltip"
             >
               <X size={14} />
             </button>
           </div>
-          <Tooltip.Arrow className="fill-primary" />
+          <Tooltip.Arrow className="fill-amber-500" />
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>
