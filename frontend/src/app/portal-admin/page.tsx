@@ -100,10 +100,13 @@ function AdminPortalLoginContent() {
 
           {step === "MFA_SETUP" && (
             <div className="flex flex-col items-center space-y-6">
-              <div
-                className="rounded-xl border-4 border-white bg-surface p-2 shadow-sm"
-                dangerouslySetInnerHTML={{ __html: qrCode }}
-              />
+              <div className="rounded-xl border-4 border-white bg-surface p-2 shadow-sm">
+                <img 
+                  src={`data:image/svg+xml;utf8,${encodeURIComponent(qrCode)}`} 
+                  alt="MFA Setup QR Code" 
+                  className="size-48 bg-white"
+                />
+              </div>
               <form onSubmit={handleVerifyOTP} className="w-full space-y-4">
                 <input
                   required

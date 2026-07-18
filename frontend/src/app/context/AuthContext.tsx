@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/app/lib/api/core";
 import type { AuthPromptFeature } from "@/app/lib/auth-prompts";
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { dispatchToast as showToast } from "@/app/lib/toast";
 
 export interface UserProfile {
@@ -50,6 +51,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStudent, setIsStudent] = useState(false);
@@ -115,8 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => syncUserFromSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => syncUserFromSession(session));
     return () => subscription.unsubscribe();
   }, [syncUserFromSession]);
@@ -171,7 +171,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (authMode === "signup") {
         const { data, error } = await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
-        if (data.session) { await syncUserFromSession(data.session); setAuthPassword(""); handleAuthModalOpenChange(false); window.location.reload(); }
+        if (data.session) { 
+          await syncUserFromSession(data.session); 
+          setAuthPassword(""); 
+          handleAuthModalOpenChange(false); 
+          queryClient.invalidateQueries();
+          router.refresh(); 
+        }
         else { showToast("Registration Complete", "Please verify your email.", "success"); setAuthMode("signin"); }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
@@ -179,7 +185,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await syncUserFromSession(data.session);
         setAuthPassword("");
         handleAuthModalOpenChange(false);
-        window.location.reload();
+        queryClient.invalidateQueries();
+        router.refresh();
       }
     } catch (err: any) { showToast("Authentication Error", err.message, "error"); } 
     finally { setAuthLoading(false); }

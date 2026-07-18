@@ -48,6 +48,7 @@ export default function DocumentInteractiveGrid({
   const [cols, setCols] = useState(1);
   const [showContributionPrompt, setShowContributionPrompt] = useState(false);
   const [downloadingIds, setDownloadingIds] = useState<number[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: paginationConfig ? paginationConfig.queryKey : ['static-grid'],
@@ -96,6 +97,7 @@ export default function DocumentInteractiveGrid({
       else setCols(1);
     };
     updateCols();
+    setIsClient(true);
     window.addEventListener("resize", updateCols);
     return () => window.removeEventListener("resize", updateCols);
   }, []);
@@ -325,9 +327,30 @@ export default function DocumentInteractiveGrid({
           </div>
         </div>
       )}
-      <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-        {virtualizer.getVirtualItems().map((virtualRow) => {
-          const isLoaderRow = virtualRow.index > rowCount - 1;
+
+      {!isClient ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {displayDocuments.map((doc) => (
+            <DocumentCard
+              key={doc.id}
+              doc={doc}
+              subjectSlug={subjectSlug}
+              isBookmarked={bookmarks.includes(doc.id)}
+              isUpvoted={upvotes.includes(doc.id)}
+              currentUpvoteCount={upvoteCounts[doc.id]}
+              isAdmin={isAdmin}
+              onDownload={handleDownload}
+              onToggleBookmark={toggleBookmark}
+              onToggleUpvote={handleToggleUpvote}
+              onDelete={setDocumentToDelete}
+              isDownloading={downloadingIds.includes(doc.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const isLoaderRow = virtualRow.index > rowCount - 1;
 
           return (
             <div
@@ -376,6 +399,7 @@ export default function DocumentInteractiveGrid({
           );
         })}
       </div>
+      )}
 
       <AlertDialog.Root open={documentToDelete !== null} onOpenChange={(open) => !open && setDocumentToDelete(null)}>
         <AlertDialog.Portal>

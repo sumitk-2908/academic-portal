@@ -100,7 +100,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         setShowUploadForm(false); 
         setUploadState("idle"); 
         setUploading(false);
-        queryClient.invalidateQueries();
+        queryClient.invalidateQueries({ queryKey: ['documents'] });
         if (!isAdmin) showToast("Success", "Notes submitted! Pending admin approval.", "success");
       }, 1500);
     } catch (err: any) {

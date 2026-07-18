@@ -254,7 +254,7 @@ export const CommentItem = ({ comment, documentId, depth = 0, onRefresh, onReply
           )}
         </div>
 
-        {!isEditing && (
+        {!isEditing && depth < 2 && (
           <div className="mt-3 flex items-center gap-4">
             <button 
               onClick={() => {

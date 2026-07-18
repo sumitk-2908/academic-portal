@@ -5,13 +5,13 @@ from dotenv import load_dotenv
 
 # --- SlowAPI Imports ---
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # Import the optimized documents router
 from app.routers import documents, users
 from app.config import settings
 import sentry_sdk
+from app.db import supabase
 
 if settings.SENTRY_DSN:
     sentry_sdk.init(
@@ -22,7 +22,16 @@ if settings.SENTRY_DSN:
 # Force Python to read your .env file locally (Render will use its own environment variables)
 load_dotenv()
 
-limiter = Limiter(key_func=get_remote_address)
+if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"):
+    raise RuntimeError("SUPABASE_URL and SUPABASE_KEY are required environment variables")
+
+def get_real_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host or "unknown"
+
+limiter = Limiter(key_func=get_real_ip)
 
 app = FastAPI(
     title="Academic Portal API",
@@ -53,4 +62,16 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 @app.get("/health", tags=["Health"])
 @limiter.limit("20/minute")
 async def health_check(request: Request):
-    return {"status": "healthy", "version": "1.0.0", "engine": "supabase-direct"}
+    try:
+        supabase.table("subjects").select("id", count="exact").limit(1).execute()
+        db_status = "ok"
+    except Exception as e:
+        db_status = "error"
+        import traceback
+        traceback.print_exc()
+
+    return {
+        "status": "healthy" if db_status == "ok" else "unhealthy", 
+        "version": "1.0.0", 
+        "database": db_status
+    }

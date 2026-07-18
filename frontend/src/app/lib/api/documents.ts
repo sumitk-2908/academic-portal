@@ -85,65 +85,32 @@ export const searchDocuments = async (options: SearchOptions = {}) => {
     subject
   } = options;
 
-  const fromIndex = (page - 1) * limit;
-  const toIndex = fromIndex + limit - 1;
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    sort_by: sortBy,
+    sort_order: sortOrder,
+  });
 
-  const selectedFields = `
-    id, 
-    title, 
-    category, 
-    subject, 
-    module_id,
-    thumbnail_url, 
-    file_url,
-    file_size, 
-    page_count, 
-    created_at, 
-    uploaded_by, 
-    uploader_name,
-    document_analytics(upvotes, view_count, download_count)
-  `;
+  if (query) params.append("query", query);
+  if (category) params.append("category", category);
+  if (subject) params.append("subject", subject);
 
-  let dbQuery = supabase
-    .from('documents')
-    .select(selectedFields, { count: 'exact' })
-    .eq('status', 'approved');
-
-  if (query && query.trim() !== "") {
-    dbQuery = dbQuery.textSearch('fts', query.trim(), {
-      type: 'websearch',
-      config: 'english'
-    });
-  }
-
-  if (category) {
-    dbQuery = dbQuery.eq('category', category);
-  }
-  if (subject) {
-    dbQuery = dbQuery.eq('subject', subject);
-  }
-
-  if (sortBy === 'upvotes' || sortBy === 'download_count') {
-    dbQuery = dbQuery.order(sortBy, { foreignTable: 'document_analytics', ascending: sortOrder === 'asc' });
-  } else {
-    dbQuery = dbQuery.order(sortBy, { ascending: sortOrder === 'asc' });
-  }
-  dbQuery = dbQuery.range(fromIndex, toIndex);
-
-  const { data, count, error } = await dbQuery;
-
-  if (error) {
-    if (error.code !== 'PGRST103') {
-      console.error("Search Error:", error);
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/search?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.statusText}`);
     }
+    const result = await response.json();
+    return {
+      data: (result.data as unknown as DocumentWithAnalytics[]) || [],
+      totalPages: result.totalPages || 0,
+      totalItems: result.totalItems || 0,
+    };
+  } catch (error) {
+    console.error("FastAPI Search Error:", error);
     return { data: [], totalPages: 0, totalItems: 0 };
   }
-
-  return { 
-    data: (data as unknown as DocumentWithAnalytics[]) || [], 
-    totalPages: count ? Math.ceil(count / limit) : 0,
-    totalItems: count || 0
-  };
 };
 
 export type UploadState = "idle" | "uploading" | "processing" | "success" | "error";

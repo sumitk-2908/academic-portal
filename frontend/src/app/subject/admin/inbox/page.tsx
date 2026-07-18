@@ -89,6 +89,24 @@ function AdminInboxAuditingContent() {
     loadInbox();
   }, [page, selectedSubject]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-inbox-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'documents', filter: "status=eq.pending" },
+        (payload) => {
+          setToast({ open: true, message: "New document uploaded for review.", type: "success" });
+          loadInbox();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handleApprove = async (id: number) => {
     await updateDocumentStatus(id, 'approved');
     setPendingDocs(prev => prev.filter(d => d.id !== id));
@@ -286,7 +304,7 @@ function AdminInboxAuditingContent() {
                   </div>
                   
                   <div className="mt-auto flex gap-2 border-t border-border pt-4">
-                    <a href={doc.file_url} target="_blank" className="motion-hover motion-active flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="motion-hover motion-active flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-sm font-bold text-primary-foreground hover:opacity-90">
                       <Eye size={12} /> View
                     </a>
                     <button onClick={() => handleApprove(doc.id)} className="motion-hover motion-active flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-success py-2 text-sm font-bold text-white hover:opacity-90">
@@ -443,7 +461,7 @@ function AdminInboxAuditingContent() {
               </div>
 
               <div className="flex shrink-0 justify-end gap-3 border-t border-border pt-4">
-                <a href={reviewingFlagsDoc?.file_url} target="_blank" className="motion-hover mr-auto rounded-xl bg-primary/10 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/20">
+                <a href={reviewingFlagsDoc?.file_url} target="_blank" rel="noopener noreferrer" className="motion-hover mr-auto rounded-xl bg-primary/10 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/20">
                   Open PDF
                 </a>
                 

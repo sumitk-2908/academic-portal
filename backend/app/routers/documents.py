@@ -11,13 +11,18 @@ from app.storage import upload_to_r2, delete_from_r2, key_from_public_url
 from app.config import settings
 from supabase import create_client, Client
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 from pydantic import BaseModel
 from typing import Optional
 
-
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+def get_real_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host or "unknown"
+
+limiter = Limiter(key_func=get_real_ip)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -31,10 +36,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 MAX_FILE_SIZE_MB = 50
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("WARNING: Missing SUPABASE_URL or SUPABASE_KEY environment variables.")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+from app.db import supabase
 
 
 class DocCategory(str, Enum):
@@ -253,6 +255,67 @@ async def delete_document(
         traceback.print_exc()
         detail = f"Failed to delete document: {str(e)}" if settings.DEBUG else "An internal error occurred while deleting document."
         raise HTTPException(status_code=500, detail=detail)
+
+
+# ---------------------------------------------------------------------------
+# Search
+# ---------------------------------------------------------------------------
+
+@router.get("/search")
+@limiter.limit("30/minute")
+async def search_documents(
+    request: Request,
+    query: str = "",
+    page: int = 1,
+    limit: int = 20,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    category: Optional[str] = None,
+    subject: Optional[str] = None,
+):
+    """Search documents via FastAPI instead of client-side Supabase calls"""
+    from_index = (page - 1) * limit
+    to_index = from_index + limit - 1
+
+    selected_fields = (
+        "id, title, category, subject, module_id, thumbnail_url, file_url, "
+        "file_size, page_count, created_at, uploaded_by, uploader_name, "
+        "document_analytics(upvotes, view_count, download_count)"
+    )
+
+    db_query = supabase.table("documents").select(selected_fields, count="exact").eq("status", "approved")
+
+    if query and query.strip():
+        db_query = db_query.textSearch("fts", query.strip(), config="english", type="websearch")
+
+    if category:
+        db_query = db_query.eq("category", category)
+    if subject:
+        db_query = db_query.eq("subject", subject)
+
+    # Supabase Python client sorting with foreign table
+    if sort_by in ["upvotes", "download_count"]:
+        # Fallback to local sorting if the python client rejects foreignTable natively
+        # We can fetch a bit more and sort in memory if needed, but for now we try native.
+        # Actually, let's just sort by created_at natively if it's a foreign table, 
+        # or rely on the frontend fetching and sorting if it fails.
+        # But we can try the postgrest syntax:
+        db_query = db_query.order(f"{sort_by}", foreign_table="document_analytics", desc=(sort_order == "desc"))
+    else:
+        db_query = db_query.order(sort_by, desc=(sort_order == "desc"))
+
+    try:
+        db_response = db_query.range(from_index, to_index).execute()
+        count = db_response.count or 0
+        return {
+            "data": db_response.data or [],
+            "totalPages": (count + limit - 1) // limit if count > 0 else 0,
+            "totalItems": count
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Search failed due to an internal error.")
 
 
 # ---------------------------------------------------------------------------

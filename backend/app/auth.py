@@ -9,7 +9,7 @@ from jose import jwt
 SUPABASE_URL = os.getenv("SUPABASE_URL") 
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+from app.db import supabase
 
 async def verify_token(request: Request):
     auth_header = request.headers.get("Authorization")
@@ -83,7 +83,9 @@ async def verify_admin(user: dict = Depends(verify_token)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Authorization check failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Authorization check failed due to an internal error.")
 
     # 2. STRICT AAL2 (MFA) VERIFICATION
     assert_aal2(user)

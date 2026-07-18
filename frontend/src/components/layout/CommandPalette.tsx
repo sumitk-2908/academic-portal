@@ -239,6 +239,9 @@ export const CommandPalette = ({ open, onOpenChange, isMac }: { open: boolean; o
           </div>
 
           <div id="command-palette-results" role="listbox" className="max-h-[68vh] overflow-y-auto p-2">
+            <div aria-live="polite" className="sr-only">
+              {isSearching ? "Searching..." : `${items.length} results found`}
+            </div>
             {isSearching && normalizedQuery && (
               <div className="flex items-center gap-2 p-3 text-xs font-bold text-muted">
                 <InlineSpinner label="Searching" size={14} /> Searching documents

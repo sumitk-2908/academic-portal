@@ -31,11 +31,15 @@ const cspHeader = `
     form-action 'self';
     frame-ancestors 'none';
     frame-src 'self' https://vercel.live;
+    upgrade-insecure-requests;
 `;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   turbopack: {},
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns'],
+  },
   images: {
     remotePatterns: [
       {

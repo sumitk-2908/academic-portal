@@ -1,11 +1,18 @@
 import { supabase } from './core';
 import type { DocumentRecord } from '../document-types';
 
+const trackedStats = new Set<string>();
+
 export const trackDocumentStat = async (docId: number, type: 'view' | 'download') => {
+  const key = `${docId}-${type}`;
+  if (trackedStats.has(key)) return;
+  trackedStats.add(key);
+
   try {
     await supabase.rpc('increment_doc_stat', { doc_id: docId, stat_type: type });
   } catch (error) {
     console.error("Analytics Error:", error);
+    trackedStats.delete(key); // Allow retry on failure
   }
 };
 

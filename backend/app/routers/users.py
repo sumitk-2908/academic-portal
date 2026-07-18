@@ -13,9 +13,6 @@ async def delete_my_account(user: dict = Depends(verify_token)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid user session.")
 
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Supabase client is not configured.")
-
     try:
         # Supabase auth.admin.delete_user requires the service_role key, 
         # which our backend supabase client is initialized with.

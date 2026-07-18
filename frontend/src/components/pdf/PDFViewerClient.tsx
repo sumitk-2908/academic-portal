@@ -14,6 +14,7 @@ import { useLogStudySessionMutation } from "@/app/hooks/useStudyHistory";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Document, Page, pdfjs } from 'react-pdf';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { InlineSpinner, SkeletonBlock } from "@/components/layout/SharedLayouts";
@@ -30,10 +31,19 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
   const logStudySessionMutation = useLogStudySessionMutation();
 
   const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const rowVirtualizer = useVirtualizer({
+    count: numPages,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => (containerWidth * 0.95 * 1.414) + 16, // A4 aspect ratio + margin
+    overscan: 2,
+  });
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const currentPage = virtualItems.length > 0 ? virtualItems[0].index + 1 : 1;
   
   const [copied, setCopied] = useState(false);
   const hasTrackedView = useRef(false);
@@ -104,12 +114,33 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
-    setPageNumber(1);
   }
 
   function changePage(offset: number) {
-    setPageNumber(prev => Math.min(Math.max(prev + offset, 1), numPages));
+    const newPage = Math.min(Math.max(currentPage + offset, 1), numPages);
+    rowVirtualizer.scrollToIndex(newPage - 1, { align: 'start' });
   }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't interfere with inputs or textareas
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'ArrowRight') {
+        changePage(1);
+      } else if (e.key === 'ArrowLeft') {
+        changePage(-1);
+      } else if (e.key === '=' || e.key === '+') {
+        setScale(s => Math.min(s + 0.2, 2.5));
+      } else if (e.key === '-') {
+        setScale(s => Math.max(s - 0.2, 0.6));
+      } else if (e.key === 'Escape') {
+        router.back();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentPage, numPages, router]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -270,21 +301,52 @@ export default function PDFViewerClient({ documentMeta }: { documentMeta: any })
         </div>
 
         <div className="flex items-center gap-2">
-          <button aria-label="Previous Page" onClick={() => changePage(-1)} disabled={pageNumber <= 1} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronLeft size={18} aria-hidden="true" /></button>
-          <span className="text-sm font-bold text-muted tabular-nums" aria-hidden="true">Page {pageNumber} of {numPages || '--'}</span>
-          <button aria-label="Next Page" onClick={() => changePage(1)} disabled={pageNumber >= numPages} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronRight size={18} aria-hidden="true" /></button>
+          <button aria-label="Previous Page" onClick={() => changePage(-1)} disabled={currentPage <= 1} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronLeft size={18} aria-hidden="true" /></button>
+          <span className="text-sm font-bold text-muted tabular-nums" aria-hidden="true">Page {currentPage} of {numPages || '--'}</span>
+          <button aria-label="Next Page" onClick={() => changePage(1)} disabled={currentPage >= numPages} className="motion-hover motion-active flex items-center justify-center rounded-lg bg-surface-hover p-1.5 text-foreground disabled:opacity-50"><ChevronRight size={18} aria-hidden="true" /></button>
         </div>
         {/* ARIA Live region for screen readers to announce page changes */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
-          {numPages > 0 ? `Page ${pageNumber} of ${numPages}` : 'Loading PDF'}
+          {numPages > 0 ? `Page ${currentPage} of ${numPages}` : 'Loading PDF'}
         </div>
       </div>
 
       <div ref={containerRef} className="custom-scrollbar flex flex-1 justify-center overflow-auto bg-surface-hover p-4">
         <Document file={documentMeta.file_url} onLoadSuccess={onDocumentLoadSuccess} loading={<Loader2 className="mt-10 animate-spin text-primary" size={32} />} error={<p className="mt-10 text-xs text-destructive">Failed to load PDF. Please ensure CORS is configured in Supabase.</p>}>
-          {containerWidth > 0 && (
-            <div className="mb-4 shadow-lg ring-1 ring-foreground/5">
-              <Page pageNumber={pageNumber} scale={scale} width={containerWidth * 0.95} renderTextLayer={true} renderAnnotationLayer={true} loading={<SkeletonBlock className="h-[500px] w-full rounded-none" />} />
+          {containerWidth > 0 && numPages > 0 && (
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: `${containerWidth * 0.95}px`,
+                position: 'relative',
+              }}
+            >
+              {virtualItems.map((virtualRow) => (
+                <div
+                  key={virtualRow.index}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <div className="mb-4 shadow-lg ring-1 ring-foreground/5 h-fit">
+                    <Page 
+                      pageNumber={virtualRow.index + 1} 
+                      scale={scale} 
+                      width={containerWidth * 0.95} 
+                      renderTextLayer={true} 
+                      renderAnnotationLayer={true} 
+                      loading={<SkeletonBlock className="h-[500px] w-full rounded-none" />} 
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </Document>
