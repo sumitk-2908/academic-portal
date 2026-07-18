@@ -53,7 +53,7 @@ export default function DocumentInteractiveGrid({
     queryFn: ({ pageParam = 1 }) => getPaginatedDocumentsByModule(paginationConfig!.moduleId, pageParam, 20, paginationConfig?.category, paginationConfig?.sortBy),
     initialPageParam: 1,
     enabled: !!paginationConfig,
-    initialData: paginationConfig ? { pages: [{ data: initialDocuments, nextCursor: 2, total: 0 }], pageParams: [1] } : undefined,
+    initialData: paginationConfig ? { pages: [{ data: initialDocuments, nextCursor: initialDocuments.length === 20 ? 2 : null, total: 0 }], pageParams: [1] } : undefined,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
     placeholderData: keepPreviousData,
   });

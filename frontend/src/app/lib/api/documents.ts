@@ -45,7 +45,9 @@ export const getPaginatedDocumentsByModule = async (
   const { data, count, error } = await query.range(fromIndex, toIndex);
 
   if (error) {
-    console.error("Fetch Paginated Error:", error);
+    if (error.code !== 'PGRST103') {
+      console.error("Fetch Paginated Error:", error);
+    }
     return { data: [], nextCursor: null, total: 0 };
   }
 
@@ -126,7 +128,9 @@ export const searchDocuments = async (options: SearchOptions = {}) => {
   const { data, count, error } = await dbQuery;
 
   if (error) {
-    console.error("Search Error:", error);
+    if (error.code !== 'PGRST103') {
+      console.error("Search Error:", error);
+    }
     return { data: [], totalPages: 0, totalItems: 0 };
   }
 

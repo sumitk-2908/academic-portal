@@ -20,10 +20,10 @@ const withPWA = withPWAInit({
 
 const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-eval' 'unsafe-inline';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live;
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https://pub-11c1374f05774b54a2ab6c8bc83d6f7f.r2.dev https://dyxymzyijinfouqzjfls.supabase.co;
-    connect-src 'self' https://dyxymzyijinfouqzjfls.supabase.co wss://dyxymzyijinfouqzjfls.supabase.co https://academic-portal-backend-kt25.onrender.com http://localhost:8000 https://*.ingest.us.sentry.io;
+    connect-src 'self' https://dyxymzyijinfouqzjfls.supabase.co wss://dyxymzyijinfouqzjfls.supabase.co https://academic-portal-backend-kt25.onrender.com http://localhost:8000 https://*.ingest.us.sentry.io https://pub-11c1374f05774b54a2ab6c8bc83d6f7f.r2.dev;
     worker-src 'self' blob:;
     font-src 'self';
     object-src 'none';
