@@ -5,6 +5,7 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { Metadata } from "next";
 import { Suspense } from "react";
 import { SubjectPageSkeleton } from "@/components/layout/SharedLayouts";
+import { notFound } from "next/navigation";
 
 export async function generateMetadata({ params }: { params: Promise<{ subjectSlug: string }> }): Promise<Metadata> {
   const { subjectSlug } = await params;
@@ -32,6 +33,10 @@ import Breadcrumb from "@/components/ui/Breadcrumb";
 async function SubjectTabsFetcher({ subjectSlug, displayTitle }: { subjectSlug: string, displayTitle: string }) {
   const dbSubject = await getCachedSubjectBySlug(subjectSlug);
 
+  if (!dbSubject) {
+    notFound();
+  }
+
   let modules: any[] = [];
   let moduleCounts: Record<number, number> = {};
 
@@ -42,7 +47,7 @@ async function SubjectTabsFetcher({ subjectSlug, displayTitle }: { subjectSlug: 
 
   return (
     <SubjectTabs
-      subjectDetails={dbSubject ? { ...dbSubject, is_non_module: dbSubject.is_non_module ?? false } : { id: 0, slug: subjectSlug, name: displayTitle, is_non_module: false }}
+      subjectDetails={{ ...dbSubject, is_non_module: dbSubject.is_non_module ?? false }}
       modules={modules}
       moduleCounts={moduleCounts}
       subjectSlug={subjectSlug}

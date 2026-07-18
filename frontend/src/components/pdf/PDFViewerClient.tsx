@@ -20,7 +20,10 @@ import { InlineSpinner, SkeletonBlock } from "@/components/layout/SharedLayouts"
 import { dispatchToast as showToast } from "@/app/lib/toast";
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 export default function PDFViewerClient({ documentMeta }: { documentMeta: any }) {
   const router = useRouter();

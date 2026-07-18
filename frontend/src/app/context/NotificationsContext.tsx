@@ -110,10 +110,15 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       if (notifUpdateChannel) supabase.removeChannel(notifUpdateChannel);
     };
 
-    const handleSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setupDataAndListeners(session.user.id);
+    let currentUserId: string | null = null;
+
+    const setup = (userId: string | null) => {
+      if (currentUserId === userId) return;
+      cleanupListeners();
+      currentUserId = userId;
+
+      if (userId) {
+        setupDataAndListeners(userId);
       } else {
         setNotifications([]);
         setUnreadCount(0);
@@ -121,17 +126,15 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       }
     };
 
+    const handleSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setup(session?.user?.id || null);
+    };
+
     handleSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      cleanupListeners();
-      if (session?.user) {
-        setupDataAndListeners(session.user.id);
-      } else {
-        setNotifications([]);
-        setUnreadCount(0);
-        earnedBadgesRef.current.clear();
-      }
+      setup(session?.user?.id || null);
     });
 
     return () => {

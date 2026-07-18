@@ -16,9 +16,9 @@ export const getCachedSubjects = unstable_cache(
 export const getCachedSubjectBySlug = unstable_cache(
   async (slug: string) => {
     const supabase = createPublicClient();
-    const { data, error } = await supabase.from('subjects').select('*').eq('slug', slug).single();
+    const { data, error } = await supabase.from('subjects').select('*').eq('slug', slug).maybeSingle();
     if (error) throw error;
-    return data as Subject;
+    return data as Subject | null;
   },
   ['subject-by-slug'],
   { revalidate: 86400, tags: ['subjects'] }
