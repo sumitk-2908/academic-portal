@@ -27,6 +27,13 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
   
   const rejectReason = item?.rejection_reason || "Does not meet community guidelines.";
   
+  const revisions = Array.isArray((item as any).document_revisions) 
+    ? (item as any).document_revisions 
+    : [];
+  const pastRejections = revisions
+    .filter((r: any) => r.status === 'rejected')
+    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  
   const analytics = Array.isArray(item.document_analytics)
     ? item.document_analytics[0]
     : item.document_analytics;
@@ -89,28 +96,50 @@ export const UserDocumentCard: React.FC<UserDocumentCardProps> = ({
         </div>
       </div>
 
-      {/* Rejected State UI (Inline Alert) */}
-      {isRejected && (
-        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertCircle className="size-4" />
-            <span className="text-sm font-semibold">Upload Rejected</span>
-          </div>
-          
-          <p className="text-sm text-destructive/80">
-            {rejectReason}
-          </p>
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsResubmitOpen(true);
-            }}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-destructive/20 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/30"
-          >
-            <RefreshCw className="size-4" />
-            Edit & Resubmit
-          </button>
+      {/* Rejected State & History */}
+      {(isRejected || pastRejections.length > 0) && (
+        <div className={`mt-4 flex flex-col gap-3 rounded-lg border p-4 ${isRejected ? 'border-destructive/20 bg-destructive/10' : 'border-warning/20 bg-warning/5'}`}>
+          {isRejected && (
+            <>
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="size-4" />
+                <span className="text-sm font-semibold">Upload Rejected</span>
+              </div>
+              
+              <p className="text-sm text-destructive/80">
+                {rejectReason}
+              </p>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsResubmitOpen(true);
+                }}
+                className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-destructive/20 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/30"
+              >
+                <RefreshCw className="size-4" />
+                Edit & Resubmit
+              </button>
+            </>
+          )}
+
+          {!isRejected && pastRejections.length > 0 && (
+            <div className="flex items-center gap-2 text-warning">
+              <RefreshCw className="size-4" />
+              <span className="text-sm font-semibold">Previously Rejected (Now {displayStatus})</span>
+            </div>
+          )}
+
+          {pastRejections.length > (isRejected ? 1 : 0) && (
+            <div className={`space-y-2 ${isRejected ? "mt-2 border-t border-destructive/20 pt-3" : ""}`}>
+              {isRejected && <span className="text-xs font-bold uppercase tracking-wider text-destructive/70">Previous Rejections</span>}
+              {pastRejections.slice(isRejected ? 1 : 0).map((rej: any, idx: number) => (
+                <div key={idx} className={`text-xs ${isRejected ? 'text-destructive/70' : 'text-warning/80'}`}>
+                  <span className="font-semibold">{new Date(rej.created_at).toLocaleDateString()}</span> - {rej.rejection_reason || 'No reason provided'}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

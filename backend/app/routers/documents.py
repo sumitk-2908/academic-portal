@@ -4,6 +4,7 @@ import asyncio
 import fitz
 import json
 import base64
+import hashlib
 from enum import Enum
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Request, Depends
 from app.auth import verify_admin, verify_token, assert_aal2
@@ -44,6 +45,15 @@ class DocCategory(str, Enum):
     pyq = "pyq"
     syllabus = "syllabus"
     tutorial_sheet = "tutorial_sheet"
+
+class RejectionReason(str, Enum):
+    duplicate = "duplicate"
+    wrong_subject_module = "wrong_subject_module"
+    unreadable = "unreadable"
+    incomplete = "incomplete"
+    outdated = "outdated"
+    copyright_unsafe = "copyright_unsafe"
+    other = "other"
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +152,20 @@ async def upload_document(
             raise HTTPException(status_code=400, detail="Invalid file format. Only PDF files are allowed.")
 
         file_size_mb = round(len(file_bytes) / (1024 * 1024), 2)
+        pdf_hash = hashlib.sha256(file_bytes).hexdigest()
+
+        # --- Duplicate Check ---
+        try:
+            duplicate_check = supabase.table("documents").select("id").eq("pdf_hash", pdf_hash).neq("status", "rejected").limit(1).execute()
+            if duplicate_check.data and len(duplicate_check.data) > 0:
+                raise HTTPException(
+                    status_code=409,
+                    detail={"reason": "duplicate", "existing_id": duplicate_check.data[0]["id"]}
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Warning: Duplicate check failed: {e}")
 
         # --- PDF validation + thumbnail (CPU-bound, offloaded to thread) ---
         try:
@@ -178,6 +202,7 @@ async def upload_document(
             "page_count": page_count,
             "thumbnail_url": thumbnail_url,
             "status": secure_status,
+            "pdf_hash": pdf_hash,
         }
 
         try:
@@ -272,13 +297,15 @@ async def search_documents(
     sort_order: str = "desc",
     category: Optional[str] = None,
     subject: Optional[str] = None,
+    subject_id: Optional[int] = None,
+    module_id: Optional[int] = None,
 ):
     """Search documents via FastAPI instead of client-side Supabase calls"""
     from_index = (page - 1) * limit
     to_index = from_index + limit - 1
 
     selected_fields = (
-        "id, title, category, subject, module_id, thumbnail_url, file_url, "
+        "id, title, category, subject, subject_id, module_id, thumbnail_url, file_url, "
         "file_size, page_count, created_at, uploaded_by, uploader_name, "
         "document_analytics(upvotes, view_count, download_count)"
     )
@@ -290,8 +317,12 @@ async def search_documents(
 
     if category:
         db_query = db_query.eq("category", category)
-    if subject:
+    if subject_id is not None:
+        db_query = db_query.eq("subject_id", subject_id)
+    elif subject:
         db_query = db_query.eq("subject", subject)
+    if module_id is not None:
+        db_query = db_query.eq("module_id", module_id)
 
     # Supabase Python client sorting with foreign table
     if sort_by in ["upvotes", "download_count"]:
@@ -325,6 +356,7 @@ async def search_documents(
 class StatusUpdatePayload(BaseModel):
     status: str
     reason: Optional[str] = None
+    rejection_reason_code: Optional[RejectionReason] = None
 
 
 @router.patch("/{document_id}/status")
@@ -357,6 +389,7 @@ async def update_document_status(
             "status": payload.status,
             "moderated_by": admin_user.get("id"),
             "rejection_reason": payload.reason if payload.status == "rejected" else None,
+            "rejection_reason_code": payload.rejection_reason_code.value if (payload.status == "rejected" and payload.rejection_reason_code) else None,
             "updated_at": "now()",
         }
 
@@ -383,16 +416,30 @@ async def update_document_status(
                 "is_read": False,
             }).execute()
 
-        # Log the status update
+        # Log the status update in general admin audit
         audit_payload = {
             "admin_id": admin_user.get("id"),
             "action": payload.status,
             "target_id": document_id
         }
-        if payload.status == "rejected" and payload.reason:
-            audit_payload["metadata"] = {"reason": payload.reason}
+        if payload.status == "rejected":
+            audit_metadata = {}
+            if payload.reason: audit_metadata["reason"] = payload.reason
+            if payload.rejection_reason_code: audit_metadata["rejection_reason_code"] = payload.rejection_reason_code.value
+            if audit_metadata: audit_payload["metadata"] = audit_metadata
             
         supabase.table("admin_audit_log").insert(audit_payload).execute()
+
+        # Log the revision history
+        revision_payload = {
+            "document_id": document_id,
+            "status": payload.status,
+            "moderated_by": admin_user.get("id"),
+        }
+        if payload.status == "rejected":
+            if payload.reason: revision_payload["rejection_reason"] = payload.reason
+            if payload.rejection_reason_code: revision_payload["rejection_reason_code"] = payload.rejection_reason_code.value
+        supabase.table("document_revisions").insert(revision_payload).execute()
 
         return {
             "message": f"Document successfully marked as {payload.status}",
@@ -411,6 +458,7 @@ class BulkStatusUpdatePayload(BaseModel):
     document_ids: list[int]
     status: str
     reason: Optional[str] = None
+    rejection_reason_code: Optional[RejectionReason] = None
 
 @router.patch("/bulk-status")
 @limiter.limit("20/minute")
@@ -447,6 +495,7 @@ async def bulk_update_document_status(
             "status": payload.status,
             "moderated_by": admin_user.get("id"),
             "rejection_reason": payload.reason if payload.status == "rejected" else None,
+            "rejection_reason_code": payload.rejection_reason_code.value if (payload.status == "rejected" and payload.rejection_reason_code) else None,
             "updated_at": "now()",
         }
         
@@ -460,6 +509,7 @@ async def bulk_update_document_status(
         
         notifications = []
         audit_logs = []
+        revisions = []
         
         for doc in docs:
             doc_id = doc.get("id")
@@ -486,15 +536,32 @@ async def bulk_update_document_status(
                 "action": payload.status,
                 "target_id": doc_id
             }
-            if payload.status == "rejected" and payload.reason:
-                audit_payload["metadata"] = {"reason": payload.reason}
+            if payload.status == "rejected":
+                audit_metadata = {}
+                if payload.reason: audit_metadata["reason"] = payload.reason
+                if payload.rejection_reason_code: audit_metadata["rejection_reason_code"] = payload.rejection_reason_code.value
+                if audit_metadata: audit_payload["metadata"] = audit_metadata
+                
             audit_logs.append(audit_payload)
+            
+            revision_payload = {
+                "document_id": doc_id,
+                "status": payload.status,
+                "moderated_by": admin_user.get("id"),
+            }
+            if payload.status == "rejected":
+                if payload.reason: revision_payload["rejection_reason"] = payload.reason
+                if payload.rejection_reason_code: revision_payload["rejection_reason_code"] = payload.rejection_reason_code.value
+            revisions.append(revision_payload)
             
         if notifications:
             supabase.table("notifications").insert(notifications).execute()
             
         if audit_logs:
             supabase.table("admin_audit_log").insert(audit_logs).execute()
+            
+        if revisions:
+            supabase.table("document_revisions").insert(revisions).execute()
             
         return {
             "message": f"Successfully marked {len(db_response.data)} documents as {payload.status}",

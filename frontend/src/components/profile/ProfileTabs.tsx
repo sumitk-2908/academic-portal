@@ -280,7 +280,7 @@ export default function ProfileTabs({ user, history, bookmarks, uploads, achieve
             <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
                <div className="mb-1 text-xs font-bold tracking-[0.06em] text-muted uppercase">Total Impact</div>
                <div className="text-3xl font-extrabold tracking-tight text-success tabular-nums">
-                 {uploads.reduce((acc: number, u: any) => acc + (u.document_analytics?.download_count || 0), 0)} DLs
+                 {uploads.reduce((acc: number, u: any) => acc + (u.document_analytics?.download_count || 0), 0)} Downloads
                </div>
             </div>
           </div>

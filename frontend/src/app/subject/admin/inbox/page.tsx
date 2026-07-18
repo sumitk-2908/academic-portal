@@ -11,20 +11,21 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { requestUploadPrompt } from "@/app/lib/student-prompts";
 import { DocumentGridSkeleton, InlineSpinner } from "@/components/layout/SharedLayouts";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import AuditLogViewer from "@/components/admin/AuditLogViewer";
 import { DocumentWithAnalytics, FlaggedDocument } from "@/app/lib/document-types";
 import { useNotifications } from "@/app/context/NotificationsContext";
 
 function AdminInboxAuditingContent() {
-  const [activeTab, setActiveTab] = useState<'pending' | 'flagged'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'audit'>('pending');
   
   const [pendingDocs, setPendingDocs] = useState<DocumentWithAnalytics[]>([]);
   const [flaggedDocs, setFlaggedDocs] = useState<FlaggedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // F1 Pagination & Filtering
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
+  const [slaFilter, setSlaFilter] = useState<string>("All");
   const [subjects, setSubjects] = useState<string[]>([]);
   const [pendingTotalCount, setPendingTotalCount] = useState(0);
 
@@ -34,7 +35,9 @@ function AdminInboxAuditingContent() {
   const [isBulkRejecting, setIsBulkRejecting] = useState(false);
   
   const [rejectingDocId, setRejectingDocId] = useState<number | null>(null);
+  const [isBulkRejectModalOpen, setIsBulkRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectReasonCode, setRejectReasonCode] = useState("other");
   const [isRejecting, setIsRejecting] = useState(false);
   
   // New state for reviewing specific flags
@@ -65,6 +68,15 @@ function AdminInboxAuditingContent() {
     if (selectedSubject !== 'All') {
       query = query.eq('subject', selectedSubject);
     }
+    
+    if (slaFilter === "SLA Breach (>48h)") {
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      query = query.lt('created_at', fortyEightHoursAgo);
+    } else if (slaFilter === "SLA Warning (>24h)") {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      query = query.lt('created_at', twentyFourHoursAgo).gte('created_at', fortyEightHoursAgo);
+    }
 
     const pageSize = 20;
     const from = (page - 1) * pageSize;
@@ -87,7 +99,7 @@ function AdminInboxAuditingContent() {
 
   useEffect(() => {
     loadInbox();
-  }, [page, selectedSubject]);
+  }, [page, selectedSubject, slaFilter]);
 
   useEffect(() => {
     const channel = supabase
@@ -144,16 +156,23 @@ function AdminInboxAuditingContent() {
     }
   };
 
-  const handleBulkReject = async () => {
+  const handleBulkRejectClick = () => {
     if (selectedDocs.size === 0) return;
+    setRejectReason("");
+    setRejectReasonCode("other");
+    setIsBulkRejectModalOpen(true);
+  };
+
+  const confirmBulkReject = async () => {
     setIsBulkRejecting(true);
     try {
       const ids = Array.from(selectedDocs);
-      await bulkUpdateDocumentStatus(ids, 'rejected', "Bulk rejected by admin");
+      await bulkUpdateDocumentStatus(ids, 'rejected', rejectReason, rejectReasonCode);
       setPendingDocs(prev => prev.filter(d => !selectedDocs.has(d.id)));
       setPendingTotalCount(prev => Math.max(0, prev - ids.length));
       setSelectedDocs(new Set());
       setToast({ open: true, message: `Successfully rejected ${ids.length} documents.`, type: "success" });
+      setIsBulkRejectModalOpen(false);
     } catch (e) {
       setToast({ open: true, message: "Bulk rejection failed.", type: "error" });
     } finally {
@@ -164,6 +183,7 @@ function AdminInboxAuditingContent() {
   const handleRejectClick = (id: number) => {
     setRejectingDocId(id);
     setRejectReason("");
+    setRejectReasonCode("other");
   };
 
   const confirmReject = async () => {
@@ -171,7 +191,7 @@ function AdminInboxAuditingContent() {
     setIsRejecting(true);
     
     try {
-      await updateDocumentStatus(rejectingDocId, 'rejected', rejectReason);
+      await updateDocumentStatus(rejectingDocId, 'rejected', rejectReason, rejectReasonCode);
       
       // Remove from UI depending on which tab we are on
       setPendingDocs(prev => {
@@ -249,17 +269,34 @@ function AdminInboxAuditingContent() {
             >
               <Flag size={16} /> Flagged Content ({flaggedDocs.length})
             </button>
+            <button 
+              onClick={() => setActiveTab('audit')}
+              className={`motion-hover motion-active flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold ${activeTab === 'audit' ? 'bg-foreground text-background' : 'text-muted hover:bg-surface-hover'}`}
+            >
+              <FileText size={16} /> Audit Logs
+            </button>
           </div>
           
           {activeTab === 'pending' && (
-            <select
-              value={selectedSubject}
-              onChange={(e) => { setSelectedSubject(e.target.value); setPage(1); }}
-              className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground outline-none"
-            >
-              <option value="All">All Subjects</option>
-              {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedSubject}
+                onChange={(e) => { setSelectedSubject(e.target.value); setPage(1); }}
+                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground outline-none"
+              >
+                <option value="All">All Subjects</option>
+                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select
+                value={slaFilter}
+                onChange={(e) => { setSlaFilter(e.target.value); setPage(1); }}
+                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground outline-none"
+              >
+                <option value="All">All Wait Times</option>
+                <option value="SLA Warning (>24h)">SLA Warning (&gt;24h)</option>
+                <option value="SLA Breach (>48h)">SLA Breach (&gt;48h)</option>
+              </select>
+            </div>
           )}
         </div>
 
@@ -270,9 +307,14 @@ function AdminInboxAuditingContent() {
             
             {/* PENDING TAB RENDER */}
             {activeTab === 'pending' && pendingDocs.map(doc => {
-              
+              const ageMs = Date.now() - new Date(doc.created_at || Date.now()).getTime();
+              const ageHours = Math.floor(ageMs / (1000 * 60 * 60));
+              const isBreach = ageHours > 48;
+              const isWarning = ageHours > 24 && ageHours <= 48;
+              const slaClass = isBreach ? "bg-destructive/10 text-destructive" : isWarning ? "bg-warning/10 text-warning" : "bg-success/10 text-success";
+
               return (
-                <article key={doc.id} className="flex flex-col rounded-2xl border border-warning/20 bg-surface p-4 shadow-sm">
+                <article key={doc.id} className={`flex flex-col rounded-2xl border bg-surface p-4 shadow-sm ${isBreach ? 'border-destructive/30' : isWarning ? 'border-warning/30' : 'border-border'}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <input 
@@ -281,11 +323,14 @@ function AdminInboxAuditingContent() {
                         checked={selectedDocs.has(doc.id)}
                         onChange={() => toggleDocSelection(doc.id)}
                       />
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
+                      <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${slaClass}`}>
                         <FileText size={16} />
                       </div>
                     </div>
-                    <span className="rounded-full bg-warning/10 px-2.5 py-1 text-xs font-extrabold tracking-wider text-warning uppercase">PENDING</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="rounded-full bg-warning/10 px-2.5 py-1 text-xs font-extrabold tracking-wider text-warning uppercase">PENDING</span>
+                      <span className={`text-xs font-bold ${isBreach ? 'text-destructive' : isWarning ? 'text-warning' : 'text-success'}`}>{ageHours}h in queue</span>
+                    </div>
                   </div>
                   <h3 className="mt-3 line-clamp-2 min-h-[2rem] text-base font-bold tracking-tight text-foreground">{doc.title}</h3>
                   <p className="mt-2 text-sm font-semibold text-muted">{doc.subject} • Module {doc.module_id || 1}</p>
@@ -340,6 +385,13 @@ function AdminInboxAuditingContent() {
                </article>
             ))}
 
+            {/* AUDIT LOGS RENDER */}
+            {activeTab === 'audit' && (
+              <div className="col-span-full">
+                <AuditLogViewer />
+              </div>
+            )}
+
             {/* EMPTY STATES */}
             {activeTab === 'pending' && pendingDocs.length === 0 && (
               <div className="col-span-full rounded-2xl border border-dashed border-border bg-surface-hover/50 p-8 text-center">
@@ -391,36 +443,63 @@ function AdminInboxAuditingContent() {
             <button onClick={handleBulkApprove} disabled={isBulkApproving} className="flex items-center gap-2 rounded-xl bg-success px-4 py-1.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50">
               {isBulkApproving ? <InlineSpinner label="Approving" size={14} /> : <CheckCircle size={14} />} Approve Selected
             </button>
-            <button onClick={handleBulkReject} disabled={isBulkRejecting} className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-1.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50">
+            <button onClick={handleBulkRejectClick} disabled={isBulkRejecting} className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-1.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50">
               {isBulkRejecting ? <InlineSpinner label="Rejecting" size={14} /> : <Trash2 size={14} />} Reject Selected
             </button>
           </div>
         )}
 
-        {/* --- MODAL: REJECT DOCUMENT --- */}
-        <Dialog.Root open={rejectingDocId !== null} onOpenChange={(open) => { if (!open) setRejectingDocId(null); }}>
+        {/* --- MODAL: REJECT DOCUMENT (SINGLE & BULK) --- */}
+        <Dialog.Root 
+          open={rejectingDocId !== null || isBulkRejectModalOpen} 
+          onOpenChange={(open) => { 
+            if (!open) {
+              setRejectingDocId(null);
+              setIsBulkRejectModalOpen(false);
+            }
+          }}
+        >
           <Dialog.Portal>
             <Dialog.Overlay className="motion-modal fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
             <Dialog.Content className="motion-modal fixed top-[50%] left-[50%] z-50 grid w-full max-w-md translate-[-50%] gap-4 rounded-2xl bg-surface p-6 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <Dialog.Title className="text-xl font-bold text-foreground">Reject Document</Dialog.Title>
+                <Dialog.Title className="text-xl font-bold text-foreground">
+                  {isBulkRejectModalOpen ? `Reject ${selectedDocs.size} Documents` : 'Reject Document'}
+                </Dialog.Title>
                 <Dialog.Close asChild>
                   <button className="motion-hover text-muted hover:text-foreground"><X size={20} /></button>
                 </Dialog.Close>
               </div>
               <Dialog.Description className="mb-4 text-sm text-muted">
-                Provide a reason for rejecting this document. It will be hidden from users.
+                Provide a structured reason for rejecting {isBulkRejectModalOpen ? 'these documents' : 'this document'}. This helps contributors improve their submissions.
               </Dialog.Description>
+              <select
+                value={rejectReasonCode}
+                onChange={(e) => setRejectReasonCode(e.target.value)}
+                className="mb-2 w-full rounded-xl border bg-surface p-3 text-sm font-semibold text-foreground outline-none focus:border-primary"
+              >
+                <option value="other">Other</option>
+                <option value="duplicate">Duplicate document</option>
+                <option value="wrong_subject_module">Wrong Subject / Module</option>
+                <option value="unreadable">Unreadable / Poor Quality</option>
+                <option value="incomplete">Incomplete Notes</option>
+                <option value="outdated">Outdated Material</option>
+                <option value="copyright_unsafe">Copyright Violation</option>
+              </select>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Reason for rejection..."
+                placeholder="Additional details (optional)..."
                 className="motion-focus mb-6 h-32 w-full rounded-xl border bg-background p-3 text-sm text-foreground outline-none focus:border-primary"
               />
               <div className="flex justify-end gap-3">
                 <Dialog.Close asChild><button className="motion-hover rounded-xl bg-surface-hover px-4 py-2 text-sm font-bold">Cancel</button></Dialog.Close>
-                <button onClick={confirmReject} disabled={isRejecting || !rejectReason.trim()} className="motion-hover motion-active flex items-center gap-2 rounded-xl bg-destructive px-5 py-2 text-sm font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-50">
-                  {isRejecting ? <InlineSpinner label="Rejecting document" size={16} /> : <Trash2 className="size-4" />} Confirm Rejection
+                <button 
+                  onClick={isBulkRejectModalOpen ? confirmBulkReject : confirmReject} 
+                  disabled={isRejecting || isBulkRejecting || (rejectReasonCode === 'other' && !rejectReason.trim())} 
+                  className="motion-hover motion-active flex items-center gap-2 rounded-xl bg-destructive px-5 py-2 text-sm font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  {(isRejecting || isBulkRejecting) ? <InlineSpinner label="Rejecting..." size={16} /> : <Trash2 className="size-4" />} Confirm Rejection
                 </button>
               </div>
             </Dialog.Content>

@@ -2,21 +2,17 @@ export default function ProfileStats({
   stats,
 }: {
   stats: {
-    subjects: number;
-    bookmarks: number;
-    uploads: number;
-    downloads?: number;
+    streak: number;
+    contributions: number;
+    approved: number;
+    revisions: number;
   };
 }) {
   const displayStats = [
-    { label: "Subjects", value: stats.subjects.toString() },
-    { label: "Bookmarks", value: stats.bookmarks.toString() },
-    { label: "Contributions", value: stats.uploads.toString() },
-    // FIX: Replaced the hardcoded "—" with the live download value
-    {
-      label: "Downloads",
-      value: stats.downloads !== undefined ? stats.downloads.toString() : "0",
-    },
+    { label: "Day Streak", value: stats.streak.toString() },
+    { label: "Total Uploads", value: stats.contributions.toString() },
+    { label: "Approved Notes", value: stats.approved.toString() },
+    { label: "Revisions Made", value: stats.revisions.toString() },
   ];
 
   return (

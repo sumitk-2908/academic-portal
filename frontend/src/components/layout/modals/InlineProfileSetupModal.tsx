@@ -74,8 +74,8 @@ export const InlineProfileSetupModal = ({ isOpen, onOpenChange, onSuccess }: Inl
                 Save & Continue
               </button>
               <Dialog.Close asChild>
-                <button type="button" className="motion-hover motion-active h-11 w-full rounded-xl bg-surface-hover font-bold text-foreground hover:opacity-80">
-                  Cancel
+                <button aria-label="Cancel" className="motion-hover motion-active rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-hover">
+                  Skip for now
                 </button>
               </Dialog.Close>
             </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { MoreHorizontal, MessageSquare, Edit2, Trash2, Flag, Pin } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useAuth } from "@/app/context/AuthContext";
 import { CommentInput } from "./CommentInput";
 import { updateComment, deleteComment, adminDeleteComment, flagComment, adminPinComment } from "@/app/lib/api/comments";
@@ -33,40 +34,56 @@ interface CommentItemProps {
   onReplyPrompt?: () => void;
 }
 
-// Simple restrictive markdown parser
+type CommentDialog = "delete" | "report" | "admin-delete" | null;
+type CommentFlagReason = "incorrect" | "duplicate" | "low_quality" | "other";
+
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
+const IS_URL_PATTERN = /^(https?:\/\/[^\s]+)$/;
+
+const renderInlineText = (text: string, keyPrefix: string): React.ReactNode[] => {
+  const nodes: React.ReactNode[] = [];
+  const segments = text.split(URL_PATTERN);
+
+  segments.forEach((segment, index) => {
+    if (!segment) return;
+    const key = `${keyPrefix}-${index}`;
+    if (IS_URL_PATTERN.test(segment)) {
+      nodes.push(
+        <a key={key} href={segment} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          {segment}
+        </a>
+      );
+    } else if (segment.startsWith("**") && segment.endsWith("**") && segment.length > 4) {
+      nodes.push(<strong key={key}>{segment.slice(2, -2)}</strong>);
+    } else if (segment.startsWith("`") && segment.endsWith("`") && segment.length > 2) {
+      nodes.push(<code key={key} className="rounded bg-muted/20 px-1 py-0.5 text-primary">{segment.slice(1, -1)}</code>);
+    } else {
+      nodes.push(segment);
+    }
+  });
+
+  return nodes;
+};
+
+// Safe, intentionally small markdown renderer. React escapes text nodes for us.
 const renderMarkdown = (text: string) => {
   if (!text) return null;
 
-  // Split by double newlines for paragraphs, single for BR or list items
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
-  
   let currentList: React.ReactNode[] = [];
-
-  const parseLineInline = (line: string, lineKey: string) => {
-    // Basic tokenizer for **bold**, *italic*, `code`, and raw URLs
-    // This is a naive regex-based replacer
-    let parsed = line
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .replace(/`([^`]+)`/g, '<code class="bg-muted/20 px-1 py-0.5 rounded text-primary">$1</code>')
-      // Simple URL auto-link
-      .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
-
-    return <span key={lineKey} dangerouslySetInnerHTML={{ __html: parsed }} />;
-  };
 
   lines.forEach((line, i) => {
     const trimmed = line.trim();
     if (trimmed.startsWith('- ')) {
-      currentList.push(<li key={`li-${i}`}>{parseLineInline(trimmed.substring(2), `in-${i}`)}</li>);
+      currentList.push(<li key={`li-${i}`}>{renderInlineText(trimmed.substring(2), `li-${i}`)}</li>);
     } else {
       if (currentList.length > 0) {
         elements.push(<ul key={`ul-${i}`} className="list-disc pl-5 my-1 space-y-1">{currentList}</ul>);
         currentList = [];
       }
       if (trimmed !== '') {
-         elements.push(<p key={`p-${i}`} className="my-1 whitespace-pre-wrap">{parseLineInline(line, `in-${i}`)}</p>);
+         elements.push(<p key={`p-${i}`} className="my-1 whitespace-pre-wrap">{renderInlineText(line, `p-${i}`)}</p>);
       }
     }
   });
@@ -79,18 +96,17 @@ const renderMarkdown = (text: string) => {
 };
 
 export const CommentItem = ({ comment, documentId, depth = 0, onRefresh, onReplyPrompt }: CommentItemProps) => {
-  const { userProfile, isAdmin } = useAuth();
+  const { userId, isAdmin } = useAuth();
   const [isReplying, setIsReplying] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [activeDialog, setActiveDialog] = useState<CommentDialog>(null);
+  const [reportReason, setReportReason] = useState<CommentFlagReason>("other");
+  const [reportDescription, setReportDescription] = useState("");
+  const [adminDeleteReason, setAdminDeleteReason] = useState("");
+  const [isDialogSubmitting, setIsDialogSubmitting] = useState(false);
 
-  const [editLoading, setEditLoading] = useState(false);
-
-  const currentUserId = (userProfile as any)?.id; // Assuming context holds id, wait AuthContext syncUserFromSession doesn't store id in userProfile directly. We can get it from supabase.auth.getSession, but we need it synchronous.
-  // Actually, we can check ownership if we store userId. For now we will fetch session on action, or pass currentUserId as a prop.
-  // Let's rely on checking `user_id` against a fetched session id, or just attempt and handle RLS failure.
-  
-  const isOwner = true; // Placeholder: we should ideally pass currentUserId down from CommentSection.
+  const isOwner = !!userId && comment.user_id === userId;
 
   const handleReplySubmit = async (content: string) => {
     const { postComment } = await import("@/app/lib/api/comments");
@@ -106,31 +122,47 @@ export const CommentItem = ({ comment, documentId, depth = 0, onRefresh, onReply
   };
 
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this comment?")) {
+    setIsDialogSubmitting(true);
+    try {
       await deleteComment(comment.id);
       showToast("Comment Deleted", "Your comment was removed.", "success");
+      setActiveDialog(null);
       onRefresh();
+    } catch (e: any) {
+      showToast("Delete Failed", e.message || "Could not delete this comment.", "error");
+    } finally {
+      setIsDialogSubmitting(false);
     }
   };
 
   const handleAdminDelete = async () => {
-    const reason = prompt("Enter deletion reason for the user:");
-    if (reason) {
-      await adminDeleteComment(comment.id, reason);
+    if (!adminDeleteReason.trim()) return;
+    setIsDialogSubmitting(true);
+    try {
+      await adminDeleteComment(comment.id, adminDeleteReason.trim());
       showToast("Comment Moderated", "Comment deleted by admin.", "success");
+      setAdminDeleteReason("");
+      setActiveDialog(null);
       onRefresh();
+    } catch (e: any) {
+      showToast("Moderation Failed", e.message || "Could not moderate this comment.", "error");
+    } finally {
+      setIsDialogSubmitting(false);
     }
   };
 
   const handleFlag = async () => {
-    const reason = prompt("Why are you reporting this comment? (spam, harassment, incorrect)");
-    if (reason) {
-      try {
-        await flagComment(comment.id, "other", reason);
-        showToast("Comment Reported", "Thank you for helping keep the community safe.", "success");
-      } catch (e: any) {
-        showToast("Notice", e.message, "error");
-      }
+    setIsDialogSubmitting(true);
+    try {
+      await flagComment(comment.id, reportReason, reportDescription.trim() || undefined);
+      showToast("Comment Reported", "Thank you for helping keep the discussion useful.", "success");
+      setReportReason("other");
+      setReportDescription("");
+      setActiveDialog(null);
+    } catch (e: any) {
+      showToast("Notice", e.message, "error");
+    } finally {
+      setIsDialogSubmitting(false);
     }
   };
 
@@ -203,16 +235,19 @@ export const CommentItem = ({ comment, documentId, depth = 0, onRefresh, onReply
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
               <DropdownMenu.Content className="animate-in fade-in zoom-in-95 motion-dropdown z-50 min-w-[140px] rounded-xl border border-border bg-surface p-1 shadow-lg" align="end">
-                <DropdownMenu.Item onClick={handleFlag} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-foreground hover:bg-surface-hover">
+                <DropdownMenu.Item onClick={() => setActiveDialog("report")} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-foreground hover:bg-surface-hover">
                   <Flag size={14} /> Report
                 </DropdownMenu.Item>
-                {/* Should check ownership properly here */}
-                <DropdownMenu.Item onClick={() => setIsEditing(true)} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-foreground hover:bg-surface-hover">
-                  <Edit2 size={14} /> Edit
-                </DropdownMenu.Item>
-                <DropdownMenu.Item onClick={handleDelete} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-destructive hover:bg-destructive/10">
-                  <Trash2 size={14} /> Delete
-                </DropdownMenu.Item>
+                {isOwner && (
+                  <>
+                    <DropdownMenu.Item onClick={() => setIsEditing(true)} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-foreground hover:bg-surface-hover">
+                      <Edit2 size={14} /> Edit
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item onClick={() => setActiveDialog("delete")} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-destructive hover:bg-destructive/10">
+                      <Trash2 size={14} /> Delete
+                    </DropdownMenu.Item>
+                  </>
+                )}
                 
                 {isAdmin && (
                   <>
@@ -220,7 +255,7 @@ export const CommentItem = ({ comment, documentId, depth = 0, onRefresh, onReply
                     <DropdownMenu.Item onClick={handleTogglePin} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-primary hover:bg-primary/10">
                       <Pin size={14} /> {comment.is_pinned ? "Unpin" : "Pin to Top"}
                     </DropdownMenu.Item>
-                    <DropdownMenu.Item onClick={handleAdminDelete} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-destructive hover:bg-destructive/10">
+                    <DropdownMenu.Item onClick={() => setActiveDialog("admin-delete")} className="motion-hover flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-semibold text-destructive hover:bg-destructive/10">
                       <Trash2 size={14} /> Mod Delete
                     </DropdownMenu.Item>
                   </>
@@ -296,6 +331,77 @@ export const CommentItem = ({ comment, documentId, depth = 0, onRefresh, onReply
           ))}
         </div>
       )}
+
+      <Dialog.Root open={activeDialog !== null} onOpenChange={(open) => !open && setActiveDialog(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="motion-modal fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" />
+          <Dialog.Content className="motion-modal fixed top-[50%] left-[50%] z-[100] w-[calc(100vw-2rem)] max-w-md translate-[-50%] rounded-2xl border border-border bg-surface p-5 shadow-2xl">
+            <Dialog.Title className="text-lg font-extrabold text-foreground">
+              {activeDialog === "delete" && "Delete comment"}
+              {activeDialog === "report" && "Report comment"}
+              {activeDialog === "admin-delete" && "Remove comment"}
+            </Dialog.Title>
+            <Dialog.Description className="mt-1 text-sm text-muted">
+              {activeDialog === "delete" && "This removes your comment from the discussion. Replies will stay visible."}
+              {activeDialog === "report" && "Tell moderators what makes this comment unhelpful or unsafe."}
+              {activeDialog === "admin-delete" && "Add the moderation reason that should be shown in the thread."}
+            </Dialog.Description>
+
+            {activeDialog === "report" && (
+              <div className="mt-4 space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-[0.06em] text-muted" htmlFor={`report-reason-${comment.id}`}>Reason</label>
+                <select
+                  id={`report-reason-${comment.id}`}
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value as CommentFlagReason)}
+                  className="motion-focus w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                >
+                  <option value="incorrect">Incorrect or misleading</option>
+                  <option value="duplicate">Duplicate</option>
+                  <option value="low_quality">Low quality</option>
+                  <option value="other">Other</option>
+                </select>
+                <textarea
+                  value={reportDescription}
+                  onChange={(event) => setReportDescription(event.target.value)}
+                  placeholder="Add context for the moderators..."
+                  className="motion-focus min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                />
+              </div>
+            )}
+
+            {activeDialog === "admin-delete" && (
+              <textarea
+                value={adminDeleteReason}
+                onChange={(event) => setAdminDeleteReason(event.target.value)}
+                placeholder="Reason shown to students..."
+                className="motion-focus mt-4 min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <button type="button" className="motion-hover motion-active rounded-xl bg-surface-hover px-4 py-2 text-sm font-bold text-foreground">Cancel</button>
+              </Dialog.Close>
+              {activeDialog === "delete" && (
+                <button type="button" onClick={handleDelete} disabled={isDialogSubmitting} className="motion-hover motion-active rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground disabled:opacity-50">
+                  Delete
+                </button>
+              )}
+              {activeDialog === "report" && (
+                <button type="button" onClick={handleFlag} disabled={isDialogSubmitting} className="motion-hover motion-active rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">
+                  Submit report
+                </button>
+              )}
+              {activeDialog === "admin-delete" && (
+                <button type="button" onClick={handleAdminDelete} disabled={isDialogSubmitting || !adminDeleteReason.trim()} className="motion-hover motion-active rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground disabled:opacity-50">
+                  Remove comment
+                </button>
+              )}
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 };
