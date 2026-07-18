@@ -22,7 +22,7 @@ const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
     style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data: https://pub-11c1374f05774b54a2ab6c8bc83d6f7f.r2.dev;
+    img-src 'self' blob: data: https://pub-11c1374f05774b54a2ab6c8bc83d6f7f.r2.dev https://dyxymzyijinfouqzjfls.supabase.co;
     connect-src 'self' https://dyxymzyijinfouqzjfls.supabase.co wss://dyxymzyijinfouqzjfls.supabase.co https://academic-portal-backend-kt25.onrender.com http://localhost:8000 https://*.ingest.us.sentry.io;
     worker-src 'self' blob:;
     font-src 'self';
@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'dyxymzyijinfouqzjfls.supabase.co',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
   async headers() {

@@ -42,7 +42,7 @@ async function SubjectTabsFetcher({ subjectSlug, displayTitle }: { subjectSlug: 
 
   if (dbSubject && !dbSubject.is_non_module) {
     modules = await getCachedModules(dbSubject.id);
-    moduleCounts = await getCachedModuleCounts(dbSubject.id);
+    moduleCounts = await getCachedModuleCounts(dbSubject.name);
   }
 
   return (

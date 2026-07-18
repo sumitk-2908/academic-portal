@@ -1,12 +1,9 @@
 import { supabase } from './core';
 
 export const getComments = async (documentId: number) => {
-  const { data, error } = await supabase
+  const { data: comments, error } = await supabase
     .from('document_comments')
-    .select(`
-      *,
-      profiles:user_id(full_name, avatar_url)
-    `)
+    .select('*')
     .eq('document_id', documentId)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: true });
@@ -15,7 +12,25 @@ export const getComments = async (documentId: number) => {
     console.error("Fetch Comments Error:", error);
     return [];
   }
-  return data || [];
+
+  if (!comments || comments.length === 0) return [];
+
+  const userIds = Array.from(new Set(comments.map((c: any) => c.user_id)));
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error("Fetch Profiles Error:", profilesError);
+  }
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+  return comments.map((comment: any) => ({
+    ...comment,
+    profiles: profileMap.get(comment.user_id) || { full_name: null, avatar_url: null }
+  }));
 };
 
 export const postComment = async (documentId: number, content: string, parentId?: string) => {
