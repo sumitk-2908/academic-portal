@@ -21,7 +21,8 @@ export const getPaginatedDocumentsByModule = async (
   page = 1, 
   limit = 20,
   category?: string,
-  sortBy: string = "created_at"
+  sortBy: string = "created_at",
+  subjectName?: string
 ): Promise<DocumentsPage> => {
   const fromIndex = (page - 1) * limit;
   const toIndex = fromIndex + limit - 1;
@@ -34,6 +35,10 @@ export const getPaginatedDocumentsByModule = async (
 
   if (category && category !== 'all') {
     query = query.eq('category', category);
+  }
+
+  if (subjectName) {
+    query = query.ilike('subject', subjectName);
   }
 
   if (sortBy === 'upvotes' || sortBy === 'download_count') {

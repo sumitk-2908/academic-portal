@@ -24,6 +24,7 @@ export interface PaginationConfig {
   moduleId: number;
   category?: string;
   sortBy?: string;
+  subjectName?: string;
 }
 
 export default function DocumentInteractiveGrid({ 
@@ -50,7 +51,7 @@ export default function DocumentInteractiveGrid({
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: paginationConfig ? paginationConfig.queryKey : ['static-grid'],
-    queryFn: ({ pageParam = 1 }) => getPaginatedDocumentsByModule(paginationConfig!.moduleId, pageParam, 20, paginationConfig?.category, paginationConfig?.sortBy),
+    queryFn: ({ pageParam = 1 }) => getPaginatedDocumentsByModule(paginationConfig!.moduleId, pageParam, 20, paginationConfig?.category, paginationConfig?.sortBy, paginationConfig?.subjectName),
     initialPageParam: 1,
     enabled: !!paginationConfig,
     initialData: paginationConfig ? { pages: [{ data: initialDocuments, nextCursor: initialDocuments.length === 20 ? 2 : null, total: 0 }], pageParams: [1] } : undefined,

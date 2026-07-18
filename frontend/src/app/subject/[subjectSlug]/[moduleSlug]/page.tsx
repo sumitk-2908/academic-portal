@@ -47,7 +47,8 @@ export default async function ModulePage({
     1,
     20,
     categoryStr,
-    sortStr
+    sortStr,
+    subjectName
   );
 
   return (
@@ -78,10 +79,11 @@ export default async function ModulePage({
           initialDocuments={documents || []}
           subjectSlug={subjectSlug}
           paginationConfig={{
-            queryKey: ["module-docs", moduleNumber.toString(), categoryStr, sortStr],
+            queryKey: ["module-docs", moduleNumber.toString(), categoryStr, sortStr, subjectName],
             moduleId: moduleNumber,
             category: categoryStr,
-            sortBy: sortStr
+            sortBy: sortStr,
+            subjectName: subjectName
           }}
         />
       </ErrorBoundary>
