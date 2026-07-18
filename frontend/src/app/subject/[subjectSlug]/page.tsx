@@ -1,5 +1,5 @@
 import { supabase } from "@/app/lib/api/core";
-import { getModulesBySubject } from "@/app/lib/api/subjects";
+import { getCachedSubjectBySlug, getCachedModules, getCachedModuleCounts } from "@/app/lib/api/cached-subjects";
 import SubjectTabs from "@/components/subject/SubjectTabs";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { Metadata } from "next";
@@ -30,32 +30,19 @@ import Breadcrumb from "@/components/ui/Breadcrumb";
 
 // New async component that handles the heavy lifting
 async function SubjectTabsFetcher({ subjectSlug, displayTitle }: { subjectSlug: string, displayTitle: string }) {
-  const { data: dbSubject } = await supabase
-    .from("subjects")
-    .select("*")
-    .eq("slug", subjectSlug)
-    .single();
+  const dbSubject = await getCachedSubjectBySlug(subjectSlug);
 
   let modules: any[] = [];
-  const moduleCounts: Record<number, number> = {};
+  let moduleCounts: Record<number, number> = {};
 
   if (dbSubject && !dbSubject.is_non_module) {
-    modules = await getModulesBySubject(dbSubject.id);
-
-    const { data: countData } = await supabase.rpc('get_module_counts', { p_subject_id: dbSubject.id } as any);
-
-    if (countData) {
-      countData.forEach((row: any) => {
-        if (row.module_id) {
-          moduleCounts[row.module_id] = Number(row.count);
-        }
-      });
-    }
+    modules = await getCachedModules(dbSubject.id);
+    moduleCounts = await getCachedModuleCounts(dbSubject.id);
   }
 
   return (
     <SubjectTabs
-      subjectDetails={dbSubject ? { ...dbSubject, is_non_module: dbSubject.is_non_module ?? false } : { id: 0, created_at: null, slug: subjectSlug, name: displayTitle, is_non_module: false }}
+      subjectDetails={dbSubject ? { ...dbSubject, is_non_module: dbSubject.is_non_module ?? false } : { id: 0, slug: subjectSlug, name: displayTitle, is_non_module: false }}
       modules={modules}
       moduleCounts={moduleCounts}
       subjectSlug={subjectSlug}

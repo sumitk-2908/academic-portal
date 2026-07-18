@@ -66,3 +66,23 @@ export const updateDocumentStatus = async (
     throw new Error(err.response?.data?.detail || "Failed to update document status.");
   }
 };
+
+export const bulkUpdateDocumentStatus = async (
+  ids: number[], 
+  status: 'approved' | 'rejected', 
+  reason?: string 
+) => {
+  try {
+    const payload: { document_ids: number[]; status: string; reason?: string } = { document_ids: ids, status };
+    if (reason) {
+      payload.reason = reason;
+    }
+    
+    const response = await api.patch(`/api/v1/documents/bulk-status`, payload);
+    return response.data;
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { detail?: string } } };
+    console.error("FastAPI Bulk Status Update Error:", err.response?.data || error);
+    throw new Error(err.response?.data?.detail || "Failed to bulk update document status.");
+  }
+};

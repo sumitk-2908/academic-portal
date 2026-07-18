@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import HomeClient from "./HomeClient";
 import { Suspense } from "react";
 import { HomeSkeleton } from "@/components/layout/SharedLayouts";
+import { getCachedSubjects, getCachedSubjectCounts } from "@/app/lib/api/cached-subjects";
 
 export const metadata: Metadata = {
   title: {
@@ -26,25 +27,10 @@ export default async function Page() {
   const supabase = await createClient();
 
   // 1. Fetch subjects
-  const { data: dbSubjects } = await supabase
-    .from("subjects")
-    .select("*")
-    .order("name");
+  const subjects = await getCachedSubjects();
 
   // 2. Fetch item counts mapped to each subject
-  const { data: countData } = await supabase.rpc("get_subject_counts");
-
-  const counts: Record<string, number> = {};
-
-  if (countData) {
-    countData.forEach((row: any) => {
-      if (row.subject) {
-        counts[row.subject.toUpperCase()] = Number(row.count);
-      }
-    });
-  }
-
-  const subjects = dbSubjects || [];
+  const counts = await getCachedSubjectCounts();
 
   // 3. Fetch stats and trending globally (cacheable)
   const [{ count: modulesCount }, { data: analytics }, { data: recentDocs }] = await Promise.all([

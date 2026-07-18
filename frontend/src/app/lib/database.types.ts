@@ -158,6 +158,101 @@ export type Database = {
           },
         ]
       }
+      document_comments: {
+        Row: {
+          created_at: string | null
+          deleted_by_admin: boolean | null
+          deleted_reason: string | null
+          document_id: number
+          id: string
+          is_deleted: boolean | null
+          is_pinned: boolean | null
+          parent_id: string | null
+          updated_at: string | null
+          user_id: string
+          content: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_by_admin?: boolean | null
+          deleted_reason?: string | null
+          document_id: number
+          id?: string
+          is_deleted?: boolean | null
+          is_pinned?: boolean | null
+          parent_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          content: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted_by_admin?: boolean | null
+          deleted_reason?: string | null
+          document_id?: number
+          id?: string
+          is_deleted?: boolean | null
+          is_pinned?: boolean | null
+          parent_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_comments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "document_comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      comment_flags: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          reason: Database["public"]["Enums"]["flag_reason"]
+          status: Database["public"]["Enums"]["flag_status"] | null
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reason: Database["public"]["Enums"]["flag_reason"]
+          status?: Database["public"]["Enums"]["flag_status"] | null
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reason?: Database["public"]["Enums"]["flag_reason"]
+          status?: Database["public"]["Enums"]["flag_status"] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_flags_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "document_comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       documents: {
         Row: {
           category: string

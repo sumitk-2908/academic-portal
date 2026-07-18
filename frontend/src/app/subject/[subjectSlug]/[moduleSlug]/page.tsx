@@ -1,4 +1,4 @@
-import { supabase } from "@/app/lib/api/core";
+import { getCachedSubjectBySlug } from "@/app/lib/api/cached-subjects";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import DocumentInteractiveGrid from "@/components/subject/DocumentInteractiveGrid";
@@ -38,11 +38,7 @@ export default async function ModulePage({
   const subjectName = subjectSlug.replace(/-/g, " ").toUpperCase();
   const moduleNumber = parseInt(moduleSlug.replace("module-", "")) || 1;
 
-  const { data: dbSubject } = await supabase
-    .from("subjects")
-    .select("name")
-    .eq("slug", subjectSlug)
-    .single();
+  const dbSubject = await getCachedSubjectBySlug(subjectSlug).catch(() => null);
 
   const subjectDisplayName = dbSubject?.name || subjectName;
 

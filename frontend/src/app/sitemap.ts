@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@/utils/supabase/server';
 import { subjectSlug as generateFallbackSlug } from '@/components/layout/utils';
+import { getCachedSubjects } from '@/app/lib/api/cached-subjects';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -16,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // Fetch subjects to map names to actual URL slugs
-  const { data: subjectsData } = await supabase.from('subjects').select('name, slug');
+  const subjectsData = await getCachedSubjects();
   const subjectSlugMap = new Map<string, string>();
   if (subjectsData) {
     subjectsData.forEach((sub) => subjectSlugMap.set(sub.name, sub.slug));

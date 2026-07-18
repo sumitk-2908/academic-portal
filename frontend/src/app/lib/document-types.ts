@@ -28,4 +28,4 @@ export type InfiniteDocumentsData = {
   pageParams: unknown[];
 };
 
-export type StoredBookmark = number | Pick<DocumentRecord, "id">;
+export type StoredBookmark = number | { id: number } | (DocumentRecord & { bookmarked_at?: string });

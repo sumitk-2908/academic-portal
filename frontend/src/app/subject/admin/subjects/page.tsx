@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSubjects, getModulesBySubject, createSubject, updateSubject, deleteSubject, createModule, updateModule, deleteModule, Subject, Module } from "@/app/lib/api/subjects";
+import { revalidateContentCache } from "@/app/actions/cache";
 import { ArrowLeft, Plus, Pencil, Trash2, X, BookOpen, Layers } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -76,6 +77,7 @@ function AdminSubjectsContent() {
         setSubjects(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
         setToast({ open: true, message: "Subject created successfully", type: "success" });
       }
+      await revalidateContentCache();
       setIsSubjectModalOpen(false);
     } catch (e: any) {
       setToast({ open: true, message: e.message || "Failed to save subject", type: "error" });
@@ -94,6 +96,7 @@ function AdminSubjectsContent() {
         setSelectedSubject(null);
         setModules([]);
       }
+      await revalidateContentCache();
       setToast({ open: true, message: "Subject deleted successfully", type: "success" });
     } catch (e: any) {
       setToast({ open: true, message: e.message || "Failed to delete subject", type: "error" });
@@ -130,6 +133,7 @@ function AdminSubjectsContent() {
         setModules(prev => [...prev, created].sort((a, b) => a.module_number - b.module_number));
         setToast({ open: true, message: "Module created successfully", type: "success" });
       }
+      await revalidateContentCache();
       setIsModuleModalOpen(false);
     } catch (e: any) {
       setToast({ open: true, message: e.message || "Failed to save module", type: "error" });
@@ -145,6 +149,7 @@ function AdminSubjectsContent() {
     try {
       await deleteModule(module.id, selectedSubject.name, module.module_number);
       setModules(prev => prev.filter(m => m.id !== module.id));
+      await revalidateContentCache();
       setToast({ open: true, message: "Module deleted successfully", type: "success" });
     } catch (e: any) {
       setToast({ open: true, message: e.message || "Failed to delete module", type: "error" });

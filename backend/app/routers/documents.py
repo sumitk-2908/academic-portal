@@ -233,6 +233,13 @@ async def delete_document(
         # If file deletion fails below, we log and accept the orphan rather
         # than leaving a live row pointing at a deleted file.
         supabase.table("documents").delete().eq("id", document_id).execute()
+        
+        # Log the deletion
+        supabase.table("admin_audit_log").insert({
+            "admin_id": admin_user.get("id"),
+            "action": "delete",
+            "target_id": document_id
+        }).execute()
 
         if r2_keys:
             await delete_from_r2(r2_keys)
@@ -313,6 +320,17 @@ async def update_document_status(
                 "is_read": False,
             }).execute()
 
+        # Log the status update
+        audit_payload = {
+            "admin_id": admin_user.get("id"),
+            "action": payload.status,
+            "target_id": document_id
+        }
+        if payload.status == "rejected" and payload.reason:
+            audit_payload["metadata"] = {"reason": payload.reason}
+            
+        supabase.table("admin_audit_log").insert(audit_payload).execute()
+
         return {
             "message": f"Document successfully marked as {payload.status}",
             "document": db_response.data[0],
@@ -324,6 +342,108 @@ async def update_document_status(
         import traceback
         traceback.print_exc()
         detail = f"Failed to update document status: {str(e)}" if settings.DEBUG else "An internal error occurred while updating document status."
+        raise HTTPException(status_code=500, detail=detail)
+
+class BulkStatusUpdatePayload(BaseModel):
+    document_ids: list[int]
+    status: str
+    reason: Optional[str] = None
+
+@router.patch("/bulk-status")
+@limiter.limit("20/minute")
+async def bulk_update_document_status(
+    request: Request,
+    payload: BulkStatusUpdatePayload,
+    admin_user: dict = Depends(verify_admin),
+):
+    """Approve or reject multiple pending documents in bulk (Max 10)."""
+    if payload.status not in ["approved", "rejected", "pending"]:
+        raise HTTPException(status_code=400, detail="Invalid status value.")
+    
+    if len(payload.document_ids) > 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 documents can be processed at once.")
+    
+    if not payload.document_ids:
+        return {"message": "No documents provided.", "count": 0}
+
+    try:
+        # Fetch the documents to verify they exist and get uploader info for notifications
+        doc_res = (
+            supabase.table("documents")
+            .select("id, uploaded_by, title")
+            .in_("id", payload.document_ids)
+            .execute()
+        )
+        
+        if not doc_res.data:
+            raise HTTPException(status_code=404, detail="No matching documents found.")
+            
+        docs = doc_res.data
+        
+        update_payload = {
+            "status": payload.status,
+            "moderated_by": admin_user.get("id"),
+            "rejection_reason": payload.reason if payload.status == "rejected" else None,
+            "updated_at": "now()",
+        }
+        
+        # Batch update
+        db_response = (
+            supabase.table("documents")
+            .update(update_payload)
+            .in_("id", payload.document_ids)
+            .execute()
+        )
+        
+        notifications = []
+        audit_logs = []
+        
+        for doc in docs:
+            doc_id = doc.get("id")
+            uploader_id = doc.get("uploaded_by")
+            doc_title = doc.get("title", "Your document")
+            
+            is_valid_uuid = isinstance(uploader_id, str) and len(uploader_id) > 10
+            if is_valid_uuid and payload.status in ["approved", "rejected"]:
+                message_text = f"Your document '{doc_title}' has been {payload.status}."
+                if payload.status == "rejected" and payload.reason:
+                    message_text += f" Reason: {payload.reason}"
+                
+                notifications.append({
+                    "user_id": uploader_id,
+                    "title": f"Upload {payload.status.capitalize()}",
+                    "message": message_text,
+                    "type": f"document_{payload.status}",
+                    "related_entity_id": doc_id,
+                    "is_read": False,
+                })
+            
+            audit_payload = {
+                "admin_id": admin_user.get("id"),
+                "action": payload.status,
+                "target_id": doc_id
+            }
+            if payload.status == "rejected" and payload.reason:
+                audit_payload["metadata"] = {"reason": payload.reason}
+            audit_logs.append(audit_payload)
+            
+        if notifications:
+            supabase.table("notifications").insert(notifications).execute()
+            
+        if audit_logs:
+            supabase.table("admin_audit_log").insert(audit_logs).execute()
+            
+        return {
+            "message": f"Successfully marked {len(db_response.data)} documents as {payload.status}",
+            "count": len(db_response.data)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        detail = f"Failed to bulk update document status: {str(e)}" if settings.DEBUG else "An internal error occurred while bulk updating document status."
         raise HTTPException(status_code=500, detail=detail)
 
 
@@ -478,6 +598,13 @@ async def dismiss_flags(
             .execute()
         )
         
+        # Log the dismiss action
+        supabase.table("admin_audit_log").insert({
+            "admin_id": admin_user.get("id"),
+            "action": "dismiss_flags",
+            "target_id": document_id
+        }).execute()
+
         return {
             "message": "Flags dismissed successfully", 
             "document_id": document_id

@@ -35,6 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subjectSl
 }
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
+import { CommentSection } from "@/components/comments/CommentSection";
 
 // Server Component
 export default async function PDFViewerPage({ params }: { params: Promise<{ pdfId: string }> }) {
@@ -59,9 +60,19 @@ export default async function PDFViewerPage({ params }: { params: Promise<{ pdfI
 
   // Use the wrapper to render the client logic
   return (
-    <div className="mx-auto flex max-w-6xl flex-col space-y-4">
+    <div className="mx-auto flex max-w-[90rem] flex-col space-y-4">
       <Breadcrumb />
-      <PDFViewerWrapper documentMeta={documentMeta} />
+      <div className="flex flex-col items-start gap-6 lg:flex-row">
+        <div className="w-full flex-1 min-w-0">
+          <PDFViewerWrapper documentMeta={documentMeta} />
+        </div>
+        <div 
+          className="w-full shrink-0 lg:sticky lg:top-[5.5rem] lg:w-[400px] xl:w-[450px]" 
+          style={{ height: 'calc(100vh - 6.5rem)' }}
+        >
+          <CommentSection documentId={documentMeta.id} />
+        </div>
+      </div>
     </div>
   );
 }

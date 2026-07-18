@@ -15,11 +15,11 @@ export const useToggleBookmarkMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, documentId, isAdding }: { userId: string, documentId: number, isAdding: boolean }) => {
+    mutationFn: async ({ userId, documentId, isAdding, doc }: { userId: string, documentId: number, isAdding: boolean, doc?: DocumentRecord }) => {
       await toggleBookmarkAPI(userId, documentId, isAdding);
-      return { userId, documentId, isAdding };
+      return { userId, documentId, isAdding, doc };
     },
-    onMutate: async ({ userId, documentId, isAdding }) => {
+    onMutate: async ({ userId, documentId, isAdding, doc }) => {
       // Cancel any outgoing refetches
       // (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['bookmarks', userId] });
@@ -47,11 +47,14 @@ export const useToggleBookmarkMutation = () => {
       // Update local storage for offline support
       try {
         const stored = localStorage.getItem("portal_bookmarks");
-        const parsed = stored ? JSON.parse(stored) : [];
+        const parsed: any[] = stored ? JSON.parse(stored) : [];
         if (isAdding) {
-          if (!parsed.includes(documentId)) parsed.push(documentId);
+          const exists = parsed.find(p => (typeof p === 'object' && 'id' in p ? p.id : p) === documentId);
+          if (!exists) {
+            parsed.push(doc ? { ...doc, bookmarked_at: new Date().toISOString() } : documentId);
+          }
         } else {
-          const index = parsed.indexOf(documentId);
+          const index = parsed.findIndex(p => (typeof p === 'object' && 'id' in p ? p.id : p) === documentId);
           if (index > -1) parsed.splice(index, 1);
         }
         localStorage.setItem("portal_bookmarks", JSON.stringify(parsed));
@@ -70,11 +73,12 @@ export const useToggleBookmarkMutation = () => {
       // Revert local storage
       try {
         const stored = localStorage.getItem("portal_bookmarks");
-        let parsed = stored ? JSON.parse(stored) : [];
+        let parsed: any[] = stored ? JSON.parse(stored) : [];
         if (variables.isAdding) {
-          parsed = parsed.filter((id: number) => id !== variables.documentId);
+          parsed = parsed.filter(p => (typeof p === 'object' && 'id' in p ? p.id : p) !== variables.documentId);
         } else {
-          if (!parsed.includes(variables.documentId)) parsed.push(variables.documentId);
+          const exists = parsed.find(p => (typeof p === 'object' && 'id' in p ? p.id : p) === variables.documentId);
+          if (!exists) parsed.push(variables.doc ? { ...variables.doc, bookmarked_at: new Date().toISOString() } : variables.documentId);
         }
         localStorage.setItem("portal_bookmarks", JSON.stringify(parsed));
       } catch (e) {}

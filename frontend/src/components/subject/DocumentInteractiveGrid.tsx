@@ -132,7 +132,7 @@ export default function DocumentInteractiveGrid({
       if (targetDoc?.file_url) manageOfflinePdf(targetDoc.file_url, 'CACHE_PDF').catch(console.error);
     }
     
-    toggleBookmarkMutation.mutate({ userId, documentId: id, isAdding: !isBookmarked });
+    toggleBookmarkMutation.mutate({ userId, documentId: id, isAdding: !isBookmarked, doc: targetDoc });
   };
 
   const handleToggleUpvote = async (id: number) => {

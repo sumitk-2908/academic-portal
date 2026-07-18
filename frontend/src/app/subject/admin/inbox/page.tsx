@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/app/lib/api/core";
-import { updateDocumentStatus, getFlaggedDocuments, dismissDocumentFlags } from "@/app/lib/api/moderation";
+import { updateDocumentStatus, getFlaggedDocuments, dismissDocumentFlags, bulkUpdateDocumentStatus } from "@/app/lib/api/moderation";
 import { deleteDocument } from "@/app/lib/api/documents";
 import { getSubjects } from "@/app/lib/api/subjects";
 import { Inbox, CheckCircle, Trash2, Eye, FileText, ArrowLeft, X, Flag, ShieldAlert, MessageSquareWarning, Upload } from "lucide-react";
@@ -97,8 +97,15 @@ function AdminInboxAuditingContent() {
 
   const toggleDocSelection = (id: number) => {
     const next = new Set(selectedDocs);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      if (next.size >= 10) {
+        setToast({ open: true, message: "You can only select up to 10 documents at a time.", type: "error" });
+        return;
+      }
+      next.add(id);
+    }
     setSelectedDocs(next);
   };
 
@@ -107,7 +114,7 @@ function AdminInboxAuditingContent() {
     setIsBulkApproving(true);
     try {
       const ids = Array.from(selectedDocs);
-      await Promise.all(ids.map(id => updateDocumentStatus(id, 'approved')));
+      await bulkUpdateDocumentStatus(ids, 'approved');
       setPendingDocs(prev => prev.filter(d => !selectedDocs.has(d.id)));
       setPendingTotalCount(prev => Math.max(0, prev - ids.length));
       setSelectedDocs(new Set());
@@ -124,7 +131,7 @@ function AdminInboxAuditingContent() {
     setIsBulkRejecting(true);
     try {
       const ids = Array.from(selectedDocs);
-      await Promise.all(ids.map(id => updateDocumentStatus(id, 'rejected', "Bulk rejected by admin")));
+      await bulkUpdateDocumentStatus(ids, 'rejected', "Bulk rejected by admin");
       setPendingDocs(prev => prev.filter(d => !selectedDocs.has(d.id)));
       setPendingTotalCount(prev => Math.max(0, prev - ids.length));
       setSelectedDocs(new Set());

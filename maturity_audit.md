@@ -342,9 +342,9 @@ However, to cross from "impressive project" to "premium SaaS-grade academic plat
 | L7 | **Document version history** — preserve previous PDF versions when a document is resubmitted | Currently, resubmit deletes the old file. Version history provides audit trail and rollback capability. | Low | High (12h) | Product | DB changes |
 | L8 | **Compose context providers into a single `<Providers>` component** | 7-deep nesting in `ClientLayout.tsx` is hard to read. A single wrapper improves DX. | Low | Low (1h) | Engineering | None |
 | L9 | **Offline bookmark viewing** — cache bookmarked document metadata for offline access | PWA users who saved bookmarks should be able to see their list even without internet, even if they can't view the actual PDFs. | Medium | Medium (6h) | UX, PWA | None |
-| L10 | **End-to-end tests** — add Playwright tests for critical flows (login, upload, approve, view PDF) | Playwright is already in `devDependencies` but no test files exist in the frontend. Backend has basic tests but no integration tests. | High | High (16h) | Engineering | CI/CD |
-| L11 | **API response caching** — add Supabase client-side caching or HTTP cache headers for immutable data (subjects, modules) | Subjects and modules almost never change. Every page load re-fetches them. | Medium | Medium (4h) | Performance | None |
-| L12 | **First-use discovery tooltips** — highlight Command Palette shortcut, upload button, and bookmark functionality on first visit | New users don't discover power features. A subtle, dismissible tooltip system (not a full tour) increases feature adoption. | Medium | Medium (8h) | UX, Product | None |
+| ✅ L10 | **End-to-end tests** — add Playwright tests for critical flows (login, upload, approve, view PDF) | Playwright is already in `devDependencies` but no test files exist in the frontend. Backend has basic tests but no integration tests. | High | High (16h) | Engineering | CI/CD |
+| ✅ L11 | **API response caching** — add Supabase client-side caching or HTTP cache headers for immutable data (subjects, modules) | Subjects and modules almost never change. Every page load re-fetches them. | Medium | Medium (4h) | Performance | None |
+| ✅ L12 | **First-use discovery tooltips** — highlight Command Palette shortcut, upload button, and bookmark functionality on first visit | New users don't discover power features. A subtle, dismissible tooltip system (not a full tour) increases feature adoption. | Medium | Medium (8h) | UX, Product | None |
 
 ---
 
@@ -420,9 +420,9 @@ However, to cross from "impressive project" to "premium SaaS-grade academic plat
 | 🟢 | L3 — Document discussion/comments | High | 20h |
 | 🟢 | L6 — Admin bulk actions | Medium | 8h |
 | 🟢 | L9 — Offline bookmark viewing | Medium | 6h |
-| 🟢 | L10 — End-to-end tests (Playwright) | High | 16h |
-| 🟢 | L11 — API response caching | Medium | 4h |
-| 🟢 | L12 — First-use discovery tooltips | Medium | 8h |
+| ✅ | L10 — End-to-end tests (Playwright) | High | 16h |
+| ✅ | L11 — API response caching | Medium | 4h |
+| ✅ | L12 — First-use discovery tooltips | Medium | 8h |
 | 🟢 | L5 — JSON-LD structured data | Low | 4h |
 | 🟢 | L7 — Document version history | Low | 12h |
 

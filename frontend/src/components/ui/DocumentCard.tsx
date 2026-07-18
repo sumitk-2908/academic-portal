@@ -7,6 +7,7 @@ import { SUBJECT_UI_MAP } from "@/app/lib/subject-config";
 import { InlineSpinner } from "@/components/layout/SharedLayouts";
 import type { DocumentWithAnalytics } from "@/app/lib/document-types";
 import { subjectSlug as generateSlug } from "@/components/layout/utils";
+import { DiscoveryTooltip } from "@/components/ui/DiscoveryTooltip";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = { 
   notes: NotebookPen, 
@@ -92,17 +93,19 @@ export default function DocumentCard({
         </span>
         {/* Bookmark Button: top-right */}
         {onToggleBookmark && (
-          <button
-            onClick={(e) => { e.preventDefault(); onToggleBookmark(doc.id); }}
-            className={`motion-hover motion-active absolute top-2 right-2 rounded-lg border p-1.5 shadow-sm backdrop-blur-md ${
-              isBookmarked
-                ? "border-warning bg-warning text-white"
-                : "border-border/60 bg-background/70 text-warning hover:bg-warning/10"
-            }`}
-            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
-          >
-            <Bookmark size={13} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
-          </button>
+          <DiscoveryTooltip featureKey="bookmark_button" text="Save this document for later" side="left" align="center">
+            <button
+              onClick={(e) => { e.preventDefault(); onToggleBookmark(doc.id); }}
+              className={`motion-hover motion-active absolute top-2 right-2 rounded-lg border p-1.5 shadow-sm backdrop-blur-md ${
+                isBookmarked
+                  ? "border-warning bg-warning text-white"
+                  : "border-border/60 bg-background/70 text-warning hover:bg-warning/10"
+              }`}
+              aria-label={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
+            >
+              <Bookmark size={13} className={isBookmarked ? "fill-white text-white" : "text-warning"} />
+            </button>
+          </DiscoveryTooltip>
         )}
       </div>
 

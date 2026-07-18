@@ -62,7 +62,7 @@ function RecentUploadsContent() {
       if (doc.file_url) manageOfflinePdf(doc.file_url, "CACHE_PDF").catch(console.error);
     }
 
-    toggleBookmarkMutation.mutate({ userId, documentId: doc.id, isAdding: !isBookmarked });
+    toggleBookmarkMutation.mutate({ userId, documentId: doc.id, isAdding: !isBookmarked, doc });
   };
 
   const handleDownload = async (e: React.MouseEvent, doc: any) => {

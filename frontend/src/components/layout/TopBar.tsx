@@ -14,24 +14,31 @@ import { useNotifications } from "@/app/context/NotificationsContext";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { DiscoveryTooltip } from "@/components/ui/DiscoveryTooltip";
 import { supabase } from "@/app/lib/api/core";
+import { forwardRef } from "react";
 
-const SearchTrigger = ({ onOpen, isMac }: { onOpen: () => void; isMac: boolean }) => (
-  <button
-    type="button"
-    onClick={onOpen}
-    aria-haspopup="dialog"
-    className="motion-hover motion-active flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-border bg-surface-hover px-3 text-left text-muted shadow-sm hover:bg-surface hover:text-foreground md:max-w-md lg:max-w-xl"
-  >
-    <span className="flex min-w-0 items-center gap-2">
-      <Search size={17} aria-hidden="true" />
-      <span className="truncate text-sm font-semibold">Search...</span>
-    </span>
-    <kbd className="hidden shrink-0 rounded-lg border border-border bg-surface px-2 py-1 font-mono text-xs font-bold text-muted shadow-sm md:inline-flex">
-      {isMac ? "⌘K" : "Ctrl K"}
-    </kbd>
-  </button>
+const SearchTrigger = forwardRef<HTMLButtonElement, { onOpen: () => void; isMac: boolean }>(
+  ({ onOpen, isMac, ...props }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+      className="motion-hover motion-active flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-border bg-surface-hover px-3 text-left text-muted shadow-sm hover:bg-surface hover:text-foreground md:max-w-md lg:max-w-xl"
+      {...props}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <Search size={17} aria-hidden="true" />
+        <span className="truncate text-sm font-semibold">Search...</span>
+      </span>
+      <kbd className="hidden shrink-0 rounded-lg border border-border bg-surface px-2 py-1 font-mono text-xs font-bold text-muted shadow-sm md:inline-flex">
+        {isMac ? "⌘K" : "Ctrl K"}
+      </kbd>
+    </button>
+  )
 );
+SearchTrigger.displayName = "SearchTrigger";
 
 export const TopBar = () => {
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
@@ -85,7 +92,9 @@ export const TopBar = () => {
       </div>
 
       <div className="order-3 flex w-full min-w-0 justify-center md:order-none md:flex-1">
-        <SearchTrigger onOpen={() => setIsCommandOpen(true)} isMac={isMac} />
+        <DiscoveryTooltip featureKey="command_palette" text="Quickly find subjects, modules, or documents" side="bottom">
+          <SearchTrigger onOpen={() => setIsCommandOpen(true)} isMac={isMac} />
+        </DiscoveryTooltip>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
@@ -148,23 +157,27 @@ export const TopBar = () => {
 
         {(isAdmin || isStudent) ? (
           <div className="flex items-center gap-3">
-            <button onClick={() => {
-              if (isAdmin || userProfile.full_name) {
-                setShowUploadForm(true);
-              } else {
-                setShowProfileGate(true);
-              }
-            }} className="motion-hover motion-active flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground hover:opacity-90 sm:px-4">
-              <Plus size={14} /> <span>{isAdmin ? "Upload" : "Contribute"}</span>
-            </button>
+            <DiscoveryTooltip featureKey="upload_button" text="Share your notes and help others" side="bottom" align="end">
+              <button onClick={() => {
+                if (isAdmin || userProfile.full_name) {
+                  setShowUploadForm(true);
+                } else {
+                  setShowProfileGate(true);
+                }
+              }} className="motion-hover motion-active flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground hover:opacity-90 sm:px-4">
+                <Plus size={14} /> <span>{isAdmin ? "Upload" : "Contribute"}</span>
+              </button>
+            </DiscoveryTooltip>
             <div className="hidden sm:block">
               <ProfileDropdown userName={uploadedBy || (isAdmin ? "Admin" : "Student")} userEmail={currentUserEmail} onLogout={handleLogout} />
             </div>
           </div>
         ) : (
-          <button onClick={() => openAuthPrompt("upload")} className="motion-hover motion-active flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 sm:px-4">
-            <Plus size={14} /> <span>Contribute</span>
-          </button>
+          <DiscoveryTooltip featureKey="upload_button" text="Share your notes and help others" side="bottom" align="end">
+            <button onClick={() => openAuthPrompt("upload")} className="motion-hover motion-active flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 sm:px-4">
+              <Plus size={14} /> <span>Contribute</span>
+            </button>
+          </DiscoveryTooltip>
         )}
       </div>
       <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} isMac={isMac} />

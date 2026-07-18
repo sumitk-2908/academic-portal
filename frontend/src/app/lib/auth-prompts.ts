@@ -8,7 +8,8 @@ export type AuthPromptFeature =
   | "contributionHistory"
   | "activityGraph"
   | "studyStreak"
-  | "profile";
+  | "profile"
+  | "comment";
 
 export type AuthPromptCopy = {
   title: string;
@@ -47,6 +48,10 @@ export const AUTH_PROMPT_COPY: Record<AuthPromptFeature, AuthPromptCopy> = {
   profile: {
     title: "Open your profile",
     description: "Sign in to see your bookmarks, study streak, contribution history, and activity in one place.",
+  },
+  comment: {
+    title: "Join the discussion",
+    description: "Sign in to ask questions, help others, and add your insights to these notes.",
   },
 };
 

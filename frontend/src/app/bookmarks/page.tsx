@@ -66,7 +66,7 @@ function BookmarksContent() {
       manageOfflinePdf(doc.file_url, 'REMOVE_PDF').catch(console.error);
     }
     
-    toggleBookmarkMutation.mutate({ userId, documentId: id, isAdding: false });
+    toggleBookmarkMutation.mutate({ userId, documentId: id, isAdding: false, doc });
   };
 
   const handleDownload = async (e: React.MouseEvent, doc: DocumentRecord | DocumentWithAnalytics) => {
