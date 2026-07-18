@@ -53,13 +53,8 @@ def assert_aal2(user: dict) -> None:
         raise HTTPException(status_code=401, detail="Authentication token required for MFA validation.")
         
     try:
-        # Decode the payload securely and verify signature
-        payload = jwt.decode(
-            token,
-            SUPABASE_KEY,
-            algorithms=["HS256"],
-            options={"verify_aud": False}
-        )
+        # Decode the payload to check AAL claim (token validity already verified by Supabase API in verify_token)
+        payload = jwt.get_unverified_claims(token)
         
         # SECURE: Strictly enforce AAL2
         if payload.get("aal") != "aal2":
